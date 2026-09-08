@@ -153,19 +153,7 @@ jobs:
             echo "reusing the existing draft"
           else
             gh release create "$TAG" --draft --title "nanourl CLI $VERSION" --notes-file - <<'EOF'
-          Prebuilt `nanourl` binaries. Download the archive for your platform,
-          unpack it, and put `nanourl` somewhere on your PATH.
-
-          Each archive is ~131 MB: the model weights are linked into the
-          binary, so there is nothing to fetch on first use and nothing to
-          trust but the executable itself. `nanourl model info` says which
-          weights it carries.
-
-          `SHA256SUMS` covers every archive. The builds are reproducible: each
-          binary was built twice on its runner and required to be
-          byte-identical, with the compiler pinned by
-          `rust/rust-toolchain.toml`, so you can rebuild from this tag and
-          compare rather than trusting these files.
+          Prebuilt `nanourl` binaries, one archive per platform; `SHA256SUMS` covers them all. Unpack the archive for your platform and put `nanourl` on your PATH. The model weights are inside the binary, so nothing is fetched at run time. Platforms, usage and how the builds are verified are in the README.
           EOF
           fi
       - name: upload the packages
