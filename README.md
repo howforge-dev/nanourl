@@ -41,11 +41,6 @@ decoding when nothing about this project is reachable any more. `nanourl
 model verify` re-hashes the embedded weights against the published digest;
 `nanourl model export FILE` writes them out (`--force` to overwrite).
 
-The binary cannot be built around the wrong model: `rust/nanourl/build.rs`
-checks the artifact's length and sha256 against pinned constants and fails
-otherwise. The CLI is its own crate so that `rust/urlcodec`, the library and
-the wasm tiers, builds with no artifact on the machine.
-
 ### Install
 
 Prebuilt binaries are attached to every `v*`
@@ -72,46 +67,13 @@ by `$NANOURL_MODEL_FILE`):
 cargo install --path rust/nanourl
 ```
 
-### How a release is made
+### Verifying a download
 
-Two workflows, so that tagging cannot produce a binary nobody tested.
-
-- **`build-cli.yml`** runs on every push to `main` and every pull request that
-  touches `rust/`. Six legs, one per target: build, a clean rebuild whose
-  digest must match the first, the static-linking checks, `model verify`, and
-  a decode of a real link. Each leg uploads its package as a workflow artifact, kept 30
-  days, and a final job writes `SHA256SUMS`.
-- **`release-cli.yml`** runs on a `v*` tag such as `v0.1.0`. It checks the tag against
-  `rust/nanourl/Cargo.toml`, finds the successful `build-cli` run for that
-  exact commit, downloads its packages, verifies them against that run's
-  `SHA256SUMS`, and attaches them to the release. It builds nothing.
-
-| what went wrong | what to do |
-|---|---|
-| a leg failed on a flake | re-run failed jobs on the `build-cli` run |
-| the tagged commit has no build run, or its artifacts expired | run `build-cli` on that commit by hand, then re-run `release-cli` |
-| publishing failed | re-run `release-cli`; it reuses its draft and overwrites |
-| the source was wrong and the release is a draft | delete the draft and the tag, fix, re-tag |
-| the source was wrong and the release is published | ship a new patch tag |
-
-### Reproducible builds
-
-The compiler is pinned by `rust/rust-toolchain.toml`, the nightly the threads
-tier needs by `rust/NIGHTLY`, and `rust/rustflags.sh` is the single source of
-build flags. It strips symbols and remaps the registry and standard-library
-paths rustc records, since panic locations survive stripping and would
-otherwise name the build machine. The same commit gives the same bytes, and
-that is checked:
-
-```bash
-task codec:repro     # the three .wasm tiers, built from two different paths
-task cli:repro       # the nanourl binary, likewise
-```
-
-Both also grep the result for the build machine's own paths. Every release
-binary is built twice on its runner and the digests must agree before it is
-packaged. To check a download, build the tag through `rustflags.sh` on the
-same architecture and compare:
+`SHA256SUMS` lists every archive's digest. The binaries are also reproducible:
+the compiler is pinned by `rust/rust-toolchain.toml`, the build flags come from
+`rust/rustflags.sh`, and every release binary was built twice and required to
+be byte-identical. To check one yourself, build the tag on the same
+architecture and compare:
 
 ```bash
 git checkout v<version>
@@ -120,20 +82,9 @@ RUSTFLAGS="$(../rustflags.sh <target>)" cargo build --release --locked --target 
 sha256sum ../target/<target>/release/nanourl
 ```
 
-The remapping makes a build independent of where it runs, not of what it runs
-on: cargo's `-C metadata` disambiguator names the host triple, so another
-architecture links the same code in a different order. macOS is the one
-exception to path independence: dyld requires an `LC_UUID`, and Apple's linker
-derives it from the link's own paths, so a matching macOS digest needs the
-runner's checkout path, `/Users/runner/_work/nanourl/nanourl`.
-
-The three `.wasm` files the site serves are pinned by digest in
-`rust/urlcodec/wasm.sha256`. Those bytes are what the kernel parity gate
-(`rust/urlcodec/fuzz/run_tiers.sh`: every tier byte-identical over 100 fuzz
-cases) proved. `task codec:wasm` and CI verify the pin after every build, and
-`task web:assets` refuses to pack anything else. The pin is an
-`x86_64-unknown-linux-gnu` fact, the architecture of the gate machine and the
-CI runners.
+On macOS the linker folds the checkout path into the binary's `LC_UUID`, so a
+matching digest there needs the path the release was built at,
+`/Users/runner/_work/nanourl/nanourl`.
 
 ## Repository layout
 
@@ -171,6 +122,11 @@ from `web/`, `pnpm test`, `pnpm check` and `pnpm lint` cover the app, and
 `pnpm exec playwright test` drives a real browser against a real build. The
 nightly is needed only for the multi-threaded wasm tier; without it the other
 two build and the loader falls back.
+
+The three `.wasm` files the site serves are pinned by digest in
+`rust/urlcodec/wasm.sha256`, and `task web:assets` packs nothing else. The pin
+describes an `x86_64-unknown-linux-gnu` build; on another architecture, build
+for development with `UNPINNED=1`.
 
 ## Kernel tiers
 
