@@ -148,7 +148,8 @@ The training pipeline that produced the weights is not part of this repository.
 ## Build it locally
 
 ```bash
-mise install                      # task, rust, node, pnpm at the pinned versions
+mise install                      # task, node, pnpm at the pinned versions
+(cd rust && rustup show)          # rustup installs the compiler rust-toolchain.toml names
 rustup toolchain install "$(cat rust/NIGHTLY)" --component rust-src --profile minimal
 rustup target add wasm32-unknown-unknown
 rustup target add wasm32-unknown-unknown --toolchain "$(cat rust/NIGHTLY)"
