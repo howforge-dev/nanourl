@@ -88,10 +88,26 @@
     /** The same URL's link in qr-alpha when the result is in another
      *  alphabet, for the callout that offers the switch; '' while unknown. */
     altLink = '',
+    /** The online short link for the same URL, '' until one is made; when set
+     *  a switch chooses which link the code carries. */
+    short = '',
     code,
     alpha,
     onalpha,
-  }: { link: string; altLink?: string; code: string; alpha: Alphabet; onalpha?: (a: Alphabet) => void } = $props();
+  }: { link: string; altLink?: string; short?: string; code: string; alpha: Alphabet; onalpha?: (a: Alphabet) => void } = $props();
+
+  // Which link is in the code. A short link is a Crockford slug on the site's
+  // root, so it is carried like a qr-alpha link: uppercased whole, one
+  // compact segment. The alphabet switch offer is about the compressed link
+  // and hides while the short one is shown.
+  let target = $state<'compressed' | 'short'>('compressed');
+  let useShort = $derived(target === 'short' && short !== '');
+  let carried = $derived(useShort ? short : link);
+  let carriedAlpha = $derived(useShort ? QR_ALPHA : alpha);
+  const TARGET_OPTIONS = [
+    { value: 'compressed', label: 'compressed link' },
+    { value: 'short', label: 'short link' },
+  ];
 
   let open = $state(false);
   let settings: QrSettings = $state(loadSettings());
@@ -99,7 +115,7 @@
   // the effect depends on every field.
   $effect(() => saveSettings(settings));
 
-  let text = $derived(qrText(link, alpha, { scheme: settings.scheme }));
+  let text = $derived(qrText(carried, carriedAlpha, { scheme: settings.scheme }));
   let bytes = $derived(new TextEncoder().encode(text).length);
 
   // The matrix. `create` throws for a forced version too small for the text,
@@ -168,7 +184,7 @@
     }
   }
   let offer = $derived.by(() => {
-    if (alpha === QR_ALPHA || !altLink || !built.qr || dismissed) return null;
+    if (useShort || alpha === QR_ALPHA || !altLink || !built.qr || dismissed) return null;
     try {
       const alt = build(qrText(altLink, QR_ALPHA, { scheme: settings.scheme }), settings);
       const here = built.qr;
@@ -300,7 +316,7 @@
     }
   }
 
-  let shortLink = $derived(link.replace(/^https?:\/\//, ''));
+  let shortLink = $derived(carried.replace(/^https?:\/\//, ''));
   /** The preset the settings are, exactly, for the pressed chip; none once
    *  any control has changed them. */
   let currentPreset = $derived(presetOf(settings));
@@ -313,6 +329,11 @@
 <details bind:open data-testid={TESTID.qr}>
   <summary>QR code: scan the link</summary>
   {#if open}
+    {#if short}
+      <div class="row target" data-testid={TESTID.qrTarget}>
+        <Segmented look="switch" label="link in the code" options={TARGET_OPTIONS} value={target} onchange={(v) => (target = v as typeof target)} />
+      </div>
+    {/if}
     {#if offer}
       <div data-testid={TESTID.qrOffer}>
         <Callout>

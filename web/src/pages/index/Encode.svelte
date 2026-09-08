@@ -16,6 +16,7 @@
   import TextArea from '../../lib/ui/TextArea.svelte';
   import Dist from './Dist.svelte';
   import Qr from './Qr.svelte';
+  import ShortLink from './ShortLink.svelte';
   import { TESTID } from '../../lib/testids';
   import { costParts, fmtBitsPerChar, fmtMs } from '../../lib/format';
   import { PLACEHOLDER_URL as placeholder } from '../../lib/examples';
@@ -48,6 +49,9 @@
   } as const;
   let roundtripText = $derived(ROUNDTRIP_TEXT[roundtrip]);
   let selectedTok: number | null = $state(null);
+  // The online short link for the typed URL, '' until made; the QR section
+  // offers it beside the compressed link.
+  let shortLink = $state('');
 
   let info = $derived(codec?.info ?? null);
   // Where the URL's bits went, rendered the one way the observatory's coder
@@ -176,8 +180,13 @@
     <span class="stat"><b>{fmtBitsPerChar(result.bits_per_char)}</b> bits/char</span>
     <span class="stat"><b>{result.coded_bits}</b> coded bits</span>
   </div>
+{/if}
+<!-- Outside the result block: a short link needs no model, so it is offered
+     while the model is still loading. -->
+<ShortLink url={url.trim()} onlink={(l) => (shortLink = l)} />
+{#if hasOutput && result}
   {#if resultAlpha !== null}
-    <Qr link={redirectLink} {altLink} code={result.coded} alpha={resultAlpha} onalpha={(a) => onalpha?.(a)} />
+    <Qr link={redirectLink} {altLink} short={shortLink} code={result.coded} alpha={resultAlpha} onalpha={(a) => onalpha?.(a)} />
   {/if}
   <details data-testid={TESTID.advanced}>
     <summary>Advanced: per-token cost and build info</summary>

@@ -18,7 +18,11 @@
     decodes any link on your own machine with no network:
     <code class="cmd">nanourl decode {SITE_URL}#…</code>
   </p>
-  <p>Nothing is kept server-side, so there is no database to lose and no redirect to expire.</p>
+  <p>
+    Nothing is kept server-side, so there is no database to lose and no redirect to expire. The one
+    exception is a <em>short link</em> made with the button: <code>{SITE_URL}ABC123</code> is a row in
+    a database and lasts as long as this service does.
+  </p>
 </section>
 
 <style>

@@ -1,10 +1,9 @@
-import { resolve } from 'node:path';
 import { test, expect } from './fixtures';
 import type { Locator, Page } from 'playwright/test';
 import { ALPHABETS, QR_ALPHA, qrText } from '../src/lib/alphabet';
 import { CENTRE_LABEL_MAX, CORNER_TYPES, MODULE_STYLES, PRESETS, STORAGE_KEY, applyPreset, isUnscannable } from '../src/lib/qr/options';
-import { WEB_ROOT } from '../scripts/paths';
-import { atMobile, encodeFirstExample, expectNoHorizontalOverflow, TESTID, testIdSelector, waitForModelReady, watchErrors } from './helpers';
+import { atMobile, encodeFirstExample, expectNoHorizontalOverflow, loadScanner, scan, TESTID, testIdSelector, waitForModelReady, watchErrors } from './helpers';
+import type { Inversion } from './helpers';
 import { CODEC_CALL } from './timeouts';
 
 // The compressor's QR section against the real build: it opens, draws the
@@ -17,56 +16,6 @@ import { CODEC_CALL } from './timeouts';
 // pixels must NOT read, and the pixels inverted must; the inversion is done
 // here on the canvas, since jsqr 1.4's own `onlyInvert` scans a bitmap it
 // never builds.
-
-type Inversion = 'dontInvert' | 'onlyInvert';
-
-/** The text the symbol decodes to (the one on screen, or the SVG the export
- *  link carries), or null when it does not scan. */
-async function scan(page: Page, source: 'screen' | 'export' = 'screen', inversion: Inversion = 'dontInvert'): Promise<string | null> {
-  return page.evaluate(
-    async ([sel, dl, src, inv]) => {
-      let xml: string;
-      if (src === 'export') {
-        const href = document.querySelector<HTMLAnchorElement>(dl)?.getAttribute('href') ?? '';
-        if (!href.startsWith('data:image/svg+xml')) return null;
-        xml = decodeURIComponent(href.slice(href.indexOf(',') + 1));
-      } else {
-        const svg = document.querySelector<SVGSVGElement>(`${sel} svg`);
-        if (!svg) return null;
-        xml = new XMLSerializer().serializeToString(svg);
-      }
-      const m = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(xml);
-      if (!m) return null;
-      const vb = { width: Number(m[1]), height: Number(m[2]) };
-      const scale = 6;
-      const img = new Image();
-      await new Promise<void>((ok, bad) => {
-        img.onload = () => ok();
-        img.onerror = () => bad(new Error('svg did not load'));
-        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
-      });
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(vb.width * scale);
-      canvas.height = Math.round(vb.height * scale);
-      const ctx = canvas.getContext('2d')!;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const px = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      if (inv === 'onlyInvert') {
-        for (let i = 0; i < px.data.length; i += 4) {
-          px.data[i] = 255 - px.data[i];
-          px.data[i + 1] = 255 - px.data[i + 1];
-          px.data[i + 2] = 255 - px.data[i + 2];
-        }
-      }
-      type Decoder = (d: Uint8ClampedArray, w: number, h: number, o?: { inversionAttempts: string }) => { data: string } | null;
-      const jsQR = (window as unknown as { jsQR: Decoder }).jsQR;
-      return jsQR(px.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' })?.data ?? null;
-    },
-    [testIdSelector(TESTID.qrSvg), testIdSelector(TESTID.qrSvgDownload), source, inversion] as const,
-  );
-}
 
 /** On screen and as exported, both must read as the expected text. */
 async function expectScans(page: Page, expected: string, what: string, inversion: Inversion = 'dontInvert'): Promise<void> {
@@ -86,7 +35,7 @@ test('QR section: renders, follows every control, exports, persists, and every s
 
   await page.goto('/');
   await waitForModelReady(page);
-  await page.addScriptTag({ path: resolve(WEB_ROOT, 'node_modules/jsqr/dist/jsQR.js') });
+  await loadScanner(page);
 
   const encodePane = page.locator(testIdSelector(TESTID.paneEncode));
   const { code: codeBase64url } = await encodeFirstExample(page);

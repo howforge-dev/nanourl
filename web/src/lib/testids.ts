@@ -24,6 +24,14 @@ export const TESTID = {
   redirectCancel: 'redirect-cancel',
   redirectNote: 'redirect-note',
   outlive: 'outlive',
+  /** The online short link: its button, the minted link's row, the widget's
+   *  box and the inline error. */
+  shortLinkButton: 'short-link-button',
+  shortLink: 'short-link',
+  shortLinkWidget: 'short-link-widget',
+  shortLinkError: 'short-link-error',
+  /** Which link the QR carries when a short one exists too. */
+  qrTarget: 'qr-target',
   /** The QR disclosure, its rendered symbol's box, the text it encodes, its
    *  version/segment line, its inline errors and warning, the label count,
    *  and the two export links. */

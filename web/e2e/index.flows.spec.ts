@@ -2,14 +2,16 @@ import { test, expect } from './fixtures';
 import type { Page } from 'playwright/test';
 import { B79_MARK, QR_MARK } from '../src/lib/alphabet';
 import { MODEL_RELEASE_URL, RELEASES_URL, SITE_URL } from '../src/lib/links';
-import { encodeUrl, TESTID, testIdSelector, waitForModelReady, watchErrors } from './helpers';
+import { SHORTEN_API } from '../src/lib/shortener';
+import { TURNSTILE_SCRIPT } from '../src/lib/turnstile';
+import { encodeUrl, loadScanner, NETWORK_FAILURE, scan, TESTID, testIdSelector, waitForModelReady, watchErrors } from './helpers';
 import { CODEC_CALL, MODEL_LOAD } from './timeouts';
 
 // The compressor flows `index.smoke.spec.ts` does not walk: the redirect
 // overlay end to end (an http target opened, a non-http one shown and never
 // opened, a malformed fragment refused, Escape), typing a URL of one's own,
-// the Decode pane's every input shape, the copy buttons, and the durability
-// section. Each case is its own page against the real build, in both
+// the Decode pane's every input shape, the copy buttons, the durability
+// section, and the online short link with its server answered from here. Each case is its own page against the real build, in both
 // projects, and fails on any console or page error.
 
 /**
@@ -230,5 +232,141 @@ test('the durability section links to the model release and the CLI releases', a
   await expect(outlive.getByRole('link', { name: /command-line tool/ })).toHaveAttribute('href', RELEASES_URL);
   // outside every disclosure: visible before anything is expanded
   expect(await outlive.evaluate((el) => !el.closest('details'))).toBe(true);
+  watch.expectClean();
+});
+
+/** What the stubbed shortener answers. */
+interface ShortenReply {
+  status: number;
+  body?: unknown;
+  headers?: Record<string, string>;
+}
+
+/**
+ * Answer the short link's two remote parts from here: Turnstile's script as a
+ * stub that issues a token at once, and `/api/new` with `reply`. The real
+ * service is never reached, and the bodies the page posted are kept.
+ */
+async function stubShortener(page: Page, reply: (body: { url: string; turnstile?: string }) => ShortenReply | 'abort'): Promise<{ posted: { url: string; turnstile?: string }[] }> {
+  const posted: { url: string; turnstile?: string }[] = [];
+  await page.route(`${TURNSTILE_SCRIPT.split('?')[0]}*`, (route) =>
+    route.fulfill({
+      contentType: 'application/javascript',
+      body: `window.turnstile = { render(el, o) { setTimeout(() => o.callback('e2e-token'), 0); return 'w1'; }, remove() {} };`,
+    }),
+  );
+  await page.route(SHORTEN_API, (route) => {
+    const body = route.request().postDataJSON() as { url: string; turnstile?: string };
+    posted.push(body);
+    const r = reply(body);
+    if (r === 'abort') return route.abort('connectionfailed');
+    return route.fulfill({
+      status: r.status,
+      contentType: 'application/json',
+      headers: r.headers,
+      body: r.body === undefined ? '' : JSON.stringify(r.body),
+    });
+  });
+  return { posted };
+}
+
+const minted = (slug: string, status = 201): ShortenReply => ({ status, body: { ok: true, slug, link: `${SITE_URL}${slug}` } });
+
+test('short link: offered before the model is ready, made once with a token, shown, copied, and dropped when the URL changes', async ({ page, context }) => {
+  const watch = watchErrors(page);
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const { posted } = await stubShortener(page, () => minted('ABC123'));
+  await page.goto('/');
+  const pane = page.locator(testIdSelector(TESTID.paneEncode));
+  const button = pane.locator(testIdSelector(TESTID.shortLinkButton));
+  await expect(button).toHaveCount(0);
+  await pane.locator('textarea').fill(HN.url);
+  await expect(button).toBeVisible();
+
+  await button.click();
+  const row = pane.locator(testIdSelector(TESTID.shortLink));
+  await expect(row).toHaveText('qv.lc/ABC123');
+  expect(posted).toEqual([{ url: HN.url, turnstile: 'e2e-token' }]);
+  await expect(button).toHaveCount(0);
+  await expect(pane.getByText(/A short link: 6 characters, stored on qv\.lc/)).toBeVisible();
+
+  await row.locator('..').getByRole('button', { name: 'copy', exact: true }).click();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${SITE_URL}ABC123`);
+
+  await pane.locator('textarea').fill(EXAMPLE.url);
+  await expect(row).toHaveCount(0);
+  await expect(button).toBeVisible();
+  expect(posted).toHaveLength(1);
+  watch.expectClean();
+});
+
+test('short link: an existing link is told apart from a new one', async ({ page }) => {
+  const watch = watchErrors(page);
+  await stubShortener(page, () => minted('EX1ST5', 200));
+  await page.goto('/');
+  const pane = page.locator(testIdSelector(TESTID.paneEncode));
+  await pane.locator('textarea').fill(HN.url);
+  await pane.locator(testIdSelector(TESTID.shortLinkButton)).click();
+  await expect(pane.locator(testIdSelector(TESTID.shortLink))).toHaveText('qv.lc/EX1ST5');
+  await expect(pane.getByText(/This URL already had a short link/)).toBeVisible();
+  watch.expectClean();
+});
+
+test('short link: a rate limit, a refusal and an unreachable server are said in words, and the button stays', async ({ page }) => {
+  const watch = watchErrors(page);
+  let mode: 'limit' | 'refuse' | 'down' = 'limit';
+  await stubShortener(page, () => {
+    if (mode === 'down') return 'abort';
+    if (mode === 'refuse') return { status: 400, body: { ok: false, error: 'not an http(s) URL this service will shorten' } };
+    return { status: 429, headers: { 'Retry-After': '600' }, body: { ok: false, error: 'too many links from this address; try again later' } };
+  });
+  await page.goto('/');
+  const pane = page.locator(testIdSelector(TESTID.paneEncode));
+  const button = pane.locator(testIdSelector(TESTID.shortLinkButton));
+  const error = pane.locator(testIdSelector(TESTID.shortLinkError));
+  await pane.locator('textarea').fill(HN.url);
+
+  await button.click();
+  await expect(error).toHaveText('too many short links from your address; try again in 10 minutes');
+  await expect(button).toBeEnabled();
+
+  mode = 'refuse';
+  await button.click();
+  await expect(error).toHaveText('not an http(s) URL this service will shorten');
+
+  mode = 'down';
+  await button.click();
+  await expect(error).toHaveText('could not reach qv.lc; check your connection and try again');
+  await expect(pane.locator(testIdSelector(TESTID.shortLink))).toHaveCount(0);
+  watch.expectClean([NETWORK_FAILURE]);
+});
+
+test('short link: the QR section carries it on request, in one compact segment, and it scans', async ({ page }) => {
+  const watch = watchErrors(page);
+  await stubShortener(page, () => minted('ABC123'));
+  await page.goto('/');
+  await waitForModelReady(page);
+  await loadScanner(page);
+  const pane = page.locator(testIdSelector(TESTID.paneEncode));
+  await encodeUrl(page, HN.url);
+  const qr = page.locator(testIdSelector(TESTID.qr));
+  await qr.locator('summary').click();
+  await expect(qr.locator(testIdSelector(TESTID.qrTarget))).toHaveCount(0);
+
+  await pane.locator(testIdSelector(TESTID.shortLinkButton)).click();
+  await expect(pane.locator(testIdSelector(TESTID.shortLink))).toHaveText('qv.lc/ABC123');
+  const target = qr.locator(testIdSelector(TESTID.qrTarget));
+  await expect(target).toBeVisible();
+  const text = qr.locator(testIdSelector(TESTID.qrText));
+  await expect(text).toContainText('#');
+
+  await target.getByRole('button', { name: 'short link' }).click();
+  await expect(text).toHaveText('HTTPS://QV.LC/ABC123');
+  await expect(qr.locator(testIdSelector(TESTID.qrInfo))).toContainText('all 20 characters stored in the compact mode');
+  await expect(qr.locator(testIdSelector(TESTID.qrOffer))).toHaveCount(0);
+  expect(await scan(page)).toBe('HTTPS://QV.LC/ABC123');
+
+  await target.getByRole('button', { name: 'compressed link' }).click();
+  await expect(text).toContainText('#');
   watch.expectClean();
 });
