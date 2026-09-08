@@ -379,16 +379,22 @@ jobs:
       - run: test -f web/dist/_headers
       # An assets-only Worker (wrangler.toml at the repo root): the built site
       # is uploaded as static assets and served by the Worker the custom domain
-      # is attached to. The token needs Account → Workers Scripts → Edit.
-      # quiet: wrangler's chatter names the account's workers.dev subdomain,
-      # the deployed asset list and the login; only errors are worth a public
-      # log. The GitHub-masked secrets cover the token and account id.
-      - uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "4"
-          quiet: true
-          command: deploy
+      # is attached to. The token needs Account → Workers Scripts → Edit and,
+      # for the zone routes, Zone → Workers Routes → Edit on the zone.
+      # wrangler's own output names the account's workers.dev subdomain, the
+      # asset list and the login, so it is captured and only the lines that
+      # say what happened (deployed, routes, errors) reach the public log,
+      # with any 32-hex id blanked. The GitHub-masked secrets cover the token
+      # and account id themselves.
+      - name: wrangler deploy
         env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER_SEND_METRICS: "false"
+        run: |
+          set -o pipefail
+          npx --yes wrangler@4 deploy > wrangler.log 2>&1; status=$?
+          sed -E 's/[0-9a-f]{32}/<id>/g' wrangler.log \
+            | grep -iE 'deployed|current version|route|error|✘|✔|failed|denied|permission' \
+            | grep -viE 'workers\.dev|logged in|account name' || true
+          exit $status
