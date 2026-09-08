@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { workerCount, hasRelaxedSimd, RELAXED_PROBE, describeKernel, kernelSummary } from '../src/lib/codec/tier';
+import { MAX_WORKERS, workerCount, hasRelaxedSimd, RELAXED_PROBE, describeKernel, kernelSummary } from '../src/lib/codec/tier';
 
 describe('tier', () => {
   it('no threads without cross-origin isolation', () => expect(workerCount(false, 8)).toBe(0));
-  it('leaves one core for the coordinator, caps at 8', () => {
+  it('leaves one core for the coordinator, caps at MAX_WORKERS whatever the core count claims', () => {
     expect(workerCount(true, 4)).toBe(3);
-    expect(workerCount(true, 32)).toBe(8);
+    expect(workerCount(true, 32)).toBe(MAX_WORKERS);
     expect(workerCount(true, 1)).toBe(0);
+    expect(MAX_WORKERS).toBe(4);
   });
 
   it('the relaxed-SIMD probe module validates on this engine', () => {

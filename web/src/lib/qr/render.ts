@@ -1,17 +1,19 @@
-// Our own SVG of a QR module matrix: the module and eye styles, the gradient,
-// the centre plate with the logo or a label, and the caption under the code.
+// Our own SVG of a QR module matrix: the module and corner styles, solid or
+// gradient paints, the background and its shape, the centre plate with the
+// logo, an uploaded image or a label, and the caption under the code.
 //
 // node-qrcode supplies only the matrix. Its own SVG renderer draws one shape
 // per module and nothing else, and a styling library would be a second
 // renderer to keep in step with this one; drawing from the matrix here is
 // what lets the styles, the plate and the text all be options of one
-// document that the PNG export rasterises as it is.
+// document that the raster exports rasterise as it is.
 //
-// Units are modules throughout: the viewBox is `size + 2 * margin` wide, and
-// the caption adds rows under it. `scale` only sets `width`/`height` on the
-// document, so an `<img>` of it has an intrinsic size to rasterise at.
+// Units are modules throughout: the viewBox is `size + 2 * (margin +
+// padding)` wide — the quiet zone, then the frame padding — and the caption
+// adds rows under it. `scale` only sets `width`/`height` on the document,
+// so an `<img>` of it has an intrinsic size to rasterise at.
 import { LOGO_RECTS, LOGO_VIEWBOX } from '../ui/logo';
-import { PLATE_SHARE_MAX, type EyeStyle, type RenderOptions } from './options';
+import { PLATE_SHARE_MAX, type CornerType, type ModuleStyle, type Paint, type RenderOptions } from './options';
 
 /** What `QRCode.create(...).modules` is: a square matrix read by row and
  *  column, `get` truthy for a dark module. */
@@ -72,7 +74,6 @@ export function alignmentCentres(size: number): [number, number][] {
   return out;
 }
 
-const ALIGN = 5;
 const inAlignment = (size: number, r: number, c: number): boolean =>
   alignmentCentres(size).some(([ar, ac]) => Math.abs(r - ar) <= 2 && Math.abs(c - ac) <= 2);
 
@@ -107,33 +108,42 @@ export function escapeXml(s: string): string {
 
 const n = (v: number): string => String(Math.round(v * 1000) / 1000);
 
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 /**
  * The plate on the symbol's centre for what the options put there, in
- * modules: `null` when the label would need more than `PLATE_SHARE_MAX` of
+ * modules: `null` when a label would need more than `PLATE_SHARE_MAX` of
  * the symbol, which is the caller's cue to show an error instead.
  *
  * The logo's plate is square, an odd number of modules so it sits on the
- * symbol's centre module. A label's plate is as wide as its text at a size
- * that follows the module count, and grows with the label.
+ * symbol's centre module. An image's plate is `imageSize` of the symbol's
+ * side (already clamped by the level), plus its margin. A label's plate is
+ * as wide as its text at a size that follows the module count.
  */
-export function plateBox(
-  size: number,
-  plate: RenderOptions['plate'],
-): { x: number; y: number; w: number; h: number; fontSize: number } | null {
+export function plateBox(size: number, plate: RenderOptions['plate'], imageSize = 0, imageMargin = 0): (Box & { fontSize: number }) | null {
   if (!plate) return null;
-  const cap = Math.sqrt(PLATE_SHARE_MAX) * size;
+  if (plate.kind === 'label') {
+    const fontSize = Math.max(1.8, size / 14);
+    const w = plate.text.length * fontSize * 0.62 + 1;
+    const h = fontSize * 1.3 + 0.6;
+    if (w * h > PLATE_SHARE_MAX * size * size) return null;
+    return { x: (size - w) / 2, y: (size - h) / 2, w, h, fontSize };
+  }
+  let side: number;
   if (plate.kind === 'logo') {
-    let side = Math.floor(cap);
+    side = Math.floor(Math.sqrt(PLATE_SHARE_MAX) * size);
     if (side % 2 === 0) side -= 1;
     side = Math.max(3, side);
-    const o = (size - side) / 2;
-    return { x: o, y: o, w: side, h: side, fontSize: 0 };
+  } else {
+    side = Math.max(1, imageSize * size + 2 * imageMargin);
   }
-  const fontSize = Math.max(1.8, size / 14);
-  const w = plate.text.length * fontSize * 0.62 + 1;
-  const h = fontSize * 1.3 + 0.6;
-  if (w * h > PLATE_SHARE_MAX * size * size) return null;
-  return { x: (size - w) / 2, y: (size - h) / 2, w, h, fontSize };
+  const o = (size - side) / 2;
+  return { x: o, y: o, w: side, h: side, fontSize: 0 };
 }
 
 /** A caption wrapped to `width` modules at `fontSize`: greedy by word, with
@@ -165,107 +175,217 @@ export function wrapCaption(text: string, width: number, fontSize: number): stri
   return lines.filter((l, i, all) => l !== '' || (i > 0 && i < all.length - 1));
 }
 
-/** One module as a square with the corners that face no dark neighbour
- *  rounded off, so a run of modules reads as one pill. */
-function roundedCell(x: number, y: number, tl: boolean, tr: boolean, br: boolean, bl: boolean): string {
-  const r = 0.5;
-  let d = `M${n(x + (tl ? r : 0))} ${n(y)}`;
-  d += `H${n(x + 1 - (tr ? r : 0))}`;
-  if (tr) d += `A${r} ${r} 0 0 1 ${n(x + 1)} ${n(y + r)}`;
-  d += `V${n(y + 1 - (br ? r : 0))}`;
-  if (br) d += `A${r} ${r} 0 0 1 ${n(x + 1 - r)} ${n(y + 1)}`;
-  d += `H${n(x + (bl ? r : 0))}`;
-  if (bl) d += `A${r} ${r} 0 0 1 ${n(x)} ${n(y + 1 - r)}`;
-  d += `V${n(y + (tl ? r : 0))}`;
-  if (tl) d += `A${r} ${r} 0 0 1 ${n(x + r)} ${n(y)}`;
-  return d + 'Z';
+/** Radii for the four corners, clockwise from the top-left. */
+type Radii = [number, number, number, number];
+
+/** A `w`×`h` rectangle at (x, y) with each corner rounded by its radius
+ *  (0 leaves it square), clockwise. */
+export function roundedRect(x: number, y: number, w: number, h: number, [tl, tr, br, bl]: Radii): string {
+  const arc = (r: number, ex: number, ey: number): string => (r > 0 ? `A${n(r)} ${n(r)} 0 0 1 ${n(ex)} ${n(ey)}` : '');
+  return (
+    `M${n(x + tl)} ${n(y)}H${n(x + w - tr)}${arc(tr, x + w, y + tr)}` +
+    `V${n(y + h - br)}${arc(br, x + w - br, y + h)}H${n(x + bl)}${arc(bl, x, y + h - bl)}` +
+    `V${n(y + tl)}${arc(tl, x + tl, y)}Z`
+  );
 }
 
 /** A circle as path data, so every style is one `<path>`. */
-function circle(cx: number, cy: number, r: number): string {
-  return `M${n(cx - r)} ${n(cy)}a${r} ${r} 0 1 0 ${n(2 * r)} 0a${r} ${r} 0 1 0 ${n(-2 * r)} 0Z`;
+export function circle(cx: number, cy: number, r: number): string {
+  return `M${n(cx - r)} ${n(cy)}a${n(r)} ${n(r)} 0 1 0 ${n(2 * r)} 0a${n(r)} ${n(r)} 0 1 0 ${n(-2 * r)} 0Z`;
 }
 
-/** The data modules — everything outside the finder and alignment patterns
- *  — as one path. */
-export function modulesPath(m: Matrix, style: RenderOptions['style'], margin: number): string {
+/** The radius of a dot module: 0.8 of the module across. */
+export const DOT_R = 0.4;
+/** The radius of a dot in a `dots` corner: touching, so the finder still
+ *  reads as the runs a scanner looks for. */
+export const CORNER_DOT_R = 0.5;
+
+/**
+ * One data module in a style, given which of its neighbours are dark. The
+ * run-aware styles round only the corners that face no dark neighbour, so a
+ * run of modules reads as one shape — softened at 0.3, a full pill at 0.5.
+ * `classy` rounds one corner fully, the top-left on even parity and the
+ * bottom-right on odd, so neighbours alternate and a run reads as woven;
+ * `classy-rounded` softens the other two like `rounded`.
+ */
+export function moduleShape(
+  style: ModuleStyle,
+  x: number,
+  y: number,
+  parity: number,
+  free: { tl: boolean; tr: boolean; br: boolean; bl: boolean },
+): string {
+  switch (style) {
+    case 'classic':
+      return `M${n(x)} ${n(y)}h1v1h-1z`;
+    case 'rounded':
+    case 'extra-rounded': {
+      const r = style === 'rounded' ? 0.3 : 0.5;
+      return roundedRect(x, y, 1, 1, [free.tl ? r : 0, free.tr ? r : 0, free.br ? r : 0, free.bl ? r : 0]);
+    }
+    case 'classy':
+    case 'classy-rounded': {
+      // the parity corner full, its opposite square, the other two softened
+      // when free (classy-rounded) or square (classy)
+      const even = parity % 2 === 0;
+      const soft = style === 'classy-rounded' ? 0.3 : 0;
+      return roundedRect(x, y, 1, 1, [even ? 0.5 : 0, free.tr ? soft : 0, even ? 0 : 0.5, free.bl ? soft : 0]);
+    }
+    case 'dots':
+    case 'nanourl':
+      return circle(x + 0.5, y + 0.5, DOT_R);
+  }
+}
+
+/** The data modules — everything outside the function patterns, and
+ *  outside `hole` when given — as one path. */
+export function modulesPath(m: Matrix, style: ModuleStyle, margin: number, hole: Box | null = null): string {
   const size = m.size;
   const dark = (r: number, c: number): boolean => r >= 0 && c >= 0 && r < size && c < size && !!m.get(r, c);
+  const hidden = (r: number, c: number): boolean =>
+    !!hole && c + 1 > hole.x && c < hole.x + hole.w && r + 1 > hole.y && r < hole.y + hole.h;
   const parts: string[] = [];
   for (let r = 0; r < size; r++) {
     for (let c = 0; c < size; c++) {
-      if (!dark(r, c) || isFunctionPattern(size, r, c)) continue;
-      const x = c + margin;
-      const y = r + margin;
-      switch (style) {
-        case 'classic':
-          parts.push(`M${n(x)} ${n(y)}h1v1h-1z`);
-          break;
-        case 'rounded': {
-          const up = dark(r - 1, c);
-          const down = dark(r + 1, c);
-          const left = dark(r, c - 1);
-          const right = dark(r, c + 1);
-          parts.push(roundedCell(x, y, !up && !left, !up && !right, !down && !right, !down && !left));
-          break;
-        }
-        case 'dots':
-        case 'nanourl':
-          parts.push(circle(x + 0.5, y + 0.5, 0.4));
-          break;
-      }
+      if (!dark(r, c) || isFunctionPattern(size, r, c) || hidden(r, c)) continue;
+      const up = dark(r - 1, c);
+      const down = dark(r + 1, c);
+      const left = dark(r, c - 1);
+      const right = dark(r, c + 1);
+      parts.push(
+        moduleShape(style, c + margin, r + margin, r + c, {
+          tl: !up && !left,
+          tr: !up && !right,
+          br: !down && !right,
+          bl: !down && !left,
+        }),
+      );
     }
   }
   return parts.join('');
 }
 
-/** One concentric pattern — a ring `outer` wide with a hole two narrower,
- *  and a centre two narrower again — at its top-left corner, in the eye
- *  style. The finders are 7 wide, the alignment patterns 5. Painted with
- *  the even-odd rule, so the hole is the second boundary inside the first
- *  and needs no winding of its own. */
-function concentric(x: number, y: number, outer: number, eyes: EyeStyle): string[] {
-  const hole = outer - 2;
-  const core = outer - 4;
-  switch (eyes) {
-    case 'classic':
-      return [
-        `M${n(x)} ${n(y)}h${outer}v${outer}h-${outer}z`,
-        `M${n(x + 1)} ${n(y + 1)}v${hole}h${hole}v-${hole}z`,
-        `M${n(x + 2)} ${n(y + 2)}h${core}v${core}h-${core}z`,
-      ];
+/**
+ * One `w`×`w` block of a finder — the outer boundary, the hole, or the
+ * centre — in a corner type. `dots` draws the block's modules as touching
+ * dots (the ring's 24, the centre's 9) and so has no hole of its own; for
+ * the ring, `finder` lays them over a thin bar (see `ringBar`), since a
+ * scanner reads a finder as runs and a row of separate dots is not one.
+ */
+export function cornerShape(type: CornerType, x: number, y: number, w: number, ring = false): string {
+  switch (type) {
+    case 'square':
+      return `M${n(x)} ${n(y)}h${n(w)}v${n(w)}h-${n(w)}z`;
     case 'rounded':
-      return [
-        roundedCorners(x, y, outer, outer, outer * 0.29),
-        roundedCorners(x + 1, y + 1, hole, hole, hole * 0.24),
-        roundedCorners(x + 2, y + 2, core, core, core * 0.3),
-      ];
-    case 'circle': {
-      const cx = x + outer / 2;
-      const cy = y + outer / 2;
-      return [circle(cx, cy, outer / 2), circle(cx, cy, hole / 2), circle(cx, cy, core / 2)];
+      return roundedRect(x, y, w, w, [w * 0.2, w * 0.2, w * 0.2, w * 0.2]);
+    case 'extra-rounded':
+      return roundedRect(x, y, w, w, [w * 0.35, w * 0.35, w * 0.35, w * 0.35]);
+    case 'dot':
+      return circle(x + w / 2, y + w / 2, w / 2);
+    case 'classy':
+      return roundedRect(x, y, w, w, [w * 0.4, 0, w * 0.4, 0]);
+    case 'classy-rounded':
+      return roundedRect(x, y, w, w, [w * 0.45, w * 0.15, w * 0.45, w * 0.15]);
+    case 'dots': {
+      const parts: string[] = [];
+      for (let r = 0; r < w; r++) {
+        for (let c = 0; c < w; c++) {
+          if (ring && r > 0 && r < w - 1 && c > 0 && c < w - 1) continue;
+          parts.push(circle(x + c + 0.5, y + r + 0.5, CORNER_DOT_R));
+        }
+      }
+      return parts.join('');
     }
   }
 }
 
-/** The three finder patterns and every alignment pattern, drawn as shapes
- *  rather than modules so they can be rounded or circular without changing
- *  where they are, followed by the timing patterns as squares. */
-export function eyesPath(size: number, eyes: EyeStyle, margin: number): string {
-  const parts: string[] = [];
-  for (const [er, ec] of eyeOrigins(size)) parts.push(...concentric(ec + margin, er + margin, EYE, eyes));
-  for (const [ar, ac] of alignmentCentres(size)) parts.push(...concentric(ac - 2 + margin, ar - 2 + margin, ALIGN, eyes));
+/** The bar under a `dots` ring: a 0.5-wide square ring on the dots'
+ *  centre line, as an outer boundary and a hole for the even-odd rule. */
+function ringBar(x: number, y: number): string {
+  return `M${n(x + 0.25)} ${n(y + 0.25)}h6.5v6.5h-6.5z` + `M${n(x + 0.75)} ${n(y + 0.75)}v5.5h5.5v-5.5z`;
+}
+
+/** A finder's ring (7 wide with a 5 hole) and centre (3 wide) at its
+ *  top-left corner, each in its own corner type. The ring is painted with
+ *  the even-odd rule, so the hole is the second boundary inside the first
+ *  and needs no winding of its own; a `dots` ring's beads go in a path of
+ *  their own, over the bar, since under even-odd they would cut it. */
+function finder(x: number, y: number, ringType: CornerType, coreType: CornerType): { ring: string; beads: string; core: string } {
+  const ring = ringType === 'dots' ? ringBar(x, y) : cornerShape(ringType, x, y, EYE) + cornerShape(ringType, x + 1, y + 1, EYE - 2);
+  const beads = ringType === 'dots' ? cornerShape('dots', x, y, EYE, true) : '';
+  const core = cornerShape(coreType, x + 2, y + 2, EYE - 4);
+  return { ring, beads, core };
+}
+
+/** An alignment pattern: a 5 ring with a 3 hole and a 1 centre, in the
+ *  plain square shape a scanner reads as runs. */
+function alignment(x: number, y: number): string {
+  return `M${n(x)} ${n(y)}h5v5h-5z` + `M${n(x + 1)} ${n(y + 1)}v3h3v-3z` + `M${n(x + 2)} ${n(y + 2)}h1v1h-1z`;
+}
+
+/** The three finders' rings and, separately, their centres, drawn as
+ *  shapes rather than modules so they can take any corner type without
+ *  changing where they are, and painted apart so each can take its own
+ *  paint. */
+export function finderPaths(size: number, ringType: CornerType, coreType: CornerType, margin: number): { ring: string; beads: string; core: string } {
+  const ring: string[] = [];
+  const beads: string[] = [];
+  const core: string[] = [];
+  for (const [er, ec] of eyeOrigins(size)) {
+    const f = finder(ec + margin, er + margin, ringType, coreType);
+    ring.push(f.ring);
+    beads.push(f.beads);
+    core.push(f.core);
+  }
+  return { ring: ring.join(''), beads: beads.join(''), core: core.join('') };
+}
+
+/** Every alignment pattern, then the timing patterns — the function
+ *  patterns that sit among the data, as plain squares in the dots' paint. */
+export function alignmentPath(size: number, margin: number): string {
+  const parts = alignmentCentres(size).map(([ar, ac]) => alignment(ac - 2 + margin, ar - 2 + margin));
   parts.push(timingPath(size, margin));
   return parts.join('');
 }
 
-/** A rectangle with all four corners rounded by `r`, clockwise. */
-function roundedCorners(x: number, y: number, w: number, h: number, r: number): string {
-  return (
-    `M${n(x + r)} ${n(y)}H${n(x + w - r)}A${r} ${r} 0 0 1 ${n(x + w)} ${n(y + r)}` +
-    `V${n(y + h - r)}A${r} ${r} 0 0 1 ${n(x + w - r)} ${n(y + h)}H${n(x + r)}` +
-    `A${r} ${r} 0 0 1 ${n(x)} ${n(y + h - r)}V${n(y + r)}A${r} ${r} 0 0 1 ${n(x + r)} ${n(y)}Z`
-  );
+/** Every function pattern as one path: the finders (square), the alignment
+ *  patterns and the timing patterns. */
+export function eyesPath(size: number, margin: number): string {
+  const f = finderPaths(size, 'square', 'square', margin);
+  return f.ring + f.core + alignmentPath(size, margin);
+}
+
+/** The line a linear gradient runs along, through the centre of `box` at
+ *  `rotation` degrees clockwise from left-to-right, long enough to span
+ *  the box whatever the angle. */
+export function gradientLine(rotation: number, box: Box): [number, number, number, number] {
+  const a = (rotation * Math.PI) / 180;
+  const cx = box.x + box.w / 2;
+  const cy = box.y + box.h / 2;
+  const half = (Math.abs(box.w * Math.cos(a)) + Math.abs(box.h * Math.sin(a))) / 2;
+  const dx = Math.cos(a) * half;
+  const dy = Math.sin(a) * half;
+  return [cx - dx, cy - dy, cx + dx, cy + dy];
+}
+
+/** A paint as a fill: a colour, or a gradient definition over `box` in user
+ *  space and a reference to it. */
+export function paintFill(paint: Paint, id: string, box: Box): { def: string; fill: string } {
+  const g = paint.gradient;
+  if (!g) return { def: '', fill: paint.color };
+  const stops = g.stops.map((st) => `<stop offset="${n(st.offset)}" stop-color="${st.color}"/>`).join('');
+  if (g.type === 'radial') {
+    const r = Math.hypot(box.w, box.h) / 2;
+    return {
+      def: `<radialGradient id="${id}" gradientUnits="userSpaceOnUse" cx="${n(box.x + box.w / 2)}" cy="${n(box.y + box.h / 2)}" r="${n(r)}">${stops}</radialGradient>`,
+      fill: `url(#${id})`,
+    };
+  }
+  const [x1, y1, x2, y2] = gradientLine(g.rotation, box);
+  return {
+    def: `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${n(x1)}" y1="${n(y1)}" x2="${n(x2)}" y2="${n(y2)}">${stops}</linearGradient>`,
+    fill: `url(#${id})`,
+  };
 }
 
 /** The site's mark as a `<symbol>`, from the same rects the favicon is. */
@@ -280,6 +400,49 @@ function logoSymbol(id: string): string {
   ).join('');
   return `<symbol id="${id}" viewBox="${LOGO_VIEWBOX}">${rects}</symbol>`;
 }
+
+/** The extra padding a circle needs so the disc contains the symbol and its
+ *  quiet zone: the square's half-diagonal less its half-side, rounded up. */
+export function circlePadding(size: number, margin: number): number {
+  const side = size + 2 * margin;
+  return Math.ceil((side * Math.SQRT2 - side) / 2);
+}
+
+/** A deterministic 0..1 value per cell, so the circle shape's decorative
+ *  ring is the same on every render of the same matrix. */
+const hash01 = (r: number, c: number, seed: number): number => {
+  let h = (r * 73856093) ^ (c * 19349663) ^ (seed * 83492791);
+  h = Math.imul(h ^ (h >>> 13), 0x5bd1e995);
+  h ^= h >>> 15;
+  return (h >>> 0) / 0x1_0000_0000;
+};
+
+/** The decorative modules in the ring between the symbol's quiet zone and
+ *  the disc's edge, in the module style: about half the cells, chosen by a
+ *  hash of their position and the matrix. */
+export function ringPath(m: Matrix, style: ModuleStyle, origin: number, margin: number, W: number): string {
+  const size = m.size;
+  const seed = darkSeed(m);
+  const R = W / 2;
+  const cx = W / 2;
+  const inner = { lo: origin - margin, hi: origin + size + margin };
+  const parts: string[] = [];
+  for (let r = 0; r < W; r++) {
+    for (let c = 0; c < W; c++) {
+      if (r >= inner.lo && r < inner.hi && c >= inner.lo && c < inner.hi) continue;
+      if (Math.hypot(c + 0.5 - cx, r + 0.5 - cx) > R - 0.5) continue;
+      if (hash01(r, c, seed) < 0.5) continue;
+      parts.push(moduleShape(style, c, r, r + c, { tl: true, tr: true, br: true, bl: true }));
+    }
+  }
+  return parts.join('');
+}
+
+const darkSeed = (m: Matrix): number => {
+  let k = 0;
+  for (let r = 0; r < m.size; r++) for (let c = 0; c < m.size; c++) if (m.get(r, c)) k = (k * 31 + r * m.size + c) | 0;
+  return k;
+};
 
 export interface Rendered {
   svg: string;
@@ -298,63 +461,92 @@ export interface Rendered {
 export function renderSvg(m: Matrix, o: RenderOptions, idPrefix = 'qr'): Rendered {
   const size = m.size;
   const margin = Math.max(0, o.margin);
-  const W = size + 2 * margin;
-  const fill = o.gradient ? `url(#${idPrefix}-grad)` : o.dark;
+  const padding = Math.max(o.padding, o.shape === 'circle' ? circlePadding(size, margin) : 0);
+  // where the symbol's top-left module sits
+  const origin = padding + margin;
+  const W = size + 2 * origin;
 
   const captionSize = size / 14;
   const lines = o.caption ? wrapCaption(o.caption, size, captionSize) : [];
   const lineHeight = captionSize * 1.25;
+  // a gap above and below the caption of its own making, so it clears the
+  // quiet zone and the edge even at margin 0 and padding 0
   const captionGap = lines.length ? captionSize * 0.5 : 0;
-  const H = W + (lines.length ? captionGap + lines.length * lineHeight + Math.max(margin, 1) : 0);
+  const H = W + (lines.length ? 2 * captionGap + lines.length * lineHeight : 0);
 
-  let plate = plateBox(size, o.plate);
+  const symbolBox: Box = { x: origin, y: origin, w: size, h: size };
+  const pageBox: Box = { x: 0, y: 0, w: W, h: H };
+  const dots = paintFill(o.dots, `${idPrefix}-dots`, symbolBox);
+  const ringPaint = o.cornersSquare ? paintFill(o.cornersSquare, `${idPrefix}-ring`, symbolBox) : dots;
+  const corePaint = o.cornersDot ? paintFill(o.cornersDot, `${idPrefix}-core`, symbolBox) : dots;
+  const bg = o.background ? paintFill(o.background, `${idPrefix}-bg`, pageBox) : null;
+
+  const imageMargin = o.imageMarginPx / Math.max(o.scale ?? o.pxPerModule, 0.001);
+  let plate = plateBox(size, o.plate, o.imageSize, imageMargin);
   let error: string | null = null;
   if (o.plate && !plate) {
     error = `the centre label needs more than ${Math.round(PLATE_SHARE_MAX * 100)}% of the symbol — shorten it, or force a larger version`;
     plate = null;
   }
+  const hole = plate && o.plate?.kind !== 'label' && o.hideBackgroundDots ? plate : null;
 
   const parts: string[] = [];
+  const crisp = o.style === 'classic' && o.cornersSquareType === 'square' && o.cornersDotType === 'square' && o.shape === 'square';
   parts.push(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${n(W)} ${n(H)}"` +
       (o.scale ? ` width="${n(W * o.scale)}" height="${n(H * o.scale)}"` : '') +
-      ` shape-rendering="${o.style === 'classic' && o.eyes === 'classic' ? 'crispEdges' : 'geometricPrecision'}">`,
+      ` shape-rendering="${crisp ? 'crispEdges' : 'geometricPrecision'}">`,
   );
-  const defs: string[] = [];
-  if (o.gradient) {
-    defs.push(
-      `<linearGradient id="${idPrefix}-grad" gradientUnits="userSpaceOnUse" x1="0" y1="${n(margin)}" x2="0" y2="${n(margin + size)}">` +
-        `<stop offset="0" stop-color="${o.gradient[0]}"/><stop offset="1" stop-color="${o.gradient[1]}"/></linearGradient>`,
-    );
-  }
+  // one definition per paint: inherited corners reuse the dots' paint, and
+  // its definition, under the one id
+  const defs = [...new Set([dots.def, ringPaint.def, corePaint.def, bg?.def ?? ''])].filter(Boolean);
   if (plate && o.plate?.kind === 'logo') defs.push(logoSymbol(`${idPrefix}-logo`));
   if (defs.length) parts.push(`<defs>${defs.join('')}</defs>`);
-  if (o.light) parts.push(`<rect width="${n(W)}" height="${n(H)}" fill="${o.light}"/>`);
-  parts.push(`<path class="modules" fill="${fill}" d="${modulesPath(m, o.style, margin)}"/>`);
-  parts.push(`<path class="eyes" fill="${fill}" fill-rule="evenodd" d="${eyesPath(size, o.eyes, margin)}"/>`);
+  if (bg) {
+    if (o.shape === 'circle') {
+      parts.push(`<circle class="background" cx="${n(W / 2)}" cy="${n(W / 2)}" r="${n(W / 2)}" fill="${bg.fill}"/>`);
+      if (H > W) parts.push(`<rect class="background" x="0" y="${n(W / 2)}" width="${n(W)}" height="${n(H - W / 2)}" fill="${bg.fill}"/>`);
+    } else {
+      parts.push(`<rect class="background" width="${n(W)}" height="${n(H)}" rx="${n((o.backgroundRound * W) / 2)}" fill="${bg.fill}"/>`);
+    }
+  }
+  if (o.shape === 'circle') parts.push(`<path class="ring" fill="${dots.fill}" d="${ringPath(m, o.style, origin, margin, W)}"/>`);
+  parts.push(`<path class="modules" fill="${dots.fill}" d="${modulesPath(m, o.style, origin, hole)}"/>`);
+  const finders = finderPaths(size, o.cornersSquareType, o.cornersDotType, origin);
+  parts.push(`<path class="eyes ring" fill="${ringPaint.fill}" fill-rule="evenodd" d="${finders.ring}"/>`);
+  if (finders.beads) parts.push(`<path class="eyes beads" fill="${ringPaint.fill}" d="${finders.beads}"/>`);
+  parts.push(`<path class="eyes core" fill="${corePaint.fill}" d="${finders.core}"/>`);
+  parts.push(`<path class="function" fill="${dots.fill}" fill-rule="evenodd" d="${alignmentPath(size, origin)}"/>`);
   if (plate && o.plate) {
-    const px = plate.x + margin;
-    const py = plate.y + margin;
+    const px = plate.x + origin;
+    const py = plate.y + origin;
     const rx = Math.min(plate.w, plate.h) * 0.22;
-    parts.push(`<rect class="plate" x="${n(px)}" y="${n(py)}" width="${n(plate.w)}" height="${n(plate.h)}" rx="${n(rx)}" fill="${o.plateFill}"/>`);
+    if (o.plate.kind !== 'image' || o.hideBackgroundDots) {
+      parts.push(`<rect class="plate" x="${n(px)}" y="${n(py)}" width="${n(plate.w)}" height="${n(plate.h)}" rx="${n(rx)}" fill="${o.plateFill}"/>`);
+    }
     if (o.plate.kind === 'logo') {
       const pad = 0.5;
       parts.push(
         `<use href="#${idPrefix}-logo" x="${n(px + pad)}" y="${n(py + pad)}" width="${n(plate.w - 2 * pad)}" height="${n(plate.h - 2 * pad)}"/>`,
       );
+    } else if (o.plate.kind === 'image') {
+      const pad = imageMargin;
+      parts.push(
+        `<image href="${escapeXml(o.plate.href)}" x="${n(px + pad)}" y="${n(py + pad)}" width="${n(plate.w - 2 * pad)}" height="${n(plate.h - 2 * pad)}" preserveAspectRatio="xMidYMid meet"/>`,
+      );
     } else {
       parts.push(
         `<text class="label" x="${n(px + plate.w / 2)}" y="${n(py + plate.h / 2)}" font-family="${escapeXml(o.font)}" font-size="${n(plate.fontSize)}"` +
-          ` font-weight="600" text-anchor="middle" dominant-baseline="central" fill="${o.dark}">${escapeXml(o.plate.text)}</text>`,
+          ` font-weight="600" text-anchor="middle" dominant-baseline="central" fill="${o.ink}">${escapeXml(o.plate.text)}</text>`,
       );
     }
   }
   if (lines.length) {
     const x = W / 2;
-    let y = W + captionGap + captionSize;
+    let y = origin + size + margin + captionGap + captionSize;
     for (const line of lines) {
       parts.push(
-        `<text class="caption" x="${n(x)}" y="${n(y)}" font-family="${escapeXml(o.font)}" font-size="${n(captionSize)}" text-anchor="middle" fill="${o.dark}">${escapeXml(line)}</text>`,
+        `<text class="caption" x="${n(x)}" y="${n(y)}" font-family="${escapeXml(o.font)}" font-size="${n(captionSize)}" text-anchor="middle" fill="${o.ink}">${escapeXml(line)}</text>`,
       );
       y += lineHeight;
     }

@@ -39,6 +39,8 @@
     /** the group's accessible name; required for `switch`, which has no
      *  visible label of its own */
     label,
+    /** id of the element that explains the control (a `Hint`'s tooltip). */
+    describedBy,
     class: klass = '',
   }: {
     options: readonly SegmentedOption[];
@@ -46,6 +48,7 @@
     onchange: (value: string) => void;
     look?: SegmentedLook;
     label?: string;
+    describedBy?: string;
     class?: string;
   } = $props();
 
@@ -69,7 +72,7 @@
   }
 </script>
 
-<div class="seg {look} {klass}" role={look === 'tabs' ? 'tablist' : 'group'} aria-label={label}>
+<div class="seg {look} {klass}" role={look === 'tabs' ? 'tablist' : 'group'} aria-label={label} aria-describedby={describedBy}>
   {#each options as o, i (o.value)}
     <button
       bind:this={buttons[i]}

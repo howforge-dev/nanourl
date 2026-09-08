@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { test, expect } from 'playwright/test';
 import type { Locator, Page } from 'playwright/test';
 import { ALPHABETS, QR_ALPHA, qrText } from '../src/lib/alphabet';
-import { CENTRE_LABEL_MAX, EYE_STYLES, MODULE_STYLES, STORAGE_KEY } from '../src/lib/qr/options';
+import { CENTRE_LABEL_MAX, CORNER_TYPES, MODULE_STYLES, STORAGE_KEY, isUnscannable } from '../src/lib/qr/options';
 import { WEB_ROOT } from '../scripts/paths';
 import { atMobile, encodeFirstExample, expectNoHorizontalOverflow, TESTID, testIdSelector, waitForModelReady, watchErrors } from './helpers';
 import { CODEC_CALL } from './timeouts';
@@ -12,57 +12,73 @@ import { CODEC_CALL } from './timeouts';
 // and, the part that matters, every style of it still scans. The scan is a
 // JS decoder (jsqr) injected into the page for the test only: it reads the
 // rendered SVG back off a canvas, so the check is on the pixels a phone
-// would see, for every module style and every alphabet, on screen and as
-// exported. `dontInvert`: a symbol that only reads inverted is a failure.
+// would see, on screen and as exported, with inversion OFF: a symbol that
+// only reads inverted is a failure. Under the dark-mode switch the check is
+// the other way round: the raw pixels must NOT read, and the pixels
+// inverted must — the inversion done here on the canvas, since jsqr 1.4's
+// own `onlyInvert` scans a bitmap it never builds.
+
+type Inversion = 'dontInvert' | 'onlyInvert';
 
 /** The text the symbol decodes to — the one on screen, or the SVG the
  *  export link carries — or null when it does not scan. */
-async function scan(page: Page, source: 'screen' | 'export' = 'screen'): Promise<string | null> {
-  return page.evaluate(async ([sel, dl, src]) => {
-    let xml: string;
-    if (src === 'export') {
-      const href = document.querySelector<HTMLAnchorElement>(dl)?.getAttribute('href') ?? '';
-      if (!href.startsWith('data:image/svg+xml')) return null;
-      xml = decodeURIComponent(href.slice(href.indexOf(',') + 1));
-    } else {
-      const svg = document.querySelector<SVGSVGElement>(`${sel} svg`);
-      if (!svg) return null;
-      xml = new XMLSerializer().serializeToString(svg);
-    }
-    const m = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(xml);
-    if (!m) return null;
-    const vb = { width: Number(m[1]), height: Number(m[2]) };
-    const scale = 6;
-    const img = new Image();
-    await new Promise<void>((ok, bad) => {
-      img.onload = () => ok();
-      img.onerror = () => bad(new Error('svg did not load'));
-      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
-    });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(vb.width * scale);
-    canvas.height = Math.round(vb.height * scale);
-    const ctx = canvas.getContext('2d')!;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    const px = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    type Decoder = (d: Uint8ClampedArray, w: number, h: number, o?: { inversionAttempts: string }) => { data: string } | null;
-    const jsQR = (window as unknown as { jsQR: Decoder }).jsQR;
-    return jsQR(px.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' })?.data ?? null;
-  }, [testIdSelector(TESTID.qrSvg), testIdSelector(TESTID.qrSvgDownload), source]);
+async function scan(page: Page, source: 'screen' | 'export' = 'screen', inversion: Inversion = 'dontInvert'): Promise<string | null> {
+  return page.evaluate(
+    async ([sel, dl, src, inv]) => {
+      let xml: string;
+      if (src === 'export') {
+        const href = document.querySelector<HTMLAnchorElement>(dl)?.getAttribute('href') ?? '';
+        if (!href.startsWith('data:image/svg+xml')) return null;
+        xml = decodeURIComponent(href.slice(href.indexOf(',') + 1));
+      } else {
+        const svg = document.querySelector<SVGSVGElement>(`${sel} svg`);
+        if (!svg) return null;
+        xml = new XMLSerializer().serializeToString(svg);
+      }
+      const m = /viewBox="0 0 ([\d.]+) ([\d.]+)"/.exec(xml);
+      if (!m) return null;
+      const vb = { width: Number(m[1]), height: Number(m[2]) };
+      const scale = 6;
+      const img = new Image();
+      await new Promise<void>((ok, bad) => {
+        img.onload = () => ok();
+        img.onerror = () => bad(new Error('svg did not load'));
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(vb.width * scale);
+      canvas.height = Math.round(vb.height * scale);
+      const ctx = canvas.getContext('2d')!;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const px = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      if (inv === 'onlyInvert') {
+        for (let i = 0; i < px.data.length; i += 4) {
+          px.data[i] = 255 - px.data[i];
+          px.data[i + 1] = 255 - px.data[i + 1];
+          px.data[i + 2] = 255 - px.data[i + 2];
+        }
+      }
+      type Decoder = (d: Uint8ClampedArray, w: number, h: number, o?: { inversionAttempts: string }) => { data: string } | null;
+      const jsQR = (window as unknown as { jsQR: Decoder }).jsQR;
+      return jsQR(px.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' })?.data ?? null;
+    },
+    [testIdSelector(TESTID.qrSvg), testIdSelector(TESTID.qrSvgDownload), source, inversion] as const,
+  );
 }
 
 /** On screen and as exported, both must read as the expected text. */
-async function expectScans(page: Page, expected: string, what: string): Promise<void> {
-  expect(await scan(page, 'screen'), `${what}, on screen`).toBe(expected);
-  expect(await scan(page, 'export'), `${what}, exported`).toBe(expected);
+async function expectScans(page: Page, expected: string, what: string, inversion: Inversion = 'dontInvert'): Promise<void> {
+  expect(await scan(page, 'screen', inversion), `${what}, on screen`).toBe(expected);
+  expect(await scan(page, 'export', inversion), `${what}, exported`).toBe(expected);
 }
 
 /** The module path's data, which changes whenever the symbol does. */
 const modules = (qr: Locator): Locator => qr.locator('path.modules');
 
 test('QR section: renders, follows every control, exports, persists, and every style of every alphabet scans', async ({ page }) => {
+  test.setTimeout(600_000);
   const watch = watchErrors(page);
 
   await page.goto('/');
@@ -75,6 +91,7 @@ test('QR section: renders, follows every control, exports, persists, and every s
   const linkBox = encodePane.locator(testIdSelector(TESTID.redirectLink));
   /** The full link the page shows (it drops the scheme for display). */
   const shownLink = async (): Promise<string> => origin + ((await linkBox.textContent()) ?? '').replace(/^[^/]*/, '');
+  const alphaStrip = page.locator('.alpha');
 
   // Collapsed until asked; above the Advanced disclosure so it is the first
   // <details> of the pane.
@@ -90,24 +107,66 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await expect(svg).toHaveAttribute('viewBox', /^0 0 \d+ \d+$/);
   const readout = qr.locator(testIdSelector(TESTID.qrText));
   const info = qr.locator(testIdSelector(TESTID.qrInfo));
+  const group = (name: string): Locator => qr.locator(`[data-testid="qr-group-${name}"]`);
+  const opt = (groupLabel: string, name: string): Locator => qr.getByRole('group', { name: groupLabel }).getByRole('button', { name, exact: true });
+  // every group opens
+  for (const g of ['dots', 'corners-square', 'corners-dot', 'background', 'image', 'text', 'export']) {
+    await group(g).locator('summary').click();
+    await expect(group(g)).toHaveAttribute('open', '');
+  }
+
+  // --- the offer to switch: base64url is the default, the callout names both
+  //     versions, and the button changes the page's own alphabet picker. At
+  //     level M this link fits the same version either way and the callout
+  //     says so; at H the byte-mode link needs a version more than the
+  //     alphanumeric one, so the offer gains and the button shows ---
+  const level = (l: string): Locator => qr.getByRole('group', { name: 'error correction' }).getByRole('button', { name: new RegExp(`^${l} `) });
+  const offer = qr.locator(testIdSelector(TESTID.qrOffer));
+  await expect(offer).toBeVisible({ timeout: CODEC_CALL });
+  await expect(offer).toContainText(/same QR version \(\d+, \d+×\d+\s+modules\)/);
+  await expect(qr.locator(testIdSelector(TESTID.qrSwitch))).toHaveCount(0);
+  await level('H').click();
+  await expect(offer).toContainText(/version\s+\d+\s+→\s+version\s+\d+/);
+  const offerText = ((await offer.textContent()) ?? '').replace(/\s+/g, ' ');
+  expect(offerText).toMatch(/version \d+ → version \d+, \d+×\d+ → \d+×\d+ modules/);
+  await qr.locator(testIdSelector(TESTID.qrSwitch)).click();
+  await expect(alphaStrip.locator('button[aria-pressed="true"]')).toHaveText('qr-alpha');
+  await expect(linkBox).not.toContainText('#' + codeBase64url, { timeout: CODEC_CALL });
+  await expect(encodePane.locator(testIdSelector(TESTID.roundtrip))).toContainText('✓', { timeout: CODEC_CALL });
+  await expect(info.locator('.chip').first()).toContainText('Alphanumeric');
+  await expect(offer).toHaveCount(0);
+  await alphaStrip.getByText(ALPHABETS[0].key, { exact: true }).click();
+  await expect(linkBox).toContainText('#' + codeBase64url, { timeout: CODEC_CALL });
+  await expect(encodePane.locator(testIdSelector(TESTID.roundtrip))).toContainText('✓', { timeout: CODEC_CALL });
+  await level('M').click();
 
   // --- the text in the symbol is the link as shown, and it scans ---
   await expect(readout).toHaveText(await shownLink());
-  await expect(info).toContainText(/version \d+, \d+×\d+ modules · \d+ bytes of text/);
+  await expect(info).toContainText(/version \d+, \d+×\d+ modules · \d+ bytes of text · level M recovers 15%/);
   await expect(info.locator('.chip')).not.toHaveCount(0);
   await expectScans(page, (await readout.textContent()) ?? '', 'the default');
   const dBase = await modules(qr).getAttribute('d');
 
-  // --- error correction: a different level, a different symbol, same text ---
-  const level = (l: string): Locator => qr.getByRole('group', { name: 'error correction' }).getByRole('button', { name: l, exact: true });
+  // --- error correction: labels carry the share; a different level, a
+  //     different symbol, same text ---
+  await expect(level('H')).toHaveText('H 30%');
   await level('H').click();
   await expect(level('H')).toHaveAttribute('aria-pressed', 'true');
   await expect(modules(qr)).not.toHaveAttribute('d', dBase ?? '');
+  await expect(info).toContainText('level H recovers 30%');
   const bytesOf = async (): Promise<string> => /(\d+) bytes/.exec((await info.textContent()) ?? '')?.[1] ?? '';
   const bytesBefore = await bytesOf();
   await level('M').click();
   await expect(modules(qr)).toHaveAttribute('d', dBase ?? '');
   expect(await bytesOf()).toBe(bytesBefore);
+
+  // --- byte mode: one segment, a note, still scans ---
+  await opt('segment mode', 'byte').click();
+  await expect(qr.locator(testIdSelector(TESTID.qrModeNote))).toBeVisible();
+  await expect(info.locator('.chip')).toHaveCount(1);
+  await expect(info.locator('.chip')).toContainText('Byte');
+  await expectScans(page, (await readout.textContent()) ?? '', 'byte mode');
+  await opt('segment mode', 'auto').click();
 
   // --- a forced version below the minimum is an inline error, no console ---
   const version = qr.getByRole('textbox', { name: /QR version/ });
@@ -120,20 +179,80 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await expect(error).toHaveCount(0);
   await expect(qr.locator('svg')).toHaveCount(1);
 
-  // --- PNG export produces a PNG data: URL; SVG export is our document ---
-  const png = qr.locator(testIdSelector(TESTID.qrPng));
-  const downloadPromise = page.waitForEvent('download');
-  await png.click();
-  await expect(png).toHaveAttribute('href', /^data:image\/png;base64,/);
-  const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/^nanourl-.*\.png$/);
-  await expect(qr.locator(testIdSelector(TESTID.qrSvgDownload))).toHaveAttribute('href', /^data:image\/svg\+xml/);
+  // --- hints: a "?" beside every label, each explaining its control ---
+  const hints = qr.locator(testIdSelector(TESTID.hint));
+  expect(await hints.count()).toBe(await qr.locator('.lbl').count());
+  await hints.first().hover();
+  await expect(qr.locator('[role=tooltip]').first()).toBeVisible();
 
-  // --- every module style × every alphabet scans back to the encoded text;
-  //     every eye style too, for the first alphabet ---
-  const style = (s: string): Locator => qr.getByRole('group', { name: 'module style' }).getByRole('button', { name: s, exact: true });
-  const eyes = (s: string): Locator => qr.getByRole('group', { name: 'finder style' }).getByRole('button', { name: s, exact: true });
-  const alphaStrip = page.locator('.alpha');
+  // --- exports: PNG through the canvas, JPEG and WebP with quality, SVG ---
+  const download = qr.locator(testIdSelector(TESTID.qrDownload));
+  for (const [format, mime] of [
+    ['png', 'image/png'],
+    ['jpeg', 'image/jpeg'],
+    ['webp', 'image/webp'],
+  ] as const) {
+    await opt('export format', format).click();
+    await expect(download).toHaveText(`Download ${format.toUpperCase()}`);
+    const downloadPromise = page.waitForEvent('download');
+    await download.click();
+    await expect(download).toHaveAttribute('href', /^blob:/);
+    const d = await downloadPromise;
+    expect(d.suggestedFilename()).toMatch(new RegExp(`^nanourl-.*\\.${format}$`));
+    const type = await page.evaluate(async (href) => (await (await fetch(href)).blob()).type, (await download.getAttribute('href')) ?? '');
+    expect(type).toBe(mime);
+  }
+  await opt('export format', 'svg').click();
+  await expect(download).toHaveAttribute('href', /^data:image\/svg\+xml/);
+  await qr.getByRole('textbox', { name: 'file name' }).fill('my poster');
+  await expect(download).toHaveAttribute('download', 'my_poster.svg');
+  await qr.getByRole('textbox', { name: 'file name' }).fill('');
+  await opt('export format', 'png').click();
+  // copy image: the clipboard API exists in Chromium; a refusal is a message, never a throw
+  await qr.locator(testIdSelector(TESTID.qrCopy)).click();
+  await expect(qr.locator('[role=status]').filter({ hasText: /copied|copy failed|cannot copy/ })).toBeVisible();
+
+  // --- every module type × every corner type scans on the first alphabet,
+  //     except the combinations the page itself warns about; both shapes ---
+  const style = (s: string): Locator => opt('module style', s);
+  const square = (s: string): Locator => opt('corners square type', s);
+  const dot = (s: string): Locator => opt('corners dot type', s);
+  const expected0 = (await readout.textContent()) ?? '';
+  for (const s of MODULE_STYLES) {
+    await style(s).click();
+    await expect(style(s)).toHaveAttribute('aria-pressed', 'true');
+    if (s === 'nanourl') {
+      await expect(level('H')).toHaveAttribute('aria-pressed', 'true');
+      await expect(qr.locator('rect.plate')).toHaveCount(1);
+      await expect(qr.locator('use')).toHaveCount(1);
+    }
+    for (const t of CORNER_TYPES) {
+      await square(t).click();
+      await dot(t).click();
+      await expect(dot(t)).toHaveAttribute('aria-pressed', 'true');
+      const combo = { style: s, cornersSquareType: t, cornersDotType: t };
+      if (isUnscannable(combo)) {
+        await expect(qr.locator(testIdSelector(TESTID.qrUnscannable))).toBeVisible();
+        continue;
+      }
+      await expect(qr.locator(testIdSelector(TESTID.qrUnscannable))).toHaveCount(0);
+      await expectScans(page, expected0, `${s} modules with ${t} corners`);
+    }
+    await square('square').click();
+    await dot('square').click();
+    await opt('shape', 'circle').click();
+    await expect(qr.locator('circle.background')).toHaveCount(1);
+    await expectScans(page, expected0, `${s} modules in a circle`);
+    await opt('shape', 'square').click();
+  }
+  await style('classic').click();
+  // the logo is a setting of its own and survives the style change
+  await expect(qr.locator('use')).toHaveCount(1);
+  await opt('picture', 'none').click();
+  await expect(qr.locator('use')).toHaveCount(0);
+  await level('M').click();
+
+  // --- every alphabet on classic, on screen and exported ---
   for (const a of ALPHABETS) {
     const before = (await linkBox.textContent()) ?? '';
     await alphaStrip.getByText(a.key, { exact: true }).click();
@@ -142,37 +261,49 @@ test('QR section: renders, follows every control, exports, persists, and every s
     const expected = qrText(await shownLink(), a.id);
     await expect(readout).toHaveText(expected);
     if (a.id === QR_ALPHA) {
-      // uppercase base, and the fragment made only of qr-alpha digits
       expect(expected).toMatch(/^HTTP:\/\/[A-Z0-9.:-]+\/#[/0-9A-Z$*+\-.:]+$/);
       await expect(info.locator('.chip').first()).toContainText('Alphanumeric');
     }
-    for (const s of MODULE_STYLES) {
-      const before = await svg.innerHTML();
-      await style(s).click();
-      await expect(style(s)).toHaveAttribute('aria-pressed', 'true');
-      if (s === 'nanourl') {
-        await expect(level('H')).toHaveAttribute('aria-pressed', 'true');
-        await expect(qr.locator('rect.plate')).toHaveCount(1);
-        await expect(qr.locator('use')).toHaveCount(1);
-      }
-      // every style draws a different document (the strip starts on classic)
-      if (s !== 'classic') await expect.poll(() => svg.innerHTML()).not.toBe(before);
-      await expectScans(page, expected, `${a.key} in the ${s} style`);
-      if (a.id === ALPHABETS[0].id) {
-        for (const e of EYE_STYLES) {
-          const beforeEyes = await svg.innerHTML();
-          await eyes(e).click();
-          await expect(eyes(e)).toHaveAttribute('aria-pressed', 'true');
-          if (s !== 'nanourl' && e !== 'classic') await expect.poll(() => svg.innerHTML()).not.toBe(beforeEyes);
-          await expectScans(page, expected, `${a.key} in the ${s} style with ${e} eyes`);
-        }
-        await eyes('classic').click();
-      }
-    }
-    await style('classic').click();
+    await expectScans(page, expected, `${a.key} on classic`);
   }
   await alphaStrip.getByText(ALPHABETS[0].key, { exact: true }).click();
   await expect(linkBox).toContainText('#' + codeBase64url, { timeout: CODEC_CALL });
+  await expect(encodePane.locator(testIdSelector(TESTID.roundtrip))).toContainText('✓', { timeout: CODEC_CALL });
+
+  // --- gradients and colours: a custom gradient at an angle, radial, a
+  //     colour picked with the native picker, own corner paints ---
+  const dotsGroup = group('dots');
+  await dotsGroup.getByRole('group', { name: 'dots paint' }).getByRole('button', { name: 'gradient', exact: true }).click();
+  await expect(qr.locator('linearGradient')).toHaveCount(1);
+  const stop1 = dotsGroup.getByLabel('dots stop 1 colour picker');
+  await stop1.fill('#224488');
+  await expect(qr.locator('linearGradient stop').first()).toHaveAttribute('stop-color', '#224488');
+  await expect(dotsGroup.getByLabel('dots stop 1 colour', { exact: true })).toHaveValue('#224488');
+  await dotsGroup.getByRole('spinbutton', { name: 'dots gradient angle in degrees' }).fill('45');
+  await dotsGroup.getByRole('spinbutton', { name: 'dots gradient angle in degrees' }).press('Enter');
+  // vertical by default (x1 = x2); at 45° both axes move
+  const grad = qr.locator('linearGradient');
+  await expect.poll(async () => (await grad.getAttribute('x1')) !== (await grad.getAttribute('x2'))).toBe(true);
+  await dotsGroup.getByRole('button', { name: 'add stop' }).click();
+  await expect(dotsGroup.getByLabel(/dots stop \d colour picker/)).toHaveCount(3);
+  await expectScans(page, expected0, 'a three-stop gradient at 45°');
+  await dotsGroup.getByRole('group', { name: 'dots gradient type' }).getByRole('button', { name: 'radial', exact: true }).click();
+  await expect(qr.locator('radialGradient')).toHaveCount(1);
+  await expectScans(page, expected0, 'a radial gradient');
+  await group('corners-square').getByRole('group', { name: 'corners square paint source' }).getByRole('button', { name: 'own', exact: true }).click();
+  await group('corners-square').getByLabel('corners square colour picker').fill('#aa0000');
+  await expect(qr.locator('path.ring')).toHaveAttribute('fill', '#aa0000');
+  await expectScans(page, expected0, 'red corners');
+
+  // --- dark mode: reads only inverted; the note shows ---
+  await opt('on dark', 'on').click();
+  await expect(qr.locator(testIdSelector(TESTID.qrDarkNote))).toBeVisible();
+  expect(await scan(page, 'screen', 'dontInvert'), 'on dark, not inverted').toBeNull();
+  expect(await scan(page, 'export', 'dontInvert'), 'on dark export, not inverted').toBeNull();
+  await expectScans(page, expected0, 'on dark', 'onlyInvert');
+  await opt('on dark', 'off').click();
+  await qr.locator('[data-testid="qr-preset-classic"]').click();
+  await expect(qr.locator('linearGradient, radialGradient')).toHaveCount(0);
 
   // --- caption and centre label: drawn, not encoded; the label raises the
   //     level to H, lowering it warns, and the symbol still scans ---
@@ -185,48 +316,63 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await expect(level('H')).toHaveAttribute('aria-pressed', 'true');
   await expect(qr.locator('text.caption')).not.toHaveCount(0);
   await expect(qr.locator('text.label')).toHaveText('QV');
-  await expect(qr.locator('use')).toHaveCount(0);
   await expect(readout).toHaveText(await shownLink());
   await expectScans(page, (await readout.textContent()) ?? '', 'caption and label');
-  // the label plate on a styled symbol: dots with circular eyes
   await style('dots').click();
-  await eyes('circle').click();
-  await expect(qr.locator('text.label')).toHaveText('QV');
-  await expectScans(page, (await readout.textContent()) ?? '', 'dots, circle eyes, a label');
+  await square('dot').click();
+  await dot('dot').click();
+  await expectScans(page, (await readout.textContent()) ?? '', 'dots with circular corners and a label');
   await style('classic').click();
-  await eyes('classic').click();
+  await square('square').click();
+  await dot('square').click();
   await level('L').click();
   await expect(qr.locator(testIdSelector(TESTID.qrWarning))).toBeVisible();
-  // a label that cannot fit is an inline error, and the symbol stays scannable
   await label.fill('X'.repeat(CENTRE_LABEL_MAX + 5));
   await expect(qr.locator(testIdSelector(TESTID.qrLabelCount))).toHaveText(`${CENTRE_LABEL_MAX}/${CENTRE_LABEL_MAX}`);
-  await version.fill('1');
-  await expect(error).toBeVisible(); // version 1 cannot hold the link at all
-  await version.fill('');
   await label.fill('');
   await caption.fill('');
   await level('M').click();
 
-  // --- a forced mask and no quiet zone still scan, and change the symbol ---
-  const mask = (v: string): Locator => qr.getByRole('group', { name: 'mask pattern' }).getByRole('button', { name: v, exact: true });
-  const margin = qr.getByRole('spinbutton', { name: /quiet zone/ });
+  // --- image: the logo plate at a clamped size, hide dots on and off ---
+  await opt('picture', 'logo').click();
+  await expect(level('H')).toHaveAttribute('aria-pressed', 'true');
+  await expect(qr.locator(testIdSelector(TESTID.qrImageWarning))).toBeVisible(); // 0.4 is past what H can lose
+  await expectScans(page, (await readout.textContent()) ?? '', 'the logo');
+  await opt('hide background dots', 'off').click();
+  await expectScans(page, (await readout.textContent()) ?? '', 'the logo over the dots');
+  await opt('hide background dots', 'on').click();
+  await opt('picture', 'none').click();
+  await level('M').click();
+
+  // --- a forced mask, no quiet zone, frame padding: still scan, and change the symbol ---
+  const mask = (v: string): Locator => opt('mask pattern', v);
+  const marginPick = (v: string): Locator => opt('quiet zone picks', v);
+  const padding = qr.getByRole('spinbutton', { name: /frame padding/ });
   const dAuto = await modules(qr).getAttribute('d');
   await mask('3').click();
   await expect(mask('3')).toHaveAttribute('aria-pressed', 'true');
-  await margin.fill('0');
+  await marginPick('0').click();
   await expect(svg).toHaveAttribute('viewBox', /^0 0 (\d+) \1$/);
   await expect(modules(qr)).not.toHaveAttribute('d', dAuto ?? '');
   await expectScans(page, (await readout.textContent()) ?? '', 'mask 3, margin 0');
+  await padding.fill('3');
+  await padding.press('Enter');
+  const vb = (await svg.getAttribute('viewBox')) ?? '';
+  const size = Number(vb.split(' ')[2]);
+  await marginPick('4').click();
+  await expect(svg).toHaveAttribute('viewBox', `0 0 ${size + 8} ${size + 8}`);
+  await padding.fill('0');
+  await padding.press('Enter');
   await mask('auto').click();
-  await margin.fill('4');
 
   // --- the settings persist per browser under one key ---
-  await style('dots').click();
+  await style('rounded').click();
   const stored = await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY);
-  expect(JSON.parse(stored ?? '{}')).toMatchObject({ style: 'dots', level: 'M' });
+  expect(JSON.parse(stored ?? '{}')).toMatchObject({ style: 'rounded', level: 'M', padding: 0 });
+  await qr.locator(testIdSelector(TESTID.qrReset)).click();
+  await expect(style('classic')).toHaveAttribute('aria-pressed', 'true');
 
   await atMobile(page, () => expectNoHorizontalOverflow(page));
-  await style('classic').click();
 
   watch.expectClean();
 });

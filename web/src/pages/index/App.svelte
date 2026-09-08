@@ -70,7 +70,7 @@
   testid={TESTID.paneEncode}
   style={tab === 'Encode' ? undefined : 'display:none'}
 >
-  <Encode {codec} {alpha} />
+  <Encode {codec} {alpha} onalpha={(a) => (alpha = a)} />
 </Card>
 <Card
   id="panel-Decode"

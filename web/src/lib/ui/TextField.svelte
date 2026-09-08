@@ -28,6 +28,8 @@
     autocorrect,
     /** proportional type instead of monospace */
     sans = false,
+    /** id of the element that explains the field (a `Hint`'s tooltip). */
+    describedBy,
     class: klass = '',
     style,
     oninput,
@@ -49,6 +51,7 @@
     autocapitalize?: 'off';
     autocorrect?: 'off';
     sans?: boolean;
+    describedBy?: string;
     class?: string;
     style?: string;
     oninput?: (e: Event) => void;
@@ -91,6 +94,7 @@
     {autocapitalize}
     {autocorrect}
     aria-label={ariaLabel}
+    aria-describedby={describedBy}
     {oninput}
     {onchange}
     {onkeydown}

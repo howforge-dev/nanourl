@@ -146,7 +146,10 @@
     tabindex="-1"
     bind:this={dialogEl}
   >
-    <div class="lead" id="redirect-title">decoding <span class="code">#{shown}</span>…</div>
+    <div class="lead" id="redirect-title">
+      {target ? 'decoded' : note ? 'could not decode' : 'decoding'}
+      <span class="code">#{shown}</span>{target || note ? '' : '…'}
+    </div>
     <div class="target" data-testid={TESTID.redirectTarget}>{target}</div>
     <!-- aria-live: the countdown ("redirecting in 2…"), the decoded target and
          any error are the only things that change here, and a screen-reader

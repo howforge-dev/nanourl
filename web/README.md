@@ -106,7 +106,7 @@ served `no-cache` so the browser's update check always sees the current file.
 |---|---|
 | simd128 | any modern wasm engine; the universal fallback |
 | relaxed-simd | Chrome 114+, Firefox 120+; feature-probed |
-| threads, `min(cores - 1, 8)` workers | cross-origin isolation |
+| threads, `min(cores - 1, 4)` workers | cross-origin isolation |
 
 The order of preference is threads, relaxed, simd. If the threads tier fails
 at runtime (memory allocation, worker spawn, the ready handshake, the

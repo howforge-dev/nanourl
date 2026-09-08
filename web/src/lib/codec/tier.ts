@@ -32,16 +32,18 @@ export const hasRelaxedSimd = (): boolean => {
 /**
  * Hard cap on compute workers, everywhere.
  *
- * One thread per core minus the coordinator, but never more than this: past
- * ~8 the shared block cursor's contention eats the gain, and every
- * worker reserves a 1 MiB stack + TLS block inside the shared memory
- * `worker.ts` sizes up front — so the cap is also what bounds that
- * reservation. Written by hand in four places before this; `worker.ts` sizes
- * memory from it and `numbers-lib.ts` picks the reference bench row with it,
- * and a cap raised in one of three copies leaves the other two quietly
- * describing the old one.
+ * One thread per core minus the coordinator, but never more than this. Two
+ * reasons the cap is low: past a handful of workers the shared block cursor's
+ * contention eats the gain, and `navigator.hardwareConcurrency` is not
+ * trustworthy — Brave randomises it, and other browsers clamp or round it —
+ * so the core count can only ever lower the number, never raise it beyond a
+ * value every real device can carry. Every worker also reserves a 1 MiB stack
+ * + TLS block inside the shared memory `worker.ts` sizes up front, so the cap
+ * bounds that reservation too. `worker.ts` sizes memory from this constant;
+ * a cap changed anywhere else would leave that sizing describing the old one.
+ * `/bench.html?w=N` bypasses it on purpose, for measurement.
  */
-export const MAX_WORKERS = 8;
+export const MAX_WORKERS = 4;
 
 export const workerCount = (isolated: boolean, cores: number): number =>
   isolated ? Math.max(0, Math.min(cores - 1, MAX_WORKERS)) : 0;

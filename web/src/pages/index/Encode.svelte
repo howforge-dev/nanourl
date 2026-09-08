@@ -6,7 +6,7 @@
   import { untrack } from 'svelte';
   import type { Codec } from '../../lib/codec/client';
   import type { Alphabet, EncodeResult } from '../../lib/codec/types';
-  import { fragmentFor } from '../../lib/alphabet';
+  import { QR_ALPHA, fragmentFor } from '../../lib/alphabet';
   import CopyButton from '../../lib/ui/CopyButton.svelte';
   import PendingNote from '../../lib/ui/PendingNote.svelte';
   import CostChips from '../../lib/ui/CostChips.svelte';
@@ -22,7 +22,7 @@
   import { debounce, INPUT_DEBOUNCE_MS } from '../../lib/ui/debounce';
   import { createLatest } from '../../lib/latest';
 
-  let { codec, alpha }: { codec: Codec | null; alpha: Alphabet } = $props();
+  let { codec, alpha, onalpha }: { codec: Codec | null; alpha: Alphabet; onalpha?: (a: Alphabet) => void } = $props();
 
   let url = $state('');
   let busy = $state(false);
@@ -30,6 +30,9 @@
   let hasOutput = $state(false);
   let result: EncodeResult | null = $state(null);
   let resultAlpha: Alphabet | null = $state(null);
+  // The same URL in qr-alpha, encoded beside a result in another alphabet so
+  // the QR section can show what switching would save; '' while unknown.
+  let altCode = $state('');
   let ms = $state(0);
   let roundtripTokens = $state(0);
   let roundtripUrl = $state('');
@@ -50,11 +53,13 @@
   // Where the URL's bits went, rendered the one way the observatory's coder
   // stepper renders it too (lib/format.ts's costParts).
   let cost = $derived.by(() => (result ? costParts(result.model_bits, result.coded_bits) : null));
+  const linkFor = (code: string, a: Alphabet): string => location.origin + location.pathname + '#' + fragmentFor(code, a);
   let redirectLink = $derived.by(() => {
     const r = result;
     if (!r || resultAlpha === null) return '';
-    return location.origin + location.pathname + '#' + fragmentFor(r.coded, resultAlpha);
+    return linkFor(r.coded, resultAlpha);
   });
+  let altLink = $derived(altCode && resultAlpha !== null && resultAlpha !== QR_ALPHA ? linkFor(altCode, QR_ALPHA) : '');
 
   const latest = createLatest();
 
@@ -80,6 +85,7 @@
     hasOutput = true;
     result = r;
     resultAlpha = myAlpha;
+    altCode = '';
     ms = elapsed;
     selectedTok = null;
     roundtripTokens = 0;
@@ -101,6 +107,11 @@
       roundtripTokens = 0;
       roundtripUrl = d.ok ? d.url : '';
       roundtrip = 'fail';
+    }
+    if (myAlpha !== QR_ALPHA) {
+      const alt = await codec.encode(u, QR_ALPHA);
+      if (!run.current) return;
+      if (alt.ok) altCode = alt.coded;
     }
   }
 
@@ -165,7 +176,7 @@
     <span class="stat"><b>{result.coded_bits}</b> coded bits</span>
   </div>
   {#if resultAlpha !== null}
-    <Qr link={redirectLink} code={result.coded} alpha={resultAlpha} />
+    <Qr link={redirectLink} {altLink} code={result.coded} alpha={resultAlpha} onalpha={(a) => onalpha?.(a)} />
   {/if}
   <details data-testid={TESTID.advanced}>
     <summary>Advanced — per-token cost and build info</summary>
