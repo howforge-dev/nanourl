@@ -11,6 +11,9 @@
   const inflationPerToken = -Math.log2(1 - floorFrac);
   const inflationPerUrl = inflationPerToken * numbers.meanTokensPerUrl;
   const floorFrac16 = numbers.vocab / 2 ** 16;
+  /** The second figure's window: the first token index and the pieces it shows. */
+  const LATE_FROM = 13;
+  const late = numbers.hn.tokens.slice(LATE_FROM, LATE_FROM + 4);
 </script>
 
 <Section id="coder">
@@ -87,11 +90,13 @@
     shown where it sits on every line:
   </p>
   <ScrollBox class="surface fig">
-    <CoderRows rows={4} from={13} detailed />
+    <CoderRows rows={4} from={LATE_FROM} detailed />
     <div class="cap">
-      Where a kept slice sits depends only on which piece the URL actually has next. The decoder,
-      holding just <i>v</i> and the model, reads the first token off the first row, feeds it back to
-      slice the next, and walks the nesting out.
+      Where a kept slice sits depends only on which piece the URL actually has next. The decoder
+      holds just <i>v</i> and the model: on the first row <i>v</i> falls inside
+      <code>{late[0].piece}</code>'s slice, so that is token {LATE_FROM + 1}; it feeds that piece back,
+      slices the next line, finds <i>v</i> in <code>{late[1].piece}</code>'s slice, and walks the nesting
+      out the same way.
     </div>
   </ScrollBox>
 
