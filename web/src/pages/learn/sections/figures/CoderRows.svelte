@@ -14,11 +14,11 @@
   const X0 = 20;
   const X1 = 620;
   const W = X1 - X0;
-  const ROW_H = 60;
+  const ROW_H = 64;
   /** the bar's stroke width; it reaches BAR/2 either side of its own line */
-  const BAR = 8;
+  const BAR = 10;
   /** a row label's baseline, above its bar */
-  const LABEL_DY = 14;
+  const LABEL_DY = 16;
   /** `.big` (--fs-sm) mono ink, relative to its own baseline */
   const LABEL_ASC = 11;
   /** a kept slice narrower than this is drawn this wide: a late token's slice
@@ -30,7 +30,7 @@
   const toks = $derived(numbers.hn.tokens.slice(0, rows));
   const y = (i: number) => 30 + i * ROW_H;
   /** the ink-free band under bar `i`, stopping short of row `i+1`'s label */
-  const gapTop = (i: number) => y(i) + BAR / 2 + 3;
+  const gapTop = (i: number) => y(i) + BAR / 2 + 2;
   const gapBot = (i: number) => y(i + 1) - LABEL_DY - LABEL_ASC - 3;
   /** the drawn slice edges: the real ones, widened to MIN_SLICE inside the bar */
   const slice = (t: { clo?: number; chi?: number }) => {
@@ -39,11 +39,16 @@
     if (x2 - x1 < MIN_SLICE) x2 = Math.min(X1, x1 + MIN_SLICE);
     return { x1, x2 };
   };
+  /** the slice as a share of its line, worded for the label beside it */
+  const share = (t: { clo?: number; chi?: number }) => {
+    const p = ((t.chi ?? 1) - (t.clo ?? 0)) * 100;
+    return p >= 99.5 ? '~100% kept' : p >= 10 ? `${p.toFixed(0)}% kept` : `${p.toFixed(1)}% kept`;
+  };
   // Height reaches just past the LAST row, not one whole row past it: a row's
   // worth of empty card below the final line reads as a row that failed to
   // render. `detailed` adds the two lanes below the last bar: v's own label,
   // then the caption naming it.
-  const height = $derived(y(Math.max(0, rows - 1)) + (detailed ? 56 : 16));
+  const height = $derived(y(Math.max(0, rows - 1)) + (detailed ? 56 : 18));
   // v is one number, but each row's line is a different zoom of [0,1), so v
   // sits at a different fraction of each bar. Working back from the last row,
   // where it is the midpoint of the kept slice: in row i it is that position
@@ -64,33 +69,38 @@
 <svg viewBox="0 0 640 {height}" width="640" height={height}>
   {#each toks as t, i (t.piece + i)}
     {@const s = slice(t)}
-    {#if i < toks.length - 1}
+    {@const last = i === toks.length - 1}
+    {#if !last}
       <!-- The zoom: this row's kept slice becomes the whole of the next row's
            line. The funnel stops at the next label's lane so it never runs
            through the words. -->
       <polygon
         points="{s.x1},{gapTop(i)} {s.x2},{gapTop(i)} {X1},{gapBot(i)} {X0},{gapBot(i)}"
         fill={COLOR.acc}
-        fill-opacity="0.08"
+        fill-opacity="0.22"
       />
-      <line x1={s.x1} y1={gapTop(i)} x2={X0} y2={gapBot(i)} stroke={COLOR.line2} stroke-dasharray="3,3" />
-      <line x1={s.x2} y1={gapTop(i)} x2={X1} y2={gapBot(i)} stroke={COLOR.line2} stroke-dasharray="3,3" />
+      <line x1={s.x1} y1={gapTop(i)} x2={X0} y2={gapBot(i)} stroke={COLOR.acc} stroke-opacity="0.7" />
+      <line x1={s.x2} y1={gapTop(i)} x2={X1} y2={gapBot(i)} stroke={COLOR.acc} stroke-opacity="0.7" />
+      {#if i === 0}
+        <text x={(X0 + X1) / 2} y={(gapTop(i) + gapBot(i)) / 2 + 4} text-anchor="middle" fill={COLOR.acc}>
+          zoom: the kept slice becomes the whole next line
+        </text>
+      {/if}
     {/if}
     <line x1={X0} y1={y(i)} x2={X1} y2={y(i)} stroke={COLOR.line} stroke-width={BAR} stroke-linecap="round" />
-    <line
-      x1={s.x1}
-      y1={y(i)}
-      x2={s.x2}
-      y2={y(i)}
-      stroke={i === toks.length - 1 ? COLOR.ok : COLOR.acc}
-      stroke-width={BAR}
-      stroke-linecap="round"
-    />
+    <line x1={s.x1} y1={y(i)} x2={s.x2} y2={y(i)} stroke={last ? COLOR.ok : COLOR.acc} stroke-width={BAR} stroke-linecap="round" />
     <text x={X0} y={y(i) - LABEL_DY} class="big">
-      token {i + 1} (<tspan class="piece-label">{t.piece}</tspan>) kept — its real slice of this step's line
+      token {i + 1} (<tspan class="piece-label">{t.piece}</tspan>) — its slice of this line
     </text>
+    <!-- The share, beside the slice's end (or before it when the slice fills
+         the line), is the number the caption's claim rests on. -->
+    {#if s.x2 < X1 - 80}
+      <text x={s.x2 + 8} y={y(i) + 4} fill={last ? COLOR.ok : COLOR.acc}>{share(t)}</text>
+    {:else}
+      <text x={X1} y={y(i) - LABEL_DY} text-anchor="end" fill={last ? COLOR.ok : COLOR.acc}>{share(t)}</text>
+    {/if}
     {#if detailed}
-      <circle cx={vAt[i]} cy={y(i)} r="4" fill={COLOR.txt} />
+      <circle cx={vAt[i]} cy={y(i)} r="4.5" fill={COLOR.txt} stroke={COLOR.bg} stroke-width="1.5" />
     {/if}
   {/each}
   {#if detailed}
@@ -99,11 +109,11 @@
          would sit on the bar. -->
     <text x={vAt[last]} y={y(last) + V_LABEL_DY} class="big" text-anchor="middle" fill={COLOR.txt}>v</text>
     <text x={X0} y={height - 8}>
-      the same v on every row; any number inside the last kept slice is a valid code
+      the white dot is v: one number, inside every kept slice; any number in the last one is a valid code
     </text>
   {/if}
 </svg>
 
 <style>
-  .piece-label { font: var(--fs-xs) var(--font-mono); fill: var(--dim); }
+  .piece-label { font-family: var(--font-mono); fill: var(--dim); }
 </style>

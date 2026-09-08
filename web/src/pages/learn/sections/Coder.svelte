@@ -80,7 +80,7 @@
       without changing an output bit.
     </div>
   </ScrollBox>
-  <p>One more token, with dashed lines carrying each kept slice down into the next step's line. The white marker is <i>v</i>, a number inside the final kept slice:</p>
+  <p>One more token. Each funnel zooms a kept slice out to the full width of the next line; the white dot is <i>v</i>, one number inside the final kept slice, shown where it sits on every line:</p>
   <ScrollBox class="surface fig">
     <CoderRows rows={4} detailed />
     <div class="cap">
