@@ -137,14 +137,18 @@ jobs:
       # network failure overwrites its own half-finished upload instead of
       # failing on "asset already exists", and nobody sees a release with three
       # of its six binaries.
+      # A tag pushed again (re-pointed, or made annotated) on a release that is
+      # already public is a no-op, not a failure: nothing here rewrites a
+      # published release. A fix ships as a new patch tag.
       - name: draft the release if it does not exist
+        id: draft
         run: |
           set -eu
           if gh release view "$TAG" >/dev/null 2>&1; then
             if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" != true ]; then
-              echo "$TAG is already published; a published release is never" >&2
-              echo "rewritten. Ship a fix as a new patch tag." >&2
-              exit 1
+              echo "$TAG is already published; nothing to do"
+              echo "published=true" >> "$GITHUB_OUTPUT"
+              exit 0
             fi
             echo "reusing the existing draft"
           else
@@ -165,6 +169,8 @@ jobs:
           EOF
           fi
       - name: upload the packages
+        if: steps.draft.outputs.published != 'true'
         run: gh release upload "$TAG" dist/* --clobber
       - name: publish
+        if: steps.draft.outputs.published != 'true'
         run: gh release edit "$TAG" --draft=false
