@@ -1,0 +1,25 @@
+{
+  "train_shard": 0,
+  "train_urls": 36578304,
+  "eval_shard": 1,
+  "vocab_size": 8192,
+  "max_token_length": 24,
+  "split": true,
+  "split_re": "https?://|%[0-9A-Fa-f]{2}|[!#$%&'()*+,\\-./:;=?@\\[\\\\\\]\\^_`{|}~]",
+  "canonical": true,
+  "train_seconds": 350.44420623779297,
+  "vocab": {
+    "vocab_size": 8192,
+    "max_token_len": 19,
+    "tokens_ge_25": 0,
+    "mean_token_len": 3.8985347985347985
+  },
+  "eval": {
+    "urls": 200000,
+    "tokens": 6918922,
+    "chars": 16919878,
+    "chars_per_token": 2.4454500281980343,
+    "tokens_per_url": 34.59461,
+    "chars_per_url": 84.59939
+  }
+}

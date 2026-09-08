@@ -1,0 +1,3 @@
+fp32: 1.2629 bits/char over 99926 URLs (74 skipped)
+kernel_sim(int4): 1.26372 bits/char
+kernel: 1.2952 bits/char (rust/nurlcheck) over 500 URLs, artifact 124.8 MiB

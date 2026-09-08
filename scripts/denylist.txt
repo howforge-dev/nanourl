@@ -1,0 +1,26 @@
+# Rules the PUBLIC repo enforces on itself (scripts/scrub-check.sh in CI).
+# Generic classes only: this file is published, so it must never spell out a
+# name, handle, hostname or label. Those live in the private denylist, which
+# the export runs but never copies.
+!skip rust/urlcodec/tests/goldens/canonical.jsonl
+!skip rust/urlcodec/tests/goldens/tok.jsonl
+!skip models/url-bpe-8k-cap24-s0/tokenizer.json
+!skip tokenizer.*.json.bin
+
+!allow ^5\.2\.2\.4$
+!allow ^1\.2\.3\.4$
+!allow ^129\.222\.104\.0$
+!allow ^(?:user:)?pass@(?:www\.example\.com|com\.example\.www)$
+!allow ^[a-z]+@example\.(?:com|org)$
+!allow ^i@izs\.me$
+
+ipv4	\b(?:\d{1,3}\.){3}\d{1,3}\b
+root-user	[r]oot@
+root-path	/[r]oot/
+ssh-line	\b[s]sh\s
+email	(?<![A-Za-z0-9._%+-])(?!howforge-dev@users\.noreply\.github\.com)[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}
+foreign-noreply	(?<![A-Za-z0-9._%+-])(?!howforge-dev)[A-Za-z0-9._%+-]+@[u]sers\.noreply
+worktrees	\.[w]orktrees
+trailer-coauthor	[C]o-Authored-By
+trailer-session	[C]laude-Session
+session-link	[c]laude\.ai/code

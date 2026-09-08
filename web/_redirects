@@ -1,0 +1,4 @@
+# Cloudflare Workers/Pages rewrite rules. The Worker serves .html paths as
+# they are (html_handling = "none" in wrangler.toml), so the site root must be
+# mapped to the entry page explicitly; 200 makes it a rewrite, not a redirect.
+/   /index.html   200

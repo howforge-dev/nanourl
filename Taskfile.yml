@@ -1,0 +1,162 @@
+version: '3'
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds: [task --list]
+    silent: true
+
+  codec:test:
+    desc: urlcodec unit + golden tests + the tier-3 glue compile
+    # The kernel crate only. It has no build script and no model to embed, so
+    # every step here runs on a machine that has never fetched the weights --
+    # the tests then skip loudly, or fail under URLCODEC_REQUIRE_ARTIFACTS=1.
+    # The shipped binary is `task cli:test`.
+    dir: rust/urlcodec
+    # URLCODEC_REQUIRE_ARTIFACTS=1: this is a gate, so a missing model or
+    # tokenizer must FAIL the ABI tests, and so must a missing pinned nightly
+    # in codec:check:mt. A bare `cargo test` (a fresh clone with no weights
+    # downloaded) gets a loud SKIPPED line and passes.
+    cmds:
+      - cargo fmt --check
+      - cargo clippy --all-targets -- -D warnings
+      - URLCODEC_REQUIRE_ARTIFACTS=1 cargo test --release
+      # None of the three steps above compiles a single line behind
+      # cfg(target_feature = "atomics"), so a break there passes all of them.
+      - task: codec:check:mt
+
+  codec:wasm:
+    desc: >-
+      three wasm kernel tiers into rust/target/ -- urlcodec.wasm (simd128),
+      urlcodec-relaxed.wasm (+relaxed-simd), urlcodec-mt.wasm (+atomics,
+      shared memory; needs the pinned nightly) -- then verify them against
+      rust/urlcodec/wasm.sha256
+    dir: rust/urlcodec
+    cmds: [./build-wasm.sh]
+
+  codec:pin:
+    desc: >-
+      REWRITE rust/urlcodec/wasm.sha256 from a fresh build. Only after
+      fuzz/run_tiers.sh has passed on these exact files -- the pin's whole
+      job is to say "these bytes were gated"
+    dir: rust/urlcodec
+    cmds: [./build-wasm.sh --pin]
+
+  codec:repro:
+    desc: build the three wasm tiers from two differently-named trees and require identical bytes
+    cmds: [rust/repro.sh wasm]
+
+  cli:repro:
+    desc: build nanourl from two differently-named trees and require identical bytes
+    cmds: [rust/repro.sh cli]
+
+  codec:check:mt:
+    desc: >-
+      clippy the tier-3 source. THE ONLY THING THAT COMPILES IT: every
+      cfg(target_feature = "atomics") region -- src/threads.rs's wasm glue,
+      gemv_wasm's parallel branch, thread_setup/worker_main/threads_ready --
+      is invisible to cargo fmt, to clippy --all-targets, to cargo test and
+      to BOTH single-thread wasm clippy runs. Skips loudly without the pinned
+      nightly; URLCODEC_REQUIRE_ARTIFACTS=1 makes that a failure.
+    dir: rust/urlcodec
+    vars:
+      # rust/NIGHTLY, so the date is in one file: build-wasm.sh, run_tiers.sh,
+      # this Taskfile and both CI workflows all read it.
+      NIGHTLY:
+        sh: cat rust/NIGHTLY
+    cmds:
+      - |
+        if ! rustup toolchain list | grep -q '^{{.NIGHTLY}}'; then
+          hint="rustup toolchain install {{.NIGHTLY}} --component rust-src --profile minimal && rustup target add wasm32-unknown-unknown --toolchain {{.NIGHTLY}}"
+          if [ "${URLCODEC_REQUIRE_ARTIFACTS:-0}" = 1 ]; then
+            echo "*** FAIL: mt clippy needs {{.NIGHTLY}} ($hint)" >&2
+            echo "*** URLCODEC_REQUIRE_ARTIFACTS=1 is set, so a missing toolchain is a failure, not a skip." >&2
+            exit 1
+          fi
+          echo "*** SKIPPED: mt clippy needs {{.NIGHTLY}} ($hint)" >&2
+          echo "*** NOTHING ELSE compiles the tier-3 glue: a broken edit will not be caught until the parity gate runs it. ***" >&2
+          exit 0
+        fi
+        set -x
+        RUSTFLAGS="-C target-feature=+simd128,+relaxed-simd,+atomics,+bulk-memory,+mutable-globals -C panic=abort" \
+          cargo +{{.NIGHTLY}} clippy --release --target wasm32-unknown-unknown --lib \
+          -Zbuild-std=std,panic_abort --target-dir ../target/mtcheck -- -D warnings
+    silent: true
+
+  cli:build:
+    desc: the shipped nanourl binary (links the 124.8 MiB model artifact in)
+    dir: rust/nanourl
+    # rustflags.sh, not a bare cargo build: it carries the --remap-path-prefix
+    # flags without which the binary bakes in this machine's $CARGO_HOME.
+    cmds: ['RUSTFLAGS="$(../rustflags.sh)" cargo build --release']
+
+  cli:test:
+    desc: nanourl unit tests, the link goldens, and the end-to-end CLI tests
+    # From the workspace root: `cli_test` compares `nanourl` against `urlcodec
+    # encode`, a binary of the OTHER package, and `-p nanourl` alone would not
+    # build it -- the test would skip rather than compare.
+    dir: rust
+    cmds:
+      - cargo fmt --check
+      - cargo clippy --release --all-targets -p nanourl -- -D warnings
+      - cargo build --release -p urlcodec --bin urlcodec
+      - URLCODEC_REQUIRE_ARTIFACTS=1 cargo test --release -p nanourl
+
+  web:assets:
+    desc: chunk + hash the artifact set into web/public and write the manifest
+    dir: web
+    vars:
+      NURL: '{{.NURL | default "../models/target-base/ptq.nurl"}}'
+      TOK: '{{.TOK | default "../models/url-bpe-8k-cap24-s0/tokenizer.json"}}'
+    cmds:
+      # `task codec:wasm` builds all three tiers and copies them to the flat
+      # paths target/urlcodec.wasm, target/urlcodec-relaxed.wasm and
+      # target/urlcodec-mt.wasm. Prefer those; fall back to the build-tree
+      # path for the single-thread file, and only pass --wasm-relaxed/--wasm-mt
+      # when those files exist, since the mt one needs the pinned nightly.
+      # The pin, before anything is packed: `assets.json` records the digest
+      # of whatever is packed, so without this the site can ship a tier no
+      # parity gate has seen. UNPINNED=1 is the deliberate opt-out for kernel
+      # development, before `task codec:pin`.
+      - |
+        if [ "{{.UNPINNED}}" != "1" ]; then ../rust/urlcodec/build-wasm.sh --verify; fi
+      - |
+        WASM=../rust/target/urlcodec.wasm
+        if [ ! -f "$WASM" ]; then WASM=../rust/target/wasm32-unknown-unknown/release/urlcodec.wasm; fi
+        RELAXED=../rust/target/urlcodec-relaxed.wasm
+        RELAXEDFLAG=
+        if [ -f "$RELAXED" ]; then RELAXEDFLAG="--wasm-relaxed $RELAXED"; fi
+        MT=../rust/target/urlcodec-mt.wasm
+        MTFLAG=
+        if [ -f "$MT" ]; then MTFLAG="--wasm-mt $MT"; fi
+        # ATLAS is auto-detected when it isn't given, so a plain `task
+        # web:build` cannot silently ship the observatory's atlas panel as a
+        # developer error message. pack-assets.ts additionally REFUSES to drop
+        # an atlas that the previous manifest had.
+        ATLAS='{{.ATLAS}}'
+        # if-form, not `[ … ] && …`: under go-task's set -e a false test would
+        # abort the recipe before pack-assets runs
+        if [ -z "$ATLAS" ] && [ -f atlas/atlas.bin ]; then ATLAS=atlas/atlas.bin; fi
+        ATLASFLAG=
+        if [ -n "$ATLAS" ]; then ATLASFLAG="--atlas $ATLAS"; fi
+        pnpm exec tsx scripts/pack-assets.ts --nurl {{.NURL}} --tokenizer {{.TOK}} --wasm "$WASM" $RELAXEDFLAG $MTFLAG $ATLASFLAG
+
+  web:build:
+    # NOT `deps:` — go-task runs deps in PARALLEL, and web:assets reads the
+    # very ../rust/target/urlcodec*.wasm files codec:wasm is
+    # concurrently cp-ing into place, so the hash in assets.json could name
+    # bytes nobody built. Sequential `cmds:` with `task:` steps is the only
+    # ordering go-task guarantees. CLI vars (NURL=, TOK=, ATLAS=) are global,
+    # so they still reach web:assets.
+    desc: static bundle → web/dist (wasm + assets + vite + service worker)
+    dir: web
+    cmds:
+      - task: codec:wasm
+      - task: web:assets
+      # `_headers` is copied into dist/ by vite itself (vite.config.ts's
+      # copyHeaders plugin), not by a `cp` here: a host configured with the
+      # build command its own Vite detection suggests runs `pnpm build`
+      # directly, and a copy step living only here would ship a dist/ with no
+      # COOP/COEP rules at all. `pnpm build` also runs scripts/build-sw.ts +
+      # scripts/sw-manifest.ts (the offline service worker).
+      - pnpm build

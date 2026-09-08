@@ -1,0 +1,28 @@
+{
+  "site": "https://qv.lc/",
+  "repo": "https://github.com/howforge-dev/nanourl",
+  "modelRelease": "https://github.com/howforge-dev/nanourl/releases/tag/model-v0",
+  "modelAsset": "https://github.com/howforge-dev/nanourl/releases/download/model-v0/nanourl-target-base.nurl",
+  "releases": "https://github.com/howforge-dev/nanourl/releases",
+  "defaultAlphabet": 1,
+  "alphabets": [
+    {
+      "id": 1,
+      "key": "base64url"
+    },
+    {
+      "id": 0,
+      "key": "base79"
+    },
+    {
+      "id": 2,
+      "key": "emoji-1k"
+    }
+  ],
+  "examples": [
+    "https://en.wikipedia.org/wiki/Solar_eclipse_of_August_12,_2026",
+    "https://news.ycombinator.com/item?id=44567890",
+    "https://github.com/karpathy/nanoGPT/blob/master/train.py",
+    "https://www.nytimes.com/2026/08/12/science/solar-eclipse-europe-viewing.html"
+  ]
+}

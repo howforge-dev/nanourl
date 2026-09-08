@@ -1,0 +1,22 @@
+# Cloudflare Worker serving the built site as static assets (assets-only, no
+# script). `dist/_headers` is applied by the assets layer, which is what gives
+# the pages cross-origin isolation and the hashed chunks their immutable
+# caching. Deployed by .github/workflows/ci.yml with `wrangler deploy`.
+name = "nanourl"
+compatibility_date = "2026-09-01"
+# The site is reached only through its custom domain; the account's
+# workers.dev subdomain and preview URLs stay off (and out of deploy logs).
+workers_dev = false
+preview_urls = false
+
+[assets]
+directory = "./web/dist"
+# Pages are linked as `/learn.html`; any rewrite to `/learn` would redirect
+# every navigation and break the service worker's precache of those paths.
+html_handling = "none"
+not_found_handling = "404-page"
+
+# Workers Logs for the assets Worker: request logs and errors in the dashboard.
+[observability]
+enabled = true
+head_sampling_rate = 1

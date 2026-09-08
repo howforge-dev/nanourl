@@ -1,0 +1,11 @@
+# Toolchain for nanourl. CI installs the same versions through jdx/mise-action,
+# so a local build and a CI build run identical tools.
+[tools]
+task = "latest"
+rust = "latest"
+node = "22"
+pnpm = "10"
+
+[settings]
+# CI runs non-interactively; never prompt.
+idiomatic_version_file_enable_tools = []

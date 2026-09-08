@@ -1,0 +1,12 @@
+node_modules/
+dist/
+# Entry HTML: generated from src/lib/pages.ts by vite.config.ts's `pages`
+# plugin, at the project root because Vite derives an HTML entry's output path
+# from its path relative to the root. Root level only — src/**.html would be a
+# source file.
+/*.html
+public/*.bin
+src/lib/assets.json
+test-results/
+playwright-report/
+blob-report/

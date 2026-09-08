@@ -1,0 +1,354 @@
+name: build-cli
+
+# The six release binaries, built and proven on every commit -- so a `cli-v*`
+# tag has nothing left to build and `release-cli` only has to publish.
+#
+# The weights ARE in these archives -- linked into the executable -- so each one
+# is ~131 MB and there are six of them. That is the deliberate trade: the binary
+# a person downloads is the whole product, with nothing to fetch on first use,
+# no cache to lose and no TLS stack to trust.
+#
+# Nothing is packaged that has not been built twice to the same bytes, asserted
+# to be statically linked, and made to decode a real link.
+on:
+  push:
+    branches: [main]
+    paths: &cli_paths
+      - 'rust/**'
+      - 'models/url-bpe-8k-cap24-s0/**'
+      - '.github/workflows/build-cli.yml'
+  pull_request:
+    paths: *cli_paths
+  # A tag needs this run to exist for its commit; when a push was filtered out,
+  # or its artifacts have aged past retention, this is how to produce them.
+  workflow_dispatch:
+
+# Read-only: this workflow produces artifacts, never a release. `contents:
+# write` lives on release-cli.yml alone.
+permissions:
+  contents: read
+
+concurrency:
+  group: build-cli-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The published weights. Every leg downloads them BEFORE cargo runs, because
+  # `build.rs` embeds this exact file and refuses to embed any other. Its digest
+  # is NOT restated here -- it is read out of rust/nanourl/model_pin.rs below,
+  # the file build.rs checks against, so the two cannot disagree.
+  MODEL_URL: https://github.com/howforge-dev/nanourl/releases/download/model-v0/nanourl-target-base.nurl
+  # A URL and the link the site mints for it with the default alphabet. The code
+  # is a function of the weights, so these hold exactly as long as MODEL_SHA256
+  # does and change with it.
+  SMOKE_URL: "https://news.ycombinator.com/item?id=44567890"
+  SMOKE_LINK: "https://qv.lc/#BAddTS_zj"
+
+jobs:
+  version:
+    # One parse of Cargo.toml, so every leg and every archive name agrees on the
+    # version without six copies of the sed.
+    name: version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - id: v
+        run: |
+          set -eu
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/nanourl/Cargo.toml | head -1)
+          [ -n "$version" ] || { echo "no version in rust/nanourl/Cargo.toml" >&2; exit 1; }
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+
+  build:
+    name: ${{ matrix.target }}
+    needs: [version]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      # Every leg reports: a target that stops building should say so by name
+      # rather than by cancelling its five siblings.
+      fail-fast: false
+      matrix:
+        include:
+          # Blacksmith wherever it offers the machine, GitHub-hosted for the one
+          # it does not (ARM Windows). Every leg's host architecture matches its
+          # target, except the Intel macOS build, which Rosetta runs below —
+          # so every archive is executed before it is packaged.
+          #
+          # Not `cross` for musl: its container mounts the cargo workspace
+          # root, and rust/nanourl reaches OUTSIDE it for both embedded
+          # artifacts -- models/url-bpe-8k-cap24-s0/tokenizer.json and the
+          # weights downloaded below -- which would then be outside the mount.
+          # A runner of the right architecture keeps those paths valid and
+          # needs no container at all.
+          - { os: blacksmith-4vcpu-ubuntu-2404, target: x86_64-unknown-linux-musl, musl: true }
+          - { os: blacksmith-4vcpu-ubuntu-2404-arm, target: aarch64-unknown-linux-musl, musl: true }
+          - { os: blacksmith-6vcpu-macos-latest, target: aarch64-apple-darwin }
+          - { os: blacksmith-6vcpu-macos-latest, target: x86_64-apple-darwin, run_prefix: arch -x86_64 }
+          - { os: blacksmith-4vcpu-windows-2025, target: x86_64-pc-windows-msvc, exe: .exe }
+          - { os: windows-11-arm, target: aarch64-pc-windows-msvc, exe: .exe }
+    steps:
+      - uses: actions/checkout@v7
+
+      # The pinned digest, from the file build.rs checks against.
+      - name: the model digest, from model_pin.rs
+        shell: bash
+        run: |
+          set -eu
+          sha=$(sed -n 's/^pub const MODEL_SHA256: &str = "\(.*\)";$/\1/p' rust/nanourl/model_pin.rs)
+          [ ${#sha} = 64 ] || { echo "no MODEL_SHA256 in rust/nanourl/model_pin.rs" >&2; exit 1; }
+          echo "MODEL_SHA256=$sha" >>"$GITHUB_ENV"
+
+      # One place decides the toolchain: rust/rust-toolchain.toml. `rustup
+      # show` inside rust/ installs exactly what it names, with its components;
+      # the target is then added to THAT toolchain. An action that installs
+      # `stable` with `targets:` would put the target on a different rustup
+      # toolchain from the one the build runs under, and every leg would fail
+      # with E0463 on the first crate it compiles.
+      - name: the pinned toolchain, with this leg's target
+        shell: bash
+        working-directory: rust
+        run: |
+          set -eu
+          rustup show
+          rustup target add ${{ matrix.target }}
+          rustc --version
+
+      # `musl-gcc` is the linker named for both musl targets below; Ubuntu
+      # ships it in musl-tools. Nothing in this build compiles C -- there is no
+      # TLS stack and no C dependency left -- so this is the linker and only
+      # the linker.
+      - name: musl toolchain
+        if: matrix.musl
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      # The weights, BEFORE cargo: build.rs embeds this file into the binary,
+      # so a leg without it does not build at all. Blacksmith intercepts
+      # actions/cache transparently, so the same restore/save split works on
+      # all six runners; it is split so a failed or wrong download is never
+      # written into the cache under the artifact's own digest.
+      - name: production model (cached by sha)
+        uses: actions/cache/restore@v6
+        id: model
+        with:
+          path: models/target-base/ptq.nurl
+          key: model-${{ env.MODEL_SHA256 }}-v2
+      - name: fetch the model
+        if: steps.model.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p models/target-base
+          curl -sSfL --retry 3 -o models/target-base/ptq.nurl "$MODEL_URL"
+      - name: the model is the published one
+        shell: bash
+        run: |
+          set -eu
+          f=models/target-base/ptq.nurl
+          # sha256sum on Linux and in Git Bash, shasum on macOS: one step for
+          # three operating systems, and no digest check skipped on any of them.
+          if command -v sha256sum >/dev/null 2>&1; then got=$(sha256sum "$f"); else got=$(shasum -a 256 "$f"); fi
+          got=${got%% *}
+          [ "$got" = "$MODEL_SHA256" ] || { echo "$f: sha256 $got, expected $MODEL_SHA256" >&2; exit 1; }
+      - if: steps.model.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: models/target-base/ptq.nurl
+          key: model-${{ env.MODEL_SHA256 }}-v2
+
+      # rust/rustflags.sh is the single source of the build flags -- the path
+      # remapping AND the per-target link options -- because cargo takes
+      # RUSTFLAGS, `target.<triple>.rustflags` and `build.rustflags` as
+      # mutually exclusive: setting one here silently discards the others.
+      - name: build
+        shell: bash
+        env:
+          # The file rust/nanourl/build.rs embeds. It checks the length and
+          # sha256 against its own pinned constants, so this cannot point the
+          # build at anything but the model the digest above just proved.
+          NANOURL_MODEL_FILE: ${{ github.workspace }}/models/target-base/ptq.nurl
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+          # How far back the macOS binaries run. Ignored on every other target.
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        working-directory: rust/nanourl
+        run: |
+          set -eu
+          RUSTFLAGS="$(../rustflags.sh ${{ matrix.target }})" \
+            cargo build --release --locked --target ${{ matrix.target }}
+
+      # The same source has to give the same binary, or `SHA256SUMS` describes
+      # one run rather than this commit. A second build into its own target
+      # directory, and the two digests must be equal. rust-toolchain.toml pins
+      # the compiler and rustflags.sh strips symbols and remaps source paths,
+      # which is what makes this hold; `task cli:repro` is the same check
+      # across two source paths.
+      - name: built twice, byte for byte
+        shell: bash
+        env:
+          NANOURL_MODEL_FILE: ${{ github.workspace }}/models/target-base/ptq.nurl
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER: musl-gcc
+          MACOSX_DEPLOYMENT_TARGET: "11.0"
+        working-directory: rust/nanourl
+        run: |
+          set -eu
+          bin=../target/${{ matrix.target }}/release/nanourl${{ matrix.exe }}
+          RUSTFLAGS="$(../rustflags.sh ${{ matrix.target }})" \
+            cargo build --release --locked --target ${{ matrix.target }} --target-dir ../target-again
+          # sha256sum on Linux and in Git Bash, shasum on macOS.
+          sum() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi; }
+          one=$(sum "$bin")
+          two=$(sum "../target-again/${{ matrix.target }}/release/nanourl${{ matrix.exe }}")
+          echo "1: $one"
+          echo "2: $two"
+          [ "${one%% *}" = "${two%% *}" ] || {
+            echo "the same commit produced two different binaries" >&2; exit 1; }
+          rm -rf ../target-again
+          # Identical twice on ONE runner would also hold with the remapping
+          # broken, so the direct check: no path from this machine is baked in.
+          # grep -a, because the binary is not text.
+          leaked=$(grep -a -c -e "$HOME" -e "${CARGO_HOME:-$HOME/.cargo}" "$bin" || true)
+          [ "$leaked" = 0 ] || {
+            echo "$leaked build-machine path(s) in the binary; rustflags.sh's" >&2
+            echo "--remap-path-prefix did not reach this build" >&2
+            grep -a -o -m 3 "${HOME}[^\"]*" "$bin" | sort -u | head -3 >&2
+            exit 1; }
+
+      # The archives promise a binary that runs on a machine with nothing
+      # installed, so the promise is checked on the artifact rather than
+      # inferred from the flags that were meant to produce it.
+      - name: the Linux binary is static
+        if: matrix.musl
+        shell: bash
+        run: |
+          set -eu
+          bin=rust/target/${{ matrix.target }}/release/nanourl
+          file "$bin"
+          # `static-pie linked` is what a position-independent static musl
+          # binary reports; both spellings mean no interpreter, no libc.
+          file "$bin" | grep -qE 'statically linked|static-pie linked'
+          # ldd exits non-zero on a static binary, so the pipeline's verdict is
+          # grep's: the words have to be there, not merely the failure.
+          ldd "$bin" 2>&1 | grep -q 'not a dynamic executable'
+
+      - name: the Windows binary carries its own C runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $bin = "rust/target/${{ matrix.target }}/release/nanourl.exe"
+          # A byte scan for the import names rather than dumpbin: dumpbin needs
+          # a Visual Studio developer shell, and the only question here is
+          # whether this binary names the redistributable C runtime DLLs at all.
+          $text = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($bin))
+          $hit = [regex]::Matches($text, 'VCRUNTIME[0-9]*\.dll|api-ms-win-crt-[a-z0-9-]*\.dll|MSVCP[0-9]*\.dll')
+          if ($hit.Count -gt 0) {
+            Write-Error "links the C runtime dynamically: $($hit | ForEach-Object { $_.Value } | Sort-Object -Unique)"
+            exit 1
+          }
+          Write-Output "no dynamic C runtime imports"
+
+      # Nothing is packaged that has not run. `${{ matrix.run_prefix }}` is
+      # `arch -x86_64` on the Intel macOS leg, the only one whose host
+      # architecture differs from its target, and empty everywhere else.
+      # No --model: the decode below must go through the weights that were
+      # linked into this binary, which is the whole thing being shipped.
+      - name: it reports the tag's version and decodes a real link
+        shell: bash
+        run: |
+          set -eu
+          bin=rust/target/${{ matrix.target }}/release/nanourl${{ matrix.exe }}
+          got=$(${{ matrix.run_prefix }} "$bin" --version)
+          [ "$got" = "nanourl ${{ needs.version.outputs.version }}" ] || {
+            echo "binary says '$got', Cargo.toml says ${{ needs.version.outputs.version }}" >&2; exit 1; }
+          # The weights it carries are the published ones, re-hashed out of the
+          # executable rather than taken on trust from the build.
+          ${{ matrix.run_prefix }} "$bin" model verify
+          url=$(${{ matrix.run_prefix }} "$bin" decode "$SMOKE_LINK")
+          [ "$url" = "$SMOKE_URL" ] || { echo "decode gave '$url', expected '$SMOKE_URL'" >&2; exit 1; }
+
+      - name: package
+        shell: bash
+        env:
+          NAME: nanourl-${{ needs.version.outputs.version }}-${{ matrix.target }}
+        run: |
+          set -eu
+          mkdir -p "stage/$NAME" dist
+          cp "rust/target/${{ matrix.target }}/release/nanourl${{ matrix.exe }}" "stage/$NAME/"
+          cp LICENSE "stage/$NAME/"
+          # The archive's own README: what the two commands do and where the
+          # weights come from. Everything else is in the repository.
+          cat >"stage/$NAME/README.md" <<EOF
+          # nanourl ${{ needs.version.outputs.version }}
+
+          Lossless URL compression with a neural language model, offline.
+
+              nanourl encode https://example.com/some/long/url --link
+              nanourl decode https://qv.lc/#CODE
+              nanourl model info
+
+          The binary is ~131 MB because the 124.8 MiB model is inside it. There
+          is nothing to download, no cache directory and no network access at
+          any point: a link decodes on a machine that has never been online.
+          \`nanourl model verify\` re-hashes the embedded weights,
+          \`nanourl model export FILE\` writes them out (\`--force\` to overwrite),
+          and \`--model PATH\` or
+          \`\$NANOURL_MODEL\` runs a different model instead.
+
+          Exit codes: 0 success, 1 unusable input, 2 model unavailable.
+
+          The Linux and Windows builds are static: no libc, no Visual C++
+          redistributable, no TLS library of any kind. The macOS builds link
+          the system \`libSystem\` and nothing else, for macOS 11 and later.
+
+          Source, issues and the web version: https://github.com/howforge-dev/nanourl
+          Licence: MIT, see LICENSE.
+          EOF
+          # 7z rather than PowerShell's Compress-Archive: this step runs in
+          # bash on every platform, and `$env:NAME` inside a nested PowerShell
+          # string would be expanded by bash first.
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            (cd stage && 7z a -tzip "../dist/$NAME.zip" "$NAME" >/dev/null)
+          else
+            tar -C stage -czf "dist/$NAME.tar.gz" "$NAME"
+          fi
+          ls -l dist
+
+      # The package itself, kept long enough for a tag to find it. `release-cli`
+      # publishes THESE files: it never rebuilds, so what a tag ships is what
+      # this run built, asserted and smoke-tested.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: nanourl-${{ matrix.target }}
+          path: dist/*
+          retention-days: 30
+          if-no-files-found: error
+
+
+  sums:
+    # One SHA256SUMS over all six packages, produced HERE rather than at release
+    # time: it is the digest list of the artifacts this run made, and the
+    # release job verifies the files it downloads against it before publishing.
+    name: SHA256SUMS
+    needs: [version, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: nanourl-*
+          path: dist
+          merge-multiple: true
+      - name: SHA256SUMS
+        working-directory: dist
+        run: |
+          set -eu
+          sha256sum ./*.tar.gz ./*.zip | sed 's|\./||' | sort -k2 >SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/upload-artifact@v7
+        with:
+          name: SHA256SUMS
+          path: dist/SHA256SUMS
+          retention-days: 30
+          if-no-files-found: error

@@ -1,0 +1,36 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && tsx scripts/build-sw.ts && tsx scripts/sw-manifest.ts && cp _headers _redirects dist/",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "lint": "eslint src tests e2e scripts playwright.config.ts vite.config.ts --ext .ts,.svelte"
+  },
+  "packageManager": "pnpm@10.34.5",
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.1.1",
+    "@types/node": "^26.4.1",
+    "@typescript-eslint/eslint-plugin": "^8.69.0",
+    "@typescript-eslint/parser": "^8.69.0",
+    "eslint": "^8.57.1",
+    "eslint-plugin-svelte": "^2.46.1",
+    "jsdom": "^30.0.1",
+    "playwright": "^1.63.0",
+    "svelte": "^5.57.0",
+    "svelte-check": "^4.7.6",
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.3",
+    "vitest": "^3.2.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

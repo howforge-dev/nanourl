@@ -1,0 +1,34 @@
+[package]
+name = "nanourl"
+version = "0.1.0"
+edition = "2021"
+description = "Compress a URL into a short code, and expand it again -- offline"
+
+# The library half is what the tests reach: `tests/link_test.rs` pins the link
+# parsing to the site's TypeScript and `tests/embedded_test.rs` pins the
+# embedded artifacts to what the site packs, neither of which can be done
+# through a binary.
+[lib]
+path = "src/lib.rs"
+
+# `src/main.rs` is three lines: the `include_bytes!` of the weights, and a call
+# into the library. Nothing else in the workspace carries the model.
+[[bin]]
+name = "nanourl"
+path = "src/main.rs"
+
+[dependencies]
+# The kernel, by path. `nanourl` runs its C ABI -- codec_init/codec_encode/
+# codec_decode, the exact functions the three wasm builds export -- so a code
+# minted at a terminal and a code minted in the browser are the same string by
+# construction rather than by two implementations agreeing.
+urlcodec = { path = "../urlcodec" }
+clap = { version = "4", features = ["derive"] }
+serde_json = "1"
+# `nanourl model verify`, and the digest of a `--model` override.
+sha2 = "0.10"
+
+# build.rs refuses to produce a binary around the wrong artifact. A host
+# dependency: compiled for the build machine, never for the target.
+[build-dependencies]
+sha2 = "0.10"

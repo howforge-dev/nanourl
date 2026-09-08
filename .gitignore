@@ -1,0 +1,9 @@
+# Rust build artifacts.
+target/
+
+# Model weights: they ship as a GitHub release asset (tag model-v0), not in git.
+models/**/*.nurl
+
+node_modules/
+*.log
+.DS_Store

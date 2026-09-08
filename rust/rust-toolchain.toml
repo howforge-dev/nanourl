@@ -1,0 +1,18 @@
+# The toolchain every artifact in this workspace is built with.
+#
+# rustc's output is not stable across compiler versions, and two of this
+# repository's artifacts are pinned by digest: the three `.wasm` files
+# (rust/urlcodec/wasm.sha256, gated by fuzz/run_tiers.sh) and the released
+# `nanourl` binaries (SHA256SUMS). A floating toolchain produces different
+# bytes for the same commit, so a digest pin and a floating toolchain cannot
+# both be true.
+#
+# rustup reads this file for any cargo command run under rust/, so CI, a
+# developer's box and a compute server all get the same compiler with no flag.
+# The tier-3 (threads) build is the one exception: it needs -Zbuild-std and is
+# invoked as `cargo +nightly-2026-09-06`, which overrides this pin -- that
+# nightly is dated for the same reason this channel is exact.
+[toolchain]
+channel = "1.97.1"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]

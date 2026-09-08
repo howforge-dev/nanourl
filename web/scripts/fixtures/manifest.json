@@ -1,0 +1,68 @@
+{
+  "_about": "Public manifest for the nanourl model-v0 release. Generated from the training run's own manifest; every field naming build infrastructure is dropped rather than redacted.",
+  "config": {
+    "model": {
+      "n_layer": 12,
+      "d_model": 1280,
+      "n_head": 20
+    },
+    "train": {
+      "iters": 76000,
+      "final_eval_urls": 100000
+    }
+  },
+  "model_config": {
+    "n_layer": 12,
+    "d_model": 1280,
+    "n_head": 20,
+    "n_kv_head": 20,
+    "d_attn": 1280,
+    "d_mlp": 3392,
+    "vocab": 8192,
+    "block": 512,
+    "struct_pos": false,
+    "head_dim": 64,
+    "mlp": "swiglu",
+    "host_rows": 0,
+    "host_dim": 64,
+    "prefix_rows": 0,
+    "prefix_dim": 64
+  },
+  "model": {
+    "n_params": 246087680,
+    "artifact_filename": "nanourl-target-base.nurl",
+    "artifact_bytes": 130862112,
+    "artifact_mib": 124.79983520507812,
+    "artifact_sha256": "5e37aad1f34c420f2a3f5ea5a273ec3bd95a99b48f0c3eaa29187b1d22039fd2"
+  },
+  "stream_version": 0,
+  "data": {
+    "train_shards": "0-39",
+    "total_tokens": 51927702104,
+    "total_urls": 1463118092,
+    "tokens_per_url": 35.4911,
+    "tokenizer_sha256": "6e4f2b4fa9de153b27adaee016dc3f2586ac886423f0153858b89e13f31be374",
+    "eval_shard": 512,
+    "eval_source": "part-00512.parquet, even stride"
+  },
+  "schedule": {
+    "iters": 76000,
+    "tokens_per_iter": 262144,
+    "qat_iters": 7600,
+    "train_tokens": 19922944000,
+    "corpus_passes": 0.3837
+  },
+  "training": {
+    "iterations_completed": 83600,
+    "tokens_seen": 21915238400,
+    "qat_applied": true
+  },
+  "eval": {
+    "bits_per_char_fp32": 1.2629,
+    "bits_per_char_int4": 1.26372,
+    "urls_scored": 99926,
+    "urls_skipped": 74,
+    "bits_per_char_int4_real_kernel": 1.2952,
+    "real_kernel_urls": 500
+  }
+}

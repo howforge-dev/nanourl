@@ -1,0 +1,20 @@
+# Two crates, one lock file and one target directory.
+#
+# `urlcodec` is the kernel: the codec library, the wasm cdylib the browser
+# runs, and the developer `urlcodec` binary. `nanourl` is the shipped command
+# line, and it is a separate package for one reason -- it embeds the 124.8 MiB
+# model artifact through its own `build.rs`, and a build script runs once per
+# PACKAGE, not once per target. Inside one package that check would fire for
+# every `cargo build`, `cargo test` and `clippy` in the kernel, making the codec
+# unbuildable on a machine that has not fetched the weights. Split, the artifact
+# is required exactly when `nanourl` is being built.
+[workspace]
+resolver = "2"
+members = ["urlcodec", "nanourl"]
+
+# Workspace-wide: cargo takes profiles only from the workspace root, and both
+# the wasm tiers and the released binary are built under this one.
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

@@ -1,0 +1,109 @@
+/* Prose styles for the learn page only — imported once by main.ts, after
+   app.css, so it can restyle body copy for this page without touching the
+   compressor/observatory/dream pages.
+
+   What is NOT here: anything a primitive owns. The bordered figure's surface
+   is app.css's `.surface` and its scrolling is `.scroller`, both emitted by
+   lib/ui/ScrollBox.svelte; the pulled-out asides are lib/ui/Callout.svelte;
+   the piece chips are lib/ui/Chip.svelte; the table of contents is a Card.
+   Every value below comes from a token — this file is the last place a
+   hand-typed colour or radius would still look local and harmless. */
+body {
+  font: var(--fs-lg) / 1.65 var(--font-sans);
+}
+h2 { font-size: var(--fs-2xl); margin: calc(var(--s-6) + var(--s-2)) 0 var(--s-3); text-wrap: balance; }
+h3 { font-size: var(--fs-lg); margin: var(--s-5) 0 var(--s-2); }
+p { margin: 0 0 var(--s-4); }
+p, li { color: var(--prose); }
+b { color: var(--txt); }
+/* An inline code run. The same recipe PageHeader's `.hint code` uses. */
+code, .m {
+  font: 0.92em var(--font-mono);
+  background: var(--card);
+  border: var(--border);
+  border-radius: var(--r-3);
+  padding: 1px var(--s-1); /* hairline */
+  /* No white-space:nowrap: the worked examples inline full URLs (~45+ chars)
+     that don't fit a 375px viewport unbroken, and nowrap would force the page
+     to scroll horizontally. Wrap instead (same fix as app.css's .stat:
+     overflow-wrap: anywhere).
+     `box-decoration-break: clone` is what earns its place beside it: without
+     it a broken inline box draws its background and border once around the
+     whole run, so the fragment on the second line has no left border and the
+     first has no right one — which is what a clipped tail looks like. */
+  overflow-wrap: anywhere;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+ul, ol { margin: 0 0 var(--s-4) var(--s-5); }
+li { margin-bottom: var(--s-1); }
+
+/* A boxed figure: `.surface` (the decoration) + `.scroller` (a diagram wider
+   than the column scrolls inside itself) + this file's own rhythm.
+
+   `margin-block`, never the `margin` shorthand: a figure may also be
+   `.breakout`, whose whole job is a horizontal offset, and this file is
+   imported after app.css — a shorthand here silently resets that offset to 0
+   and leaves the figure's `translateX` shifting it half its own width off the
+   left of the page, where nothing can scroll to it. */
+.fig {
+  padding: var(--s-4);
+  margin-block: var(--s-4);
+}
+/* A breakout only as wide as its content needs. The per-token cost strip is
+   seventeen 96px chips, which fill two rows of nine and eight at this width;
+   the full `--col-wide` breakout spreads the same seventeen over two sparse
+   rows and a fifth of an empty card. Here rather than in BitsChips.svelte
+   because the element carrying the class is ScrollBox's, which that
+   component's scoped rules cannot reach. */
+.fig.chip-strip { --breakout-max: 976px; }
+
+/* A pseudocode listing: monospace, generously leaded, prose-coloured. Three
+   figures set it, so it is a class rather than three inline `style` strings
+   with three hand-typed sizes. `wide-lines` is the worked example, whose rows
+   read as steps rather than as code. */
+.fig .pseudo { font: var(--fs-sm) / 1.75 var(--font-mono); color: var(--prose); margin: 0; }
+.fig .pseudo.wide-lines { line-height: 1.8; }
+
+/* A caption ABOVE its figure — it names what follows rather than commenting
+   on what came before. */
+.fig .cap.head { margin: 0 0 var(--s-2); }
+
+/* The same size and colour as app.css's `.caption`: a legend under a figure
+   is a caption, and one idea gets one size. */
+.fig .cap { color: var(--dim); font-size: var(--fs-xs); margin-top: var(--s-2); }
+
+svg text { font: var(--fs-xs) var(--font-mono); fill: var(--dim); }
+svg .big { font-size: var(--fs-sm); fill: var(--txt); }
+
+table { border-collapse: collapse; font-size: var(--fs-md); margin: var(--s-4) 0; }
+td, th { border: var(--border); padding: var(--s-1) var(--s-3); text-align: left; }
+th { color: var(--dim); font-weight: 500; }
+td.n { font-family: var(--font-mono); text-align: right; }
+
+/* A collapsible derivation. `.surface` carries the box; this adds the padding
+   the disclosure needs and the serif face the equations are set in. */
+details.mathbox {
+  border-radius: var(--r-4);
+  margin: var(--s-3) 0 var(--s-4);
+}
+/* The chevron, gap, focus ring and rotation all come from app.css's one
+   shared `summary` rule — this only adds the box's own padding and colour,
+   and the sigma that says what kind of disclosure it is. */
+details.mathbox summary {
+  color: var(--acc);
+  padding: var(--s-2) var(--s-4);
+}
+details.mathbox summary .sig {
+  font-family: 'STIX Two Math', 'Cambria Math', Georgia, serif;
+  font-size: 1.15em;
+  line-height: 1;
+}
+details.mathbox .eq { padding: var(--s-half) var(--s-4) var(--s-3); font: var(--fs-base) / 2 'STIX Two Math', 'Cambria Math', Georgia, serif; }
+details.mathbox .eq .c { color: var(--dim); font: var(--fs-sm) / 1.5 var(--font-sans); margin: var(--s-half) 0 var(--s-3); }
+details.mathbox .eq i { font-style: italic; }
+details.mathbox .c i, details.mathbox .c sub, details.mathbox .c sup, details.mathbox .c .mv {
+  font-family: 'STIX Two Math', 'Cambria Math', Georgia, serif;
+  font-size: 1.06em;
+  line-height: 1;
+}

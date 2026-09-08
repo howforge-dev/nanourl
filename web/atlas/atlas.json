@@ -1,0 +1,12 @@
+{
+  "vocab": 8192,
+  "d_model": 1280,
+  "params": 246119680,
+  "pca_components": 50,
+  "n_neighbors": 15,
+  "min_dist": 0.1,
+  "random_state": 42,
+  "git": "unknown",
+  "nurl": "models/target-base/ptq.nurl",
+  "tokenizer": "models/url-bpe-8k-cap24-s0/tokenizer.json"
+}

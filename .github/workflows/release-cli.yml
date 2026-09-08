@@ -1,0 +1,170 @@
+name: release-cli
+
+# Publish the packages `build-cli` already built for this exact commit.
+#
+# NOTHING IS BUILT HERE. Every archive was produced, built twice to the same
+# bytes, asserted static and made to decode a real link by the `build-cli` run
+# for this commit; this workflow finds that run, verifies its packages against
+# the `SHA256SUMS` it produced, and attaches them. A tag therefore cannot ship
+# a binary that differs from the one main was tested with, and a failed publish
+# costs a re-run rather than six rebuilds.
+on:
+  push:
+    tags: ['cli-v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'the cli-v* tag to publish'
+        required: true
+
+permissions:
+  # The release itself, and the cross-run artifact download.
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-cli-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    # First and cheap: a tag that disagrees with rust/nanourl/Cargo.toml is not
+    # fixable after the fact, because the tag is what people cite. Seconds, and
+    # nothing downstream runs if it fails.
+    name: version (tag must match Cargo.toml)
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+      sha: ${{ steps.v.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # A dispatch names the tag; a tag push already is one.
+          ref: ${{ github.event.inputs.tag || github.ref }}
+          fetch-depth: 0
+      - id: v
+        run: |
+          set -eu
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          case "$tag" in
+            cli-v*) ;;
+            *) echo "'$tag' is not a cli-v* tag" >&2; exit 1 ;;
+          esac
+          want=${tag#cli-v}
+          version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/nanourl/Cargo.toml | head -1)
+          if [ "$version" != "$want" ]; then
+            echo "tag $tag carries version '$want', rust/nanourl/Cargo.toml says '$version'" >&2
+            exit 1
+          fi
+          # The commit the tag points at: what the build run has to match.
+          sha=$(git rev-parse "$tag^{commit}")
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+          echo "tag=$tag" >>"$GITHUB_OUTPUT"
+          echo "sha=$sha" >>"$GITHUB_OUTPUT"
+          echo "publishing $tag ($version) from commit $sha"
+
+  publish:
+    name: publish
+    needs: [version]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.version.outputs.tag }}
+      VERSION: ${{ needs.version.outputs.version }}
+      SHA: ${{ needs.version.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.tag }}
+
+      # The build run for THIS commit, not "the latest": publishing artifacts
+      # from a different commit than the tag names is the failure this whole
+      # split exists to prevent.
+      - name: find the build-cli run for this commit
+        id: run
+        run: |
+          set -eu
+          id=$(gh run list --workflow build-cli.yml --commit "$SHA" \
+                 --status success --limit 1 --json databaseId \
+                 --jq '.[0].databaseId // empty')
+          if [ -z "$id" ]; then
+            echo "No successful build-cli run for $SHA." >&2
+            echo "Nothing is rebuilt on the release path, so publish needs one:" >&2
+            echo "  run the build-cli workflow on this commit (Actions ->" >&2
+            echo "  build-cli -> Run workflow), then re-run this release." >&2
+            echo "If a run existed, its artifacts may have passed their 30-day" >&2
+            echo "retention; the same dispatch produces them again." >&2
+            exit 1
+          fi
+          echo "run-id=$id" >>"$GITHUB_OUTPUT"
+          echo "using build-cli run $id"
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: nanourl-*
+          path: dist
+          merge-multiple: true
+          run-id: ${{ steps.run.outputs.run-id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: SHA256SUMS
+          path: dist
+          run-id: ${{ steps.run.outputs.run-id }}
+          github-token: ${{ github.token }}
+
+      # The digests the build run computed over the files it made. Checking
+      # them here is what makes "the release is what CI built" an assertion
+      # rather than a description of the intended flow.
+      - name: every package matches that run's SHA256SUMS
+        working-directory: dist
+        run: |
+          set -eu
+          ls -l
+          sha256sum -c SHA256SUMS
+          # And the archive names carry the tag's version, so a stale artifact
+          # set from a different version cannot be published under this tag.
+          for f in *.tar.gz *.zip; do
+            case "$f" in
+              "nanourl-$VERSION-"*) ;;
+              *) echo "$f is not a nanourl-$VERSION-* package" >&2; exit 1 ;;
+            esac
+          done
+
+      # Draft first, upload with overwrite, publish last -- so a re-run after a
+      # network failure overwrites its own half-finished upload instead of
+      # failing on "asset already exists", and nobody sees a release with three
+      # of its six binaries.
+      - name: draft the release if it does not exist
+        run: |
+          set -eu
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            if [ "$(gh release view "$TAG" --json isDraft --jq .isDraft)" != true ]; then
+              echo "$TAG is already published; a published release is never" >&2
+              echo "rewritten. Ship a fix as a new patch tag." >&2
+              exit 1
+            fi
+            echo "reusing the existing draft"
+          else
+            gh release create "$TAG" --draft --title "nanourl CLI $VERSION" --notes-file - <<'EOF'
+          Prebuilt `nanourl` binaries. Download the archive for your platform,
+          unpack it, and put `nanourl` somewhere on your PATH.
+
+          Each archive is ~131 MB: the model weights are linked into the
+          binary, so there is nothing to fetch on first use and nothing to
+          trust but the executable itself. `nanourl model info` says which
+          weights it carries.
+
+          `SHA256SUMS` covers every archive. The builds are reproducible: each
+          binary was built twice on its runner and required to be
+          byte-identical, with the compiler pinned by
+          `rust/rust-toolchain.toml`, so you can rebuild from this tag and
+          compare rather than trusting these files.
+          EOF
+          fi
+      - name: upload the packages
+        run: gh release upload "$TAG" dist/* --clobber
+      - name: publish
+        run: gh release edit "$TAG" --draft=false

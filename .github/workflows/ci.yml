@@ -1,0 +1,393 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The production artifact the site ships. The web build fails if the packed
+  # model and the quoted numbers disagree, so CI must pack this exact file.
+  MODEL_URL: https://github.com/howforge-dev/nanourl/releases/download/model-v0/nanourl-target-base.nurl
+  URLCODEC_REQUIRE_ARTIFACTS: "1"
+  # One artifact name, so the deploy job cannot guess wrong.
+  DIST_ARTIFACT: nanourl-dist
+
+jobs:
+  scrub:
+    name: scrub (publication gate)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      # Cheap and first: nothing else is worth running on a tree that leaks.
+      - run: scripts/scrub-check.sh
+
+  codec:
+    name: codec (fmt, clippy, tests, tier-3 glue)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      # NIGHTLY and MODEL_SHA256 come out of the tree, not out of this file:
+      # rust/NIGHTLY is what build-wasm.sh and run_tiers.sh read, and
+      # rust/nanourl/model_pin.rs is what build.rs checks the artifact against.
+      # Restating either here is how a workflow ends up gating a different
+      # thing from the one the code enforces. Before the caches, which key on
+      # both.
+      - name: NIGHTLY and MODEL_SHA256, from the tree
+        run: |
+          set -eu
+          echo "NIGHTLY=$(cat rust/NIGHTLY)" >>"$GITHUB_ENV"
+          sha=$(sed -n 's/^pub const MODEL_SHA256: &str = "\(.*\)";$/\1/p' rust/nanourl/model_pin.rs)
+          [ ${#sha} = 64 ] || { echo "no MODEL_SHA256 in rust/nanourl/model_pin.rs" >&2; exit 1; }
+          echo "MODEL_SHA256=$sha" >>"$GITHUB_ENV"
+      - uses: jdx/mise-action@v4
+        with:
+          install: true
+          cache: true
+      # The pinned nightly plus a rust-src component is a ~400 MB install and
+      # the runner image has neither, so it is cached by toolchain name.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.rustup/toolchains
+          key: rustup-${{ runner.os }}-${{ env.NIGHTLY }}
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-home-${{ runner.os }}-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: cargo-home-${{ runner.os }}-
+      # Rolling key: every run saves a fresh entry and restores the newest
+      # previous one, so incremental artifacts survive a source change.
+      - uses: actions/cache@v6
+        with:
+          path: rust/target
+          key: cargo-target-codec-${{ runner.os }}-${{ env.NIGHTLY }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            cargo-target-codec-${{ runner.os }}-${{ env.NIGHTLY }}-${{ hashFiles('rust/Cargo.lock') }}-
+            cargo-target-codec-${{ runner.os }}-${{ env.NIGHTLY }}-
+      # `rustup show` inside rust/ installs exactly what rust-toolchain.toml
+      # names -- the pinned stable, rustfmt, clippy and the wasm target -- so
+      # the toml is the only place a version is written. The dated nightly is
+      # separate because -Zbuild-std cannot be expressed in the toml.
+      - name: the pinned toolchain, and the nightly the tier-3 glue needs
+        run: |
+          set -eu
+          (cd rust && rustup show)
+          rustup toolchain install "$NIGHTLY" --component rust-src,clippy --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain "$NIGHTLY"
+      # restore/save are split so a failed or wrong download is never written
+      # into the cache under the artifact's own digest: the digest is checked
+      # first, and only a verified file is saved.
+      - name: production model (cached by sha)
+        uses: actions/cache/restore@v6
+        id: model
+        with:
+          path: models/target-base/ptq.nurl
+          key: model-${{ env.MODEL_SHA256 }}-v2
+      - if: steps.model.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p models/target-base
+          curl -sSfL --retry 3 -o models/target-base/ptq.nurl "$MODEL_URL"
+      - run: echo "$MODEL_SHA256  models/target-base/ptq.nurl" | sha256sum -c -
+      - if: steps.model.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: models/target-base/ptq.nurl
+          key: model-${{ env.MODEL_SHA256 }}-v2
+      # fmt, clippy --all-targets, the artifact-backed test suite, and the
+      # nightly clippy pass over the atomics-only source.
+      - run: task codec:test
+      - name: wasm clippy, single-thread feature sets
+        working-directory: rust/urlcodec
+        run: |
+          RUSTFLAGS="-C target-feature=+simd128" cargo clippy --release --target wasm32-unknown-unknown --lib -- -D warnings
+          RUSTFLAGS="-C target-feature=+simd128,+relaxed-simd" cargo clippy --release --target wasm32-unknown-unknown --lib -- -D warnings
+
+  reproducible:
+    # Two things this asserts:
+    #
+    #  1. This commit produces the same bytes twice. It builds the three wasm
+    #     tiers and the Linux `nanourl` from two source trees whose paths
+    #     differ, with clean target directories, and requires identical
+    #     digests. rustc records source paths in panic locations, so an
+    #     un-remapped prefix makes "the same build" depend on where it ran.
+    #  2. The bytes this runner produces are the bytes a parity gate proved.
+    #     rust/repro.sh checks the rebuild against rust/urlcodec/wasm.sha256,
+    #     which is written only from a `fuzz/run_tiers.sh` run. Without it, CI
+    #     packs whatever its toolchain emits and the gate proves something
+    #     else.
+    name: reproducible (wasm + the Linux CLI)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+      # NIGHTLY and MODEL_SHA256 come out of the tree, not out of this file:
+      # rust/NIGHTLY is what build-wasm.sh and run_tiers.sh read, and
+      # rust/nanourl/model_pin.rs is what build.rs checks the artifact against.
+      # Restating either here is how a workflow ends up gating a different
+      # thing from the one the code enforces. Before the caches, which key on
+      # both.
+      - name: NIGHTLY and MODEL_SHA256, from the tree
+        run: |
+          set -eu
+          echo "NIGHTLY=$(cat rust/NIGHTLY)" >>"$GITHUB_ENV"
+          sha=$(sed -n 's/^pub const MODEL_SHA256: &str = "\(.*\)";$/\1/p' rust/nanourl/model_pin.rs)
+          [ ${#sha} = 64 ] || { echo "no MODEL_SHA256 in rust/nanourl/model_pin.rs" >&2; exit 1; }
+          echo "MODEL_SHA256=$sha" >>"$GITHUB_ENV"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.rustup/toolchains
+          key: rustup-${{ runner.os }}-${{ env.NIGHTLY }}
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-home-${{ runner.os }}-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: cargo-home-${{ runner.os }}-
+      # rust-toolchain.toml installs the pinned stable on first use; the tier-3
+      # build needs the dated nightly and rust-src, which no pin can express.
+      - name: the pinned nightly (-Zbuild-std, tier 3)
+        run: |
+          rustup toolchain install "$NIGHTLY" --component rust-src --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain "$NIGHTLY"
+      - name: production model (cached by sha)
+        uses: actions/cache/restore@v6
+        id: model
+        with:
+          path: models/target-base/ptq.nurl
+          key: model-${{ env.MODEL_SHA256 }}-v2
+      - if: steps.model.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p models/target-base
+          curl -sSfL --retry 3 -o models/target-base/ptq.nurl "$MODEL_URL"
+      - run: echo "$MODEL_SHA256  models/target-base/ptq.nurl" | sha256sum -c -
+      - if: steps.model.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: models/target-base/ptq.nurl
+          key: model-${{ env.MODEL_SHA256 }}-v2
+      - run: rust/repro.sh wasm
+      - run: rust/repro.sh cli
+
+  build:
+    # Builds the three wasm tiers, packs the model and produces web/dist once;
+    # the e2e jobs and the deploy job take that artifact instead of rebuilding.
+    name: build (wasm, assets, unit, svelte-check, lint, vite)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+      # NIGHTLY and MODEL_SHA256 come out of the tree, not out of this file:
+      # rust/NIGHTLY is what build-wasm.sh and run_tiers.sh read, and
+      # rust/nanourl/model_pin.rs is what build.rs checks the artifact against.
+      # Restating either here is how a workflow ends up gating a different
+      # thing from the one the code enforces. Before the caches, which key on
+      # both.
+      - name: NIGHTLY and MODEL_SHA256, from the tree
+        run: |
+          set -eu
+          echo "NIGHTLY=$(cat rust/NIGHTLY)" >>"$GITHUB_ENV"
+          sha=$(sed -n 's/^pub const MODEL_SHA256: &str = "\(.*\)";$/\1/p' rust/nanourl/model_pin.rs)
+          [ ${#sha} = 64 ] || { echo "no MODEL_SHA256 in rust/nanourl/model_pin.rs" >&2; exit 1; }
+          echo "MODEL_SHA256=$sha" >>"$GITHUB_ENV"
+      - uses: jdx/mise-action@v4
+        with:
+          install: true
+          cache: true
+      - uses: actions/cache@v6
+        with:
+          path: ~/.rustup/toolchains
+          key: rustup-${{ runner.os }}-${{ env.NIGHTLY }}
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-home-${{ runner.os }}-${{ hashFiles('rust/Cargo.lock') }}
+          restore-keys: cargo-home-${{ runner.os }}-
+      # The mt tier rebuilds std with -Zbuild-std under target/mt and is by far
+      # the slowest step on a 4-vCPU runner, so this cache is what keeps the
+      # job inside its timeout on a repeat run.
+      - uses: actions/cache@v6
+        with:
+          path: rust/target
+          key: cargo-target-web-${{ runner.os }}-${{ env.NIGHTLY }}-${{ hashFiles('rust/Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            cargo-target-web-${{ runner.os }}-${{ env.NIGHTLY }}-${{ hashFiles('rust/Cargo.lock') }}-
+            cargo-target-web-${{ runner.os }}-${{ env.NIGHTLY }}-
+      # `rustup show` inside rust/ installs exactly what rust-toolchain.toml
+      # names -- the pinned stable, rustfmt, clippy and the wasm target -- so
+      # the toml is the only place a version is written. The dated nightly is
+      # separate because -Zbuild-std cannot be expressed in the toml.
+      - name: the pinned toolchain, and the nightly the tier-3 glue needs
+        run: |
+          set -eu
+          (cd rust && rustup show)
+          rustup toolchain install "$NIGHTLY" --component rust-src,clippy --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain "$NIGHTLY"
+      - name: pnpm store location
+        id: pnpm
+        run: echo "path=$(pnpm store path --silent)" >>"$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.pnpm.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      # Browser downloads are pinned by the playwright version in the lockfile.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+      # restore/save are split so a failed or wrong download is never written
+      # into the cache under the artifact's own digest: the digest is checked
+      # first, and only a verified file is saved.
+      - name: production model (cached by sha)
+        uses: actions/cache/restore@v6
+        id: model
+        with:
+          path: models/target-base/ptq.nurl
+          key: model-${{ env.MODEL_SHA256 }}-v2
+      - if: steps.model.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p models/target-base
+          curl -sSfL --retry 3 -o models/target-base/ptq.nurl "$MODEL_URL"
+      - run: echo "$MODEL_SHA256  models/target-base/ptq.nurl" | sha256sum -c -
+      - if: steps.model.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: models/target-base/ptq.nurl
+          key: model-${{ env.MODEL_SHA256 }}-v2
+      - working-directory: web
+        run: pnpm install --frozen-lockfile
+      # codec:wasm verifies the three tiers against rust/urlcodec/wasm.sha256
+      # and web:assets refuses to pack anything else, so the browser can only
+      # ever be served bytes a parity-gate run has proved.
+      - name: the three wasm tiers
+        run: task codec:wasm
+      - name: pack the model, tokenizer and wasm into web/public
+        run: task web:assets
+      - working-directory: web
+        run: pnpm test
+      - working-directory: web
+        run: pnpm check
+      - working-directory: web
+        run: pnpm lint
+      - working-directory: web
+        run: pnpm build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.DIST_ARTIFACT }}
+          path: web/dist
+          retention-days: 7
+          include-hidden-files: true
+      # The packed-asset manifest the E2E specs read directly (chunk names,
+      # atlas presence); it is generated by `task web:assets`, which only the
+      # build job runs.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.DIST_ARTIFACT }}-manifest
+          path: web/src/lib/assets.json
+          retention-days: 7
+
+  e2e:
+    # One job per Playwright project: each test loads the 125 MiB model and runs
+    # the threads tier, so a 4-vCPU runner saturates at a couple of browsers;
+    # splitting by project halves the wall clock. Serves the build job's dist/.
+    name: e2e ${{ matrix.project }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    needs: [build]
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [mobile, desktop]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v4
+        with:
+          install: true
+          cache: true
+      - name: pnpm store location
+        id: pnpm
+        run: echo "path=$(pnpm store path --silent)" >>"$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.pnpm.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('web/pnpm-lock.yaml') }}
+      - working-directory: web
+        run: pnpm install --frozen-lockfile
+      - working-directory: web
+        run: pnpm exec playwright install --with-deps chromium
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.DIST_ARTIFACT }}
+          path: web/dist
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.DIST_ARTIFACT }}-manifest
+          path: web/src/lib
+      - name: playwright (${{ matrix.project }}, against the built site and its headers)
+        working-directory: web
+        env:
+          PW_SKIP_BUILD: "1"
+          # 4 vCPU, and every isolated page spins up its own compute workers on
+          # top of this count.
+          PW_WORKERS: "2"
+        run: pnpm exec playwright test --project ${{ matrix.project }}
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-test-results-${{ matrix.project }}
+          path: web/test-results
+          retention-days: 7
+          if-no-files-found: ignore
+
+  deploy:
+    name: deploy (Cloudflare Worker)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Ships the build job's artifact once the scrub and codec gates pass; the
+    # e2e jobs report on the same commit in parallel rather than gating it.
+    needs: [scrub, codec, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      # wrangler.toml (the Worker name and the assets directory) comes from
+      # the checkout; without it wrangler has nothing to deploy.
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ env.DIST_ARTIFACT }}
+          path: web/dist
+      # `_headers` carries the COOP/COEP rules the threads tier needs and the
+      # immutable/no-cache split the loader depends on. It is a dotless file at
+      # the root of dist/, so its absence here would silently ship a site that
+      # falls back to the slow tier on every visit.
+      - run: test -f web/dist/_headers
+      # An assets-only Worker (wrangler.toml at the repo root): the built site
+      # is uploaded as static assets and served by the Worker the custom domain
+      # is attached to. The token needs Account → Workers Scripts → Edit.
+      # quiet: wrangler's chatter names the account's workers.dev subdomain,
+      # the deployed asset list and the login; only errors are worth a public
+      # log. The GitHub-masked secrets cover the token and account id.
+      - uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "4"
+          quiet: true
+          command: deploy
+        env:
+          WRANGLER_SEND_METRICS: "false"
