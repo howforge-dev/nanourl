@@ -40,6 +40,7 @@ export const TESTID = {
   qrSvgDownload: 'qr-svg-download',
   qrCopy: 'qr-copy',
   qrDarkNote: 'qr-dark-note',
+  qrInvert: 'qr-invert',
   qrImageError: 'qr-image-error',
   qrImageWarning: 'qr-image-warning',
   qrModeNote: 'qr-mode-note',

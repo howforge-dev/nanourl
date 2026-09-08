@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { test, expect } from 'playwright/test';
 import type { Locator, Page } from 'playwright/test';
 import { ALPHABETS, QR_ALPHA, qrText } from '../src/lib/alphabet';
-import { CENTRE_LABEL_MAX, CORNER_TYPES, MODULE_STYLES, STORAGE_KEY, isUnscannable } from '../src/lib/qr/options';
+import { CENTRE_LABEL_MAX, CORNER_TYPES, MODULE_STYLES, PRESETS, STORAGE_KEY, applyPreset, isUnscannable } from '../src/lib/qr/options';
 import { WEB_ROOT } from '../scripts/paths';
 import { atMobile, encodeFirstExample, expectNoHorizontalOverflow, TESTID, testIdSelector, waitForModelReady, watchErrors } from './helpers';
 import { CODEC_CALL } from './timeouts';
@@ -13,10 +13,10 @@ import { CODEC_CALL } from './timeouts';
 // JS decoder (jsqr) injected into the page for the test only: it reads the
 // rendered SVG back off a canvas, so the check is on the pixels a phone
 // would see, on screen and as exported, with inversion OFF: a symbol that
-// only reads inverted is a failure. Under the dark-mode switch the check is
-// the other way round: the raw pixels must NOT read, and the pixels
-// inverted must — the inversion done here on the canvas, since jsqr 1.4's
-// own `onlyInvert` scans a bitmap it never builds.
+// only reads inverted is a failure. After "invert colours" the check is the
+// other way round: the raw pixels must NOT read, and the pixels inverted
+// must — the inversion done here on the canvas, since jsqr 1.4's own
+// `onlyInvert` scans a bitmap it never builds.
 
 type Inversion = 'dontInvert' | 'onlyInvert';
 
@@ -74,8 +74,11 @@ async function expectScans(page: Page, expected: string, what: string, inversion
   expect(await scan(page, 'export', inversion), `${what}, exported`).toBe(expected);
 }
 
+/** The symbol on show — the preset swatches are SVGs too, so every look
+ *  into the drawing is scoped to it. */
+const symbolBox = (qr: Locator): Locator => qr.locator(testIdSelector(TESTID.qrSvg));
 /** The module path's data, which changes whenever the symbol does. */
-const modules = (qr: Locator): Locator => qr.locator('path.modules');
+const modules = (qr: Locator): Locator => symbolBox(qr).locator('path.modules');
 
 test('QR section: renders, follows every control, exports, persists, and every style of every alphabet scans', async ({ page }) => {
   test.setTimeout(600_000);
@@ -102,7 +105,8 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await expect(qr.locator('svg')).toHaveCount(0);
 
   await qr.locator('summary').click();
-  const svg = qr.locator(testIdSelector(TESTID.qrSvg)).locator('svg');
+  const sym = symbolBox(qr);
+  const svg = sym.locator('svg');
   await expect(svg).toHaveCount(1);
   await expect(svg).toHaveAttribute('viewBox', /^0 0 \d+ \d+$/);
   const readout = qr.locator(testIdSelector(TESTID.qrText));
@@ -119,11 +123,12 @@ test('QR section: renders, follows every control, exports, persists, and every s
   //     to, the symbol is still inside the viewport ---
   await group('export').locator('summary').scrollIntoViewIfNeeded();
   await qr.locator(testIdSelector(TESTID.qrDownload)).scrollIntoViewIfNeeded();
-  const inView = await svg.evaluate((el) => {
+  const rect = await svg.evaluate((el) => {
     const r = el.getBoundingClientRect();
-    return r.top >= 0 && r.bottom <= window.innerHeight && r.height > 0 && r.height <= window.innerHeight * 0.4 + 1;
+    return { top: r.top, bottom: r.bottom, height: r.height, viewport: window.innerHeight };
   });
-  expect(inView, 'the symbol stays within the viewport while the export controls are in view').toBe(true);
+  const inView = rect.top >= 0 && rect.bottom <= rect.viewport && rect.height > 0 && rect.height <= rect.viewport * 0.4 + 1;
+  expect(inView, `the symbol stays within the viewport while the export controls are in view: ${JSON.stringify(rect)}`).toBe(true);
   await page.evaluate(() => window.scrollTo(0, 0));
 
   // --- the offer to switch: base64url is the default, the callout names both
@@ -192,14 +197,14 @@ test('QR section: renders, follows every control, exports, persists, and every s
   const error = qr.locator(testIdSelector(TESTID.qrError));
   await expect(error).toBeVisible();
   await expect(error).toContainText(/version/i);
-  await expect(qr.locator('svg')).toHaveCount(0);
+  await expect(sym.locator('svg')).toHaveCount(0);
   await version.fill('');
   await expect(error).toHaveCount(0);
-  await expect(qr.locator('svg')).toHaveCount(1);
+  await expect(sym.locator('svg')).toHaveCount(1);
 
   // --- hints: a "?" beside every label, each explaining its control ---
   const hints = qr.locator(testIdSelector(TESTID.hint));
-  expect(await hints.count()).toBe(await qr.locator('.lbl').count());
+  expect(await hints.count()).toBe((await qr.locator('.lbl').count()) + PRESETS.length);
   await hints.first().hover();
   await expect(qr.locator('[role=tooltip]').first()).toBeVisible();
 
@@ -241,8 +246,8 @@ test('QR section: renders, follows every control, exports, persists, and every s
     await expect(style(s)).toHaveAttribute('aria-pressed', 'true');
     if (s === 'nanourl') {
       await expect(level('H')).toHaveAttribute('aria-pressed', 'true');
-      await expect(qr.locator('rect.plate')).toHaveCount(1);
-      await expect(qr.locator('use')).toHaveCount(1);
+      await expect(sym.locator('rect.plate')).toHaveCount(1);
+      await expect(sym.locator('use')).toHaveCount(1);
     }
     for (const t of CORNER_TYPES) {
       await square(t).click();
@@ -259,15 +264,15 @@ test('QR section: renders, follows every control, exports, persists, and every s
     await square('square').click();
     await dot('square').click();
     await opt('shape', 'circle').click();
-    await expect(qr.locator('circle.background')).toHaveCount(1);
+    await expect(sym.locator('circle.background')).toHaveCount(1);
     await expectScans(page, expected0, `${s} modules in a circle`);
     await opt('shape', 'square').click();
   }
   await style('classic').click();
   // the logo is a setting of its own and survives the style change
-  await expect(qr.locator('use')).toHaveCount(1);
+  await expect(sym.locator('use')).toHaveCount(1);
   await opt('picture', 'none').click();
-  await expect(qr.locator('use')).toHaveCount(0);
+  await expect(sym.locator('use')).toHaveCount(0);
   await level('M').click();
 
   // --- every alphabet on classic, on screen and exported ---
@@ -292,40 +297,78 @@ test('QR section: renders, follows every control, exports, persists, and every s
   //     colour picked with the native picker, own corner paints ---
   const dotsGroup = group('dots');
   await dotsGroup.getByRole('group', { name: 'dots paint' }).getByRole('button', { name: 'gradient', exact: true }).click();
-  await expect(qr.locator('linearGradient')).toHaveCount(1);
+  await expect(sym.locator('linearGradient')).toHaveCount(1);
   const stop1 = dotsGroup.getByLabel('dots stop 1 colour picker');
   await stop1.fill('#224488');
-  await expect(qr.locator('linearGradient stop').first()).toHaveAttribute('stop-color', '#224488');
+  await expect(sym.locator('linearGradient stop').first()).toHaveAttribute('stop-color', '#224488');
   await expect(dotsGroup.getByLabel('dots stop 1 colour', { exact: true })).toHaveValue('#224488');
   // the default second stop is the accent, chosen to be seen; for the scan
   // the gradient ends dark, since the edge rows hold two finders
   await dotsGroup.getByLabel('dots stop 2 colour picker').fill('#003366');
-  await expect(qr.locator('linearGradient stop').nth(1)).toHaveAttribute('stop-color', '#003366');
+  await expect(sym.locator('linearGradient stop').nth(1)).toHaveAttribute('stop-color', '#003366');
   await dotsGroup.getByRole('spinbutton', { name: 'dots gradient angle in degrees' }).fill('45');
   await dotsGroup.getByRole('spinbutton', { name: 'dots gradient angle in degrees' }).press('Enter');
   // vertical by default (x1 = x2); at 45° both axes move
-  const grad = qr.locator('linearGradient');
+  const grad = sym.locator('linearGradient');
   await expect.poll(async () => (await grad.getAttribute('x1')) !== (await grad.getAttribute('x2'))).toBe(true);
   await dotsGroup.getByRole('button', { name: 'add stop' }).click();
   await expect(dotsGroup.getByLabel(/dots stop \d colour picker/)).toHaveCount(3);
   await expectScans(page, expected0, 'a three-stop gradient at 45°');
   await dotsGroup.getByRole('group', { name: 'dots gradient type' }).getByRole('button', { name: 'radial', exact: true }).click();
-  await expect(qr.locator('radialGradient')).toHaveCount(1);
+  await expect(sym.locator('radialGradient')).toHaveCount(1);
   await expectScans(page, expected0, 'a radial gradient');
   await group('corners-square').getByRole('group', { name: 'corners square paint source' }).getByRole('button', { name: 'own', exact: true }).click();
   await group('corners-square').getByLabel('corners square colour picker').fill('#aa0000');
-  await expect(qr.locator('path.ring')).toHaveAttribute('fill', '#aa0000');
+  await expect(sym.locator('path.ring')).toHaveAttribute('fill', '#aa0000');
   await expectScans(page, expected0, 'red corners');
 
-  // --- dark mode: reads only inverted; the note shows ---
-  await opt('on dark', 'on').click();
-  await expect(qr.locator(testIdSelector(TESTID.qrDarkNote))).toBeVisible();
-  expect(await scan(page, 'screen', 'dontInvert'), 'on dark, not inverted').toBeNull();
-  expect(await scan(page, 'export', 'dontInvert'), 'on dark export, not inverted').toBeNull();
-  await expectScans(page, expected0, 'on dark', 'onlyInvert');
-  await opt('on dark', 'off').click();
+  // --- invert colours: the config's dots take the background colour and
+  //     the symbol reads only inverted; a two-colour gradient on each paint
+  //     survives it (the paints swap, no colour is replaced): dark colours
+  //     where the paint becomes the background, light ones where it stays
+  //     on the modules or the corners ---
   await qr.locator('[data-testid="qr-preset-classic"]').click();
-  await expect(qr.locator('linearGradient, radialGradient')).toHaveCount(0);
+  const settingsNow = async (): Promise<Record<string, { color: string }>> => JSON.parse((await page.evaluate((k) => localStorage.getItem(k), STORAGE_KEY)) ?? '{}');
+  const darkCases: [string, string, string, string][] = [
+    ['dots', 'dots', '#224488', '#003366'],
+    ['background', 'background', '#ffffff', '#dddddd'],
+    ['corners-square', 'corners square', '#ffffff', '#cccccc'],
+    ['corners-dot', 'corners dot', '#eeeeee', '#ffffff'],
+  ];
+  for (const [g, paint, c1, c2] of darkCases) {
+    if (paint.startsWith('corners')) await group(g).getByRole('group', { name: `${paint} paint source` }).getByRole('button', { name: 'own', exact: true }).click();
+    await group(g).getByRole('group', { name: `${paint} paint` }).getByRole('button', { name: 'gradient', exact: true }).click();
+    await group(g).getByLabel(`${paint} stop 1 colour picker`).fill(c1);
+    await group(g).getByLabel(`${paint} stop 2 colour picker`).fill(c2);
+    const before = await settingsNow();
+    await qr.locator(testIdSelector(TESTID.qrInvert)).click();
+    const after = await settingsNow();
+    expect(after.dots.color, `${paint}: the dots take the background colour`).toBe(before.background.color);
+    expect(after.background.color).toBe(before.dots.color);
+    await expect(qr.locator(testIdSelector(TESTID.qrDarkNote))).toBeVisible();
+    // both chosen colours are in the document
+    const shown = await sym.locator('svg').innerHTML();
+    expect(shown, `${paint} stop colours after inverting`).toContain(c2);
+    expect(shown, `${paint} stop colours after inverting`).toContain(c1);
+    if (paint === 'dots') {
+      expect(await scan(page, 'screen', 'dontInvert'), 'inverted, read as is').toBeNull();
+      expect(await scan(page, 'export', 'dontInvert'), 'inverted export, read as is').toBeNull();
+    }
+    await expectScans(page, expected0, `${paint} gradient inverted`, 'onlyInvert');
+    await qr.locator(testIdSelector(TESTID.qrInvert)).click();
+    expect(await settingsNow()).toEqual(before);
+    await qr.locator('[data-testid="qr-preset-classic"]').click();
+  }
+  await qr.locator('[data-testid="qr-preset-classic"]').click();
+  await expect(sym.locator('linearGradient, radialGradient')).toHaveCount(0);
+  await expect(qr.locator('[data-testid="qr-preset-classic"]')).toHaveAttribute('aria-pressed', 'true');
+  // a third stop lands between the last two, and its colour stays where it is set
+  await dotsGroup.getByRole('group', { name: 'dots paint' }).getByRole('button', { name: 'gradient', exact: true }).click();
+  await dotsGroup.getByRole('button', { name: 'add stop' }).click();
+  await expect(dotsGroup.getByRole('spinbutton', { name: 'dots stop 2 offset' })).toHaveValue('0.5');
+  await dotsGroup.getByLabel('dots stop 3 colour picker').fill('#3a7c5e');
+  await expect(sym.locator('linearGradient stop').nth(2)).toHaveAttribute('stop-color', '#3a7c5e');
+  await qr.locator('[data-testid="qr-preset-classic"]').click();
 
   // --- caption and centre label: drawn, not encoded; the label raises the
   //     level to H, lowering it warns, and the symbol still scans ---
@@ -336,8 +379,8 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await label.fill('QV');
   await expect(qr.locator(testIdSelector(TESTID.qrLabelCount))).toHaveText(`2/${CENTRE_LABEL_MAX}`);
   await expect(level('H')).toHaveAttribute('aria-pressed', 'true');
-  await expect(qr.locator('text.caption')).not.toHaveCount(0);
-  await expect(qr.locator('text.label')).toHaveText('QV');
+  await expect(sym.locator('text.caption')).not.toHaveCount(0);
+  await expect(sym.locator('text.label')).toHaveText('QV');
   await expect(readout).toHaveText(await shownLink());
   await expectScans(page, (await readout.textContent()) ?? '', 'caption and label');
   await style('dots').click();
@@ -386,6 +429,21 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await padding.fill('0');
   await padding.press('Enter');
   await mask('auto').click();
+
+  // --- every preset renders, is shown as pressed, and scans ---
+  for (const name of PRESETS) {
+    const chip = qr.locator(`[data-testid="qr-preset-${name}"]`);
+    await chip.click();
+    await expect(chip).toHaveAttribute('aria-pressed', 'true');
+    await expect(sym.locator('svg').first()).toHaveCount(1);
+    // a preset whose modules are lighter than its background reads inverted
+    const p = applyPreset(name, { shortLink: '' });
+    const luma = (hex: string): number => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).reduce((a, b) => a + b);
+    const dark = luma(p.dots.color) > luma(p.background.color);
+    await expectScans(page, (await readout.textContent()) ?? '', `the ${name} preset`, dark ? 'onlyInvert' : 'dontInvert');
+  }
+  await qr.locator(testIdSelector(TESTID.qrReset)).click();
+  await expect(qr.locator('[data-testid="qr-preset-classic"]')).toHaveAttribute('aria-pressed', 'true');
 
   // --- the settings persist per browser under one key ---
   await style('rounded').click();

@@ -140,11 +140,6 @@ export interface QrSettings {
   transparent: boolean;
   /** 0..1: the image's corner radius as a share of half its width. */
   backgroundRound: number;
-  /** Draw light on dark: the dots take the background colour and the
-   *  background the dots', plate and label swapped to match, every gradient
-   *  reversed toward the light end. Current phone cameras read an inverted
-   *  code; not every scanner does, which the page says beside the switch. */
-  onDark: boolean;
   // image
   imageSource: ImageSource;
   /** The upload as a data: URL, or `null`. */
@@ -228,7 +223,6 @@ export const DEFAULT_SETTINGS: QrSettings = {
   background: solid('#ffffff'),
   transparent: false,
   backgroundRound: 0,
-  onDark: false,
   imageSource: 'none',
   imageData: null,
   imageSize: 0.4,
@@ -266,8 +260,9 @@ const oneOf = <T extends string>(v: unknown, allowed: readonly T[], fallback: T)
 
 const obj = (v: unknown): Record<string, unknown> => (typeof v === 'object' && v !== null ? (v as Record<string, unknown>) : {});
 
-/** A valid gradient from anything, or `null`: two to five stops, sorted by
- *  offset, every colour a colour. */
+/** A valid gradient from anything, or `null`: two to five stops in the
+ *  order given (the renderer sorts a copy when it emits), each offset
+ *  clamped to 0..1, every colour a colour. */
 export function sanitizeGradient(raw: unknown, fallbackColor: string): Gradient | null {
   if (raw === null || raw === undefined) return null;
   const g = obj(raw);
@@ -280,7 +275,6 @@ export function sanitizeGradient(raw: unknown, fallbackColor: string): Gradient 
   // (or from) the paint's colour rather than two stops on one spot
   if (stops.length === 0) stops.push({ offset: 0, color: fallbackColor });
   if (stops.length === 1) stops.push({ offset: stops[0].offset > 0.5 ? 0 : 1, color: fallbackColor });
-  stops.sort((a, b) => a.offset - b.offset);
   return {
     type: oneOf(g.type, GRADIENT_TYPES, 'linear'),
     rotation: clampInt(g.rotation, 0, 359, 0),
@@ -297,8 +291,12 @@ export function sanitizePaint(raw: unknown, fallback: Paint): Paint {
 
 /**
  * A full, valid settings object from anything: every field checked for type
- * and range, defaults where a value is missing or wrong. `null`/`'auto'` and
- * an empty string all mean "auto" for the version and the mask.
+ * and range, defaults where a value is missing or wrong, out-of-range
+ * numbers clamped. It validates and nothing else — no sorting, swapping,
+ * tinting or replacing: the settings are exactly what was chosen, and every
+ * colour in them is the one drawn (or, on dark, its exact swap).
+ * `null`/`'auto'` and an empty string all mean "auto" for the version and
+ * the mask.
  */
 export function sanitize(raw: unknown): QrSettings {
   const r = obj(raw);
@@ -329,7 +327,6 @@ export function sanitize(raw: unknown): QrSettings {
     background: sanitizePaint(r.background, d.background),
     transparent: r.transparent === true,
     backgroundRound: clampFloat(r.backgroundRound, 0, 1, d.backgroundRound),
-    onDark: r.onDark === true,
     imageSource: oneOf(r.imageSource, IMAGE_SOURCES, d.imageSource),
     imageData: image,
     imageSize: clampFloat(r.imageSize, 0, 1, d.imageSize),
@@ -395,30 +392,74 @@ export function applyStyle(s: QrSettings, style: ModuleStyle): QrSettings {
   return { ...s, style };
 }
 
-export const PRESETS = ['classic', 'nanourl'] as const;
-export type Preset = (typeof PRESETS)[number];
+/** What a preset may need from the page: the short link, for a caption. */
+export interface PresetContext {
+  shortLink: string;
+}
 
-/** A preset: the looks, leaving the code's own settings (level, version,
- *  mask, mode, sizes, text, export) as they are — except that the signature
- *  style raises the level, since it carries the logo. */
-export function applyPreset(s: QrSettings, preset: Preset): QrSettings {
-  const d = DEFAULT_SETTINGS;
-  const classic: QrSettings = {
-    ...s,
-    style: 'classic',
-    dots: d.dots,
-    cornersSquareType: d.cornersSquareType,
-    cornersSquare: null,
-    cornersDotType: d.cornersDotType,
-    cornersDot: null,
-    background: d.background,
-    transparent: false,
-    backgroundRound: 0,
-    onDark: false,
-    imageSource: 'none',
-    shape: 'square',
-  };
-  return preset === 'classic' ? classic : applyStyle(classic, 'nanourl');
+/** The presets: each a named look, as its own overrides on the defaults —
+ *  applying one resets everything it does not set. Colours are tokens
+ *  where a token fits; the fixed ones live in this table and nowhere else.
+ *  Every preset scans (the e2e applies each and reads it back). */
+export const PRESET_TABLE: Readonly<Record<string, { hint: string; settings: (ctx: PresetContext) => Partial<QrSettings> }>> = {
+  classic: { hint: 'The plain code: black squares on white, nothing else.', settings: () => ({}) },
+  nanourl: {
+    hint: 'The site’s own look: dots under the blue gradient, rounded corners, the logo in the middle.',
+    settings: () => ({
+      style: 'nanourl',
+      dots: { color: DEFAULT_SETTINGS.dots.color, gradient: presetGradient(DEFAULT_SETTINGS.dots.color) },
+      cornersSquareType: 'extra-rounded',
+      cornersDotType: 'rounded',
+      imageSource: 'logo',
+      level: 'H',
+    }),
+  },
+  rounded: { hint: 'Softened squares and rounded corners, dark on light.', settings: () => ({ style: 'rounded', cornersSquareType: 'rounded', cornersDotType: 'rounded' }) },
+  dots: {
+    hint: 'Every module a dot, round corners, ink on light.',
+    settings: () => ({ style: 'dots', cornersSquareType: 'dot', cornersDotType: 'dot', dots: solid(COLOR.ink) }),
+  },
+  classy: { hint: 'One corner of each module rounded so runs look woven, with matching corners.', settings: () => ({ style: 'classy', cornersSquareType: 'classy', cornersDotType: 'classy' }) },
+  ocean: {
+    hint: 'Pills across the runs, fading from the site’s blue down to its ink, on white.',
+    settings: () => ({
+      style: 'extra-rounded',
+      cornersSquareType: 'extra-rounded',
+      cornersDotType: 'extra-rounded',
+      dots: { color: COLOR.ink, gradient: { type: 'linear', rotation: 90, stops: [{ offset: 0, color: mix(COLOR.acc, COLOR.ink, 0.35) }, { offset: 1, color: COLOR.ink }] } },
+    }),
+  },
+  sunset: {
+    hint: 'Dots in a warm diagonal fade, rounded corners, the short link written underneath.',
+    settings: ({ shortLink }) => ({
+      style: 'dots',
+      cornersSquareType: 'rounded',
+      cornersDotType: 'rounded',
+      dots: { color: '#7a1f2b', gradient: { type: 'linear', rotation: 45, stops: [{ offset: 0, color: '#7a1f2b' }, { offset: 1, color: '#b3410f' }] } },
+      caption: shortLink,
+    }),
+  },
+  'mono-dark': { hint: 'Light on dark: the paper as ink and the ink as paper. Phone cameras read it; some scanners do not.', settings: () => ({ dots: solid(COLOR.txt), background: solid(COLOR.ink) }) },
+  poster: {
+    hint: 'Large, with a tight quiet zone, the site’s name on a plate in the middle, and the strongest error correction.',
+    settings: () => ({ style: 'classy-rounded', cornersSquareType: 'classy-rounded', cornersDotType: 'rounded', width: 320, margin: 2, centreLabel: 'qv.lc', level: 'H' }),
+  },
+  minimal: { hint: 'The smallest text and the tightest frame: no scheme, a one-module quiet zone, no padding.', settings: () => ({ margin: 1, padding: 0, scheme: false }) },
+};
+export const PRESETS = Object.keys(PRESET_TABLE) as Preset[];
+export type Preset = keyof typeof PRESET_TABLE;
+
+/** A preset applied: the defaults, then its own overrides — so it resets
+ *  everything it does not set — validated like any other settings. */
+export function applyPreset(preset: Preset, ctx: PresetContext): QrSettings {
+  return sanitize({ ...DEFAULT_SETTINGS, ...PRESET_TABLE[preset].settings(ctx) });
+}
+
+/** The preset the settings currently are, exactly, or `null` once any
+ *  control has changed them. */
+export function presetOf(s: QrSettings, ctx: PresetContext): Preset | null {
+  const now = JSON.stringify(s);
+  return PRESETS.find((name) => JSON.stringify(applyPreset(name, ctx)) === now) ?? null;
 }
 
 /** An image is a plate, and a plate needs level H — applied when a picture
@@ -480,44 +521,56 @@ export interface QrOptions {
   /** For `QRCode.create`: the options, and the text or a single byte segment. */
   create: QRCodeOptions;
   segments: (text: string) => string | QRCodeSegment[];
-  /** The inline symbol: the site's own colours behind the signature style,
-   *  the chosen colours behind every other. */
+  /** The inline symbol, sized by the page. */
   screen: RenderOptions;
-  /** The exported files: always the chosen colours, never the theme. */
+  /** The exported files, at the export scale. */
   export: RenderOptions;
 }
 
-/** How much of a gradient's own colour survives on dark: the rest is the
- *  light end. Colours chosen for dark-on-light are dark, and reversed onto a
- *  dark background they would have no contrast; tinted this far toward the
- *  light end they keep their hue and read. */
-export const DARK_TINT = 0.3;
-
-/** A gradient for dark mode: its stops run the other way, every colour
- *  tinted toward `endColor` (the light end), and the far stop exactly it,
- *  so the paint still fades toward its first colour and ends in the colour
- *  the modules must have. */
-export function reverseGradient(g: Gradient, endColor: string): Gradient {
-  const stops = g.stops.map((st) => ({ offset: 1 - st.offset, color: mix(endColor, st.color, DARK_TINT) })).reverse();
-  const far = Math.max(...stops.map((st) => st.offset));
-  return { ...g, stops: stops.map((st) => (st.offset === far ? { ...st, color: endColor } : st)) };
+/** A gradient run the other way: the same colours, the offsets mirrored,
+ *  the order reversed. Nothing a person chose is replaced. */
+export function reverseGradient(g: Gradient): Gradient {
+  return { ...g, stops: g.stops.map((st) => ({ ...st, offset: Math.round((1 - st.offset) * 1000) / 1000 })).reverse() };
 }
 
-const invertPaint = (p: Paint, endColor: string): Paint => ({ color: endColor, gradient: p.gradient ? reverseGradient(p.gradient, endColor) : null });
+const reversePaint = (p: Paint): Paint => ({ color: p.color, gradient: p.gradient ? reverseGradient(p.gradient) : null });
 
 /**
- * The one mapping from settings to what each consumer takes.
- *
- * On screen the signature style is drawn in the theme's own ink and paper
- * — the dots' solid colour and the gradient's end become the ink, the
- * background and the plate the text colour — so it reads as part of the
- * page while staying dark on light, the polarity every scanner reads
- * without inverting. Every other style, and every export, uses the explicit
- * colours: a file leaves the page and has to stand on its own.
- *
- * On dark, both documents swap: the modules take the background colour, the
- * background (unless transparent), the plate and the label's paper take the
- * dots' colour, and every gradient is reversed toward the light end.
+ * The colours inverted, in the config itself: the modules take the
+ * background's paint and the background the modules', each gradient's
+ * stops run the other way (so it still lies the same way across the
+ * symbol); the corners' own paints are reversed in place; the plate and
+ * the label follow, since they take the two base colours. An involution:
+ * pressed twice, the config is what it was. Inverted codes need a scanner
+ * that reads light on dark, which the page says under the button.
+ */
+export function invertColours(s: QrSettings): QrSettings {
+  return {
+    ...s,
+    dots: reversePaint(s.background),
+    background: reversePaint(s.dots),
+    cornersSquare: s.cornersSquare ? reversePaint(s.cornersSquare) : null,
+    cornersDot: s.cornersDot ? reversePaint(s.cornersDot) : null,
+  };
+}
+
+/** A gradient with one more stop: its offset the midpoint of the last two
+ *  (0.5 for a two-stop gradient), so it never lands on another stop and
+ *  can never trade places with one; its colour the last stop's. */
+export function addStop(g: Gradient): Gradient {
+  if (g.stops.length >= STOPS_MAX) return g;
+  const [a, b] = g.stops.slice(-2);
+  const offset = Math.round(((a.offset + b.offset) / 2) * 1000) / 1000;
+  const stops = [...g.stops.slice(0, -1), { offset, color: b.color }, b];
+  return { ...g, stops };
+}
+
+/**
+ * The one mapping from settings to what each consumer takes. The renderer
+ * draws the config verbatim — the same paints on screen and in the export;
+ * the two differ only in scale — so every colour in the settings is the
+ * colour drawn. The one thing the renderer does to a value is sort a copy
+ * of a gradient's stops by offset when it emits the definition.
  */
 export function qrOptions(s: QrSettings, pxPerModuleOnScreen = 1): QrOptions {
   const create: QRCodeOptions = { errorCorrectionLevel: s.level };
@@ -534,7 +587,7 @@ export function qrOptions(s: QrSettings, pxPerModuleOnScreen = 1): QrOptions {
         : s.imageSource === 'upload' && s.imageData
           ? { kind: 'image', href: s.imageData }
           : null;
-  const explicit: RenderOptions = {
+  const render: RenderOptions = {
     style: s.style,
     cornersSquareType: s.cornersSquareType,
     cornersDotType: s.cornersDotType,
@@ -556,35 +609,11 @@ export function qrOptions(s: QrSettings, pxPerModuleOnScreen = 1): QrOptions {
     font: FONT.sans,
     pxPerModule: s.scale,
   };
-  const themed: RenderOptions =
-    s.style === 'nanourl'
-      ? {
-          ...explicit,
-          dots: { color: COLOR.ink, gradient: s.dots.gradient ? { ...s.dots.gradient, stops: s.dots.gradient.stops.map((st, i, all) => (i === all.length - 1 ? { ...st, color: COLOR.ink } : st)) } : null },
-          background: s.transparent ? null : solid(COLOR.txt),
-          plateFill: COLOR.txt,
-          ink: COLOR.ink,
-        }
-      : explicit;
-  const onDark = (o: RenderOptions): RenderOptions => {
-    if (!s.onDark) return o;
-    const light = o.background?.color ?? s.background.color;
-    const dark = o.dots.color;
-    return {
-      ...o,
-      dots: invertPaint(o.dots, light),
-      cornersSquare: o.cornersSquare ? invertPaint(o.cornersSquare, light) : null,
-      cornersDot: o.cornersDot ? invertPaint(o.cornersDot, light) : null,
-      background: o.background ? invertPaint(o.background, dark) : null,
-      plateFill: dark,
-      ink: light,
-    };
-  };
   return {
     create,
     segments,
-    screen: { ...onDark(themed), pxPerModule: pxPerModuleOnScreen, imageMarginPx: s.imageMargin },
-    export: { ...onDark(explicit), scale: s.scale },
+    screen: { ...render, pxPerModule: pxPerModuleOnScreen },
+    export: { ...render, scale: s.scale },
   };
 }
 

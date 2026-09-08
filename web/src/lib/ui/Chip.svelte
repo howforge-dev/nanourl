@@ -25,6 +25,8 @@
     pressed,
     title,
     ariaLabel,
+    /** id of the element that explains the chip (a `Hint`'s tooltip). */
+    describedBy,
     /** `data-testid`. On the control itself: a wrapper element carrying it
      *  instead would let a click land beside the button rather than on it. */
     testid,
@@ -41,6 +43,7 @@
     pressed?: boolean;
     title?: string;
     ariaLabel?: string;
+    describedBy?: string;
     testid?: string;
     class?: string;
     onclick?: (e: MouseEvent) => void;
@@ -60,6 +63,7 @@
     type="button"
     {title}
     aria-label={ariaLabel}
+    aria-describedby={describedBy}
     data-testid={testid}
     aria-pressed={pressed}
     {onclick}

@@ -7,6 +7,10 @@
   // are grouped the way qr-code-styling groups its options, so a person who
   // knows that tool finds the same knobs; every label carries a `Hint`.
   //
+  // The settings are the single truth and the renderer draws them verbatim:
+  // a preset overwrites them, "invert colours" rewrites them, and nothing
+  // is transformed on the way to the screen or a file.
+  //
   // What goes into the code is `qrText`'s business (lib/alphabet.ts): for
   // qr-alpha the base is uppercased so the whole link, bar the '#', rides in
   // QR alphanumeric mode. The readout under the symbol shows that text and
@@ -35,6 +39,7 @@
     MODULE_STYLES,
     PADDING_MAX,
     PRESETS,
+    PRESET_TABLE,
     SCALE_MAX,
     SCALE_MIN,
     SHAPES,
@@ -48,9 +53,11 @@
     applyStyle,
     exportName,
     hasPlate,
+    invertColours,
     isUnscannable,
     loadSettings,
     maxImageSize,
+    presetOf,
     qrOptions,
     sanitize,
     saveSettings,
@@ -70,6 +77,7 @@
   import { circlePadding, renderSvg } from '../../lib/qr/render';
   import Button from '../../lib/ui/Button.svelte';
   import Callout from '../../lib/ui/Callout.svelte';
+  import Chip from '../../lib/ui/Chip.svelte';
   import Hint from '../../lib/ui/Hint.svelte';
   import Segmented from '../../lib/ui/Segmented.svelte';
   import TextField from '../../lib/ui/TextField.svelte';
@@ -179,7 +187,6 @@
   const MODE_OPTIONS = opt(MODES);
   const FORMAT_OPTIONS = opt(EXPORT_FORMATS);
   const IMAGE_OPTIONS = opt(IMAGE_SOURCES);
-  const PRESET_OPTIONS = opt(PRESETS);
   const LEVEL_OPTIONS = EC_LEVELS.map((l) => ({ value: l, label: EC_LABEL(l), title: `recovers ${EC_RECOVERS[l]} of the symbol` }));
   const MASK_OPTIONS = [{ value: 'auto', label: 'auto' }, ...Array.from({ length: MASK_MAX + 1 }, (_, i) => ({ value: String(i), label: String(i) }))];
   const MARGIN_OPTIONS = MARGIN_PICKS.map((m) => ({ value: String(m), label: String(m) }));
@@ -295,6 +302,25 @@
   }
 
   let shortLink = $derived(link.replace(/^https?:\/\//, ''));
+  let presetCtx = $derived({ shortLink });
+  /** The preset the settings are, exactly, for the pressed chip; none once
+   *  any control has changed them. */
+  let currentPreset = $derived(presetOf(settings, presetCtx));
+
+  // A swatch per preset: the look on a 21-module dummy matrix, without its
+  // text, drawn once and kept — the presets do not change while the page is
+  // open.
+  const SWATCH_MATRIX = QRCode.create('QV.LC', { errorCorrectionLevel: 'L' }).modules;
+  const swatches = new Map<string, string>();
+  const swatch = (name: Preset): string => {
+    let svg = swatches.get(name);
+    if (!svg) {
+      const s = { ...applyPreset(name, { shortLink: '' }), caption: '', centreLabel: '', margin: 1, padding: 0 };
+      svg = renderSvg(SWATCH_MATRIX, qrOptions(s, 1).screen, `sw-${name}`).svg;
+      swatches.set(name, svg);
+    }
+    return svg;
+  };
 </script>
 
 {#snippet lbl(key: HintKey, label: string)}
@@ -322,10 +348,11 @@
       </div>
     {/if}
 
-    <!-- Two columns on a wide viewport, the preview column sticky, so a
-         control at the bottom of the options can be adjusted while the
-         symbol stays in view; on a narrow one the preview sticks to the top
-         of the viewport, capped to keep the controls usable under it. -->
+    <!-- Two columns on a wide viewport, the preview column (symbol and
+         readout, nothing taller) sticky, so a control at the bottom of the
+         options can be adjusted while the symbol stays in view; on a narrow
+         one the preview sticks to the top of the viewport, capped to keep
+         the controls usable under it. -->
     <div class="body">
     <div class="preview" data-testid={TESTID.qrPreview}>
     <div class="symbol" data-testid={TESTID.qrSvg} style:width="{displayWidth}px">
@@ -352,15 +379,20 @@
       </div>
     </div>
 
+    </div>
+    <div class="options">
     <div class="row presets">
       {@render lbl('presets', 'presets')}
-      {#each PRESET_OPTIONS as p (p.value)}
-        <Button size="sm" describedBy={hintId('presets')} testid="qr-preset-{p.value}" onclick={() => (settings = applyPreset(settings, p.value as Preset))}>{p.label}</Button>
+      {#each PRESETS as name (name)}
+        <span class="preset">
+          <Chip pressed={currentPreset === name} selected={currentPreset === name} testid="qr-preset-{name}" ariaLabel="preset {name}" describedBy="hint-preset-{name}" onclick={() => (settings = applyPreset(name, presetCtx))}>
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -- our renderer's SVG of a fixed dummy matrix -->
+            <span class="swatch">{@html swatch(name)}</span>{name}</Chip
+          ><Hint id="hint-preset-{name}" text={PRESET_TABLE[name].hint} />
+        </span>
       {/each}
       <Button size="sm" variant="ghost" describedBy={hintId('presets')} testid={TESTID.qrReset} onclick={() => (settings = sanitize(null))}>reset</Button>
     </div>
-    </div>
-    <div class="options">
 
     <details class="group" open data-testid="qr-group-main">
       <summary>Main</summary>
@@ -471,10 +503,10 @@
         <div class="row">
           <span class="num"><TextField type="number" min={0} max={1} step={0.05} ariaLabel="background corner radius, 0 to 1" describedBy={hintId('backgroundRound')} value={settings.backgroundRound} {...bounded('backgroundRound', 0, 1, false)} /></span>
         </div>
-        {@render lbl('onDark', 'on dark')}
+        {@render lbl('invert', 'invert')}
         <div>
-          <Segmented look="switch" label="on dark" describedBy={hintId('onDark')} options={ON_OFF} value={settings.onDark ? 'on' : 'off'} onchange={(v) => set('onDark', v === 'on')} />
-          {#if settings.onDark}<div class="caption" role="status" data-testid={TESTID.qrDarkNote}>some scanners cannot read an inverted code</div>{/if}
+          <Button size="sm" describedBy={hintId('invert')} testid={TESTID.qrInvert} onclick={() => (settings = invertColours(settings))}>invert colours</Button>
+          <div class="caption" data-testid={TESTID.qrDarkNote}>an inverted (light-on-dark) code needs a scanner that reads it; most phone cameras do, some scanners do not</div>
         </div>
       </div>
     </details>
@@ -607,7 +639,11 @@
   .text { font-family: var(--font-mono); font-size: var(--fs-sm); overflow-wrap: anywhere; }
   .segs { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-1); }
   .segs .stat { margin: 0; }
-  .presets { margin-top: var(--s-3); }
+  .presets { margin-bottom: var(--s-3); }
+  .preset { display: inline-flex; align-items: center; }
+  /* The swatch: the preset's look at 24px, beside its name. */
+  .swatch { display: inline-block; width: 24px; height: 24px; }
+  .swatch :global(svg) { display: block; width: 24px; height: 24px; }
   .offer-actions { display: inline-flex; gap: var(--s-2); margin-left: var(--s-2); vertical-align: middle; }
   /* Collapsible groups, the way qr-code-styling arranges its options. The
      site's one <details> chrome applies, but a group is subordinate to the

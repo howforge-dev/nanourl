@@ -8,7 +8,7 @@ import { EC_LEVELS, EC_RECOVERS, MODE_NOTE_BYTE, CENTRE_LABEL_MAX, IMAGE_MAX_BYT
 export const EC_LABEL = (level: (typeof EC_LEVELS)[number]): string => `${level} ${EC_RECOVERS[level]}`;
 
 export const HINTS = {
-  presets: 'Two starting points: the plain black-and-white code, or the site’s own look with the logo. Reset puts every setting back to its default.',
+  presets: 'Named looks. Picking one sets every option to that look; reset puts every option back to its default.',
   size: 'How wide the code is drawn on this page, in pixels. It does not change the exported files.',
   margin:
     'Blank space around the code, counted in modules (the small squares). Scanners want about 4; less looks tighter but some phones struggle.',
@@ -31,7 +31,7 @@ export const HINTS = {
   stops: `The colours the gradient passes through and where, from 0 (start) to 1 (end); up to ${STOPS_MAX}.`,
   background: 'What sits behind the code: a colour, a gradient, or nothing at all (transparent, for putting the code over something else).',
   backgroundRound: 'Rounds the corners of the image itself, from 0 (square) to 1 (fully round).',
-  onDark: 'Draws the code light on dark instead of dark on light. Today’s phone cameras read it; some older scanners cannot, so keep the normal way for print.',
+  invert: 'Swaps the colours of the modules and the background (and turns each gradient round), giving a light-on-dark code. Today’s phone cameras read one; some older scanners cannot, so keep dark-on-light for print. Pressing it again puts the colours back.',
   image: `A picture on the centre of the code: the site’s logo, or a file of your own up to ${Math.round(IMAGE_MAX_BYTES / 1024)} KB. The code keeps scanning because the error-correction level covers what the picture hides.`,
   imageSize: 'How big the picture is, as a share of the code’s width. It is capped by the error-correction level, since the picture hides part of the code.',
   imageMargin: 'A gap between the picture and the modules around it, in pixels of the exported image.',

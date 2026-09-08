@@ -373,7 +373,13 @@ export function gradientLine(rotation: number, box: Box): [number, number, numbe
 export function paintFill(paint: Paint, id: string, box: Box): { def: string; fill: string } {
   const g = paint.gradient;
   if (!g) return { def: '', fill: paint.color };
-  const stops = g.stops.map((st) => `<stop offset="${n(st.offset)}" stop-color="${st.color}"/>`).join('');
+  // SVG wants stops in offset order; the settings keep the order the person
+  // made, so a copy is sorted here, stably, and nothing upstream moves
+  const ordered = g.stops
+    .map((st, i) => ({ st, i }))
+    .sort((a, b) => a.st.offset - b.st.offset || a.i - b.i)
+    .map((x) => x.st);
+  const stops = ordered.map((st) => `<stop offset="${n(st.offset)}" stop-color="${st.color}"/>`).join('');
   if (g.type === 'radial') {
     const r = Math.hypot(box.w, box.h) / 2;
     return {

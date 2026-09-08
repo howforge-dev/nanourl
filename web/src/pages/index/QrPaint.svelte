@@ -9,7 +9,7 @@
   import Segmented from '../../lib/ui/Segmented.svelte';
   import TextField from '../../lib/ui/TextField.svelte';
   import { HINTS } from '../../lib/qr/hints';
-  import { GRADIENT_TYPES, STOPS_MAX, STOPS_MIN, defaultGradient, sanitizePaint, type Gradient, type Paint } from '../../lib/qr/options';
+  import { GRADIENT_TYPES, STOPS_MAX, STOPS_MIN, addStop, defaultGradient, sanitizePaint, type Gradient, type Paint } from '../../lib/qr/options';
 
   let {
     paint,
@@ -72,7 +72,7 @@
         </div>
       {/each}
       {#if g.stops.length < STOPS_MAX}
-        <Button size="sm" onclick={() => withGradient({ ...g, stops: [...g.stops, { offset: 1, color: g.stops[g.stops.length - 1].color }] })}>add stop</Button>
+        <Button size="sm" onclick={() => withGradient(addStop(g))}>add stop</Button>
       {/if}
     </div>
   {/if}

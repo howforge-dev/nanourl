@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   CENTRE_LABEL_MAX,
   COVER_SHARE,
-  DARK_TINT,
+  addStop,
   defaultGradient,
   DEFAULT_SETTINGS,
   EC_LEVELS,
@@ -11,11 +11,15 @@ import {
   STORAGE_KEY,
   applyCentreLabel,
   applyImageSource,
+  PRESETS,
+  PRESET_TABLE,
   applyPreset,
+  presetOf,
   applyStyle,
   effectiveImageSize,
   exportName,
   hasPlate,
+  invertColours,
   loadSettings,
   maxImageSize,
   mix,
@@ -72,7 +76,6 @@ describe('sanitize', () => {
       background: { color: '#eeeeee' },
       transparent: true,
       backgroundRound: 3,
-      onDark: true,
       imageSource: 'logo',
       imageSize: 2,
       imageMargin: -1,
@@ -101,7 +104,6 @@ describe('sanitize', () => {
       cornersDot: null,
       transparent: true,
       backgroundRound: 1,
-      onDark: true,
       imageSource: 'logo',
       imageSize: 1,
       imageMargin: 0,
@@ -111,7 +113,7 @@ describe('sanitize', () => {
       quality: 1,
     });
     expect(s.dots.color).toBe('#123abc');
-    expect(s.dots.gradient).toEqual({ type: 'radial', rotation: 359, stops: [{ offset: 0, color: '#123abc' }, { offset: 1, color: '#ffffff' }] });
+    expect(s.dots.gradient).toEqual({ type: 'radial', rotation: 359, stops: [{ offset: 1, color: '#ffffff' }, { offset: 0, color: '#123abc' }] });
     expect(s.cornersSquare).toEqual(solid('#ff0000'));
     expect(s.centreLabel).toHaveLength(CENTRE_LABEL_MAX);
     expect(s.fileName).toHaveLength(64);
@@ -133,26 +135,37 @@ describe('sanitize', () => {
 });
 
 describe('gradients and paints', () => {
-  it('sorts stops, pads to two, caps at five, and fills bad colours from the paint', () => {
+  it('keeps stops in the order given, pads to two, caps at five, and fills bad colours from the paint', () => {
     expect(sanitizeGradient(null, '#000000')).toBeNull();
     const g = sanitizeGradient({ stops: [{ offset: 1, color: 'bad' }, { offset: 0.2, color: '#00ff00' }] }, '#000000')!;
-    expect(g.stops.map((s) => s.offset)).toEqual([0.2, 1]);
-    expect(g.stops[1].color).toBe('#000000');
+    expect(g.stops.map((s) => s.offset)).toEqual([1, 0.2]);
+    expect(g.stops[0].color).toBe('#000000');
+    expect(sanitizeGradient({ stops: [{ offset: 3, color: '#111111' }, { offset: -1, color: '#222222' }] }, '#000000')!.stops.map((s) => s.offset)).toEqual([1, 0]);
     expect(sanitizeGradient({ stops: [] }, '#111111')!.stops).toEqual([{ offset: 0, color: '#111111' }, { offset: 1, color: '#111111' }]);
     const many = sanitizeGradient({ stops: Array.from({ length: 9 }, (_, i) => ({ offset: i / 8, color: '#222222' })) }, '#000000')!;
     expect(many.stops).toHaveLength(STOPS_MAX);
     expect(sanitizePaint({ color: 'nope', gradient: null }, solid('#abcdef'))).toEqual(solid('#abcdef'));
   });
-  it('reverses a gradient toward a new end colour, tinting the rest toward it', () => {
+  it('reverses a gradient: the same colours, the other way, none replaced', () => {
+    const g = { ...presetGradient('#000000'), stops: [{ offset: 0, color: '#224488' }, { offset: 0.3, color: '#3a7c5e' }, { offset: 1, color: '#000000' }] };
+    const r = reverseGradient(g);
+    expect(r.stops).toEqual([{ offset: 0, color: '#000000' }, { offset: 0.7, color: '#3a7c5e' }, { offset: 1, color: '#224488' }]);
+    expect(reverseGradient(r)).toEqual(g);
+  });
+  it('adds a stop at the midpoint of the last two, never on another stop, keeping the order stable', () => {
     const g = presetGradient('#000000');
-    const r = reverseGradient(g, '#ffffff');
-    expect(r.stops.map((s) => s.offset)).toEqual([0, 1]);
-    expect(r.stops[0].color).toBe(mix('#ffffff', '#000000', DARK_TINT));
-    expect(r.stops[1].color).toBe('#ffffff');
-    // two stops on the far offset both become the end colour
-    const twin = reverseGradient({ ...g, stops: [{ offset: 0, color: '#224488' }, { offset: 1, color: '#000000' }, { offset: 1, color: '#000000' }] }, '#ffffff');
-    expect(twin.stops.filter((s) => s.offset === 1).every((s) => s.color === '#ffffff')).toBe(true);
-    expect(twin.stops.find((s) => s.offset === 0)!.color).toBe(mix('#ffffff', '#000000', DARK_TINT));
+    const one = addStop(g);
+    expect(one.stops.map((s) => s.offset)).toEqual([0, 0.5, 1]);
+    expect(one.stops[1].color).toBe('#000000');
+    const two = addStop(one);
+    expect(two.stops.map((s) => s.offset)).toEqual([0, 0.5, 0.75, 1]);
+    // a colour set on any stop stays on that stop through sanitize, whatever the offsets
+    const coloured = { ...two, stops: two.stops.map((s, i) => (i === 3 ? { ...s, color: '#3a7c5e', offset: 0.1 } : s)) };
+    expect(sanitizeGradient(coloured, '#000000')!.stops[3]).toEqual({ offset: 0.1, color: '#3a7c5e' });
+    const twin = sanitizeGradient({ stops: [{ offset: 1, color: '#111111' }, { offset: 1, color: '#222222' }] }, '#000000')!;
+    expect(twin.stops.map((s) => s.color)).toEqual(['#111111', '#222222']);
+    expect(addStop(addStop(addStop(addStop(g)))).stops).toHaveLength(5);
+    expect(addStop(addStop(addStop(addStop(addStop(g))))).stops).toHaveLength(5);
   });
   it('a freshly switched-on gradient runs to the accent, or to the text colour from the accent', () => {
     const g = defaultGradient('#000000');
@@ -195,13 +208,29 @@ describe('presets and plates', () => {
     expect(hasPlate(s)).toBe(true);
     expect(hasPlate(DEFAULT_SETTINGS)).toBe(false);
   });
-  it('presets set the looks and leave the code settings; reset restores everything', () => {
-    const custom = { ...applyStyle(DEFAULT_SETTINGS, 'nanourl'), version: 5, caption: 'hi', onDark: true, shape: 'circle' as const };
-    const classic = applyPreset(custom, 'classic');
-    expect(classic).toMatchObject({ style: 'classic', imageSource: 'none', onDark: false, shape: 'square', version: 5, caption: 'hi', level: 'H' });
-    expect(classic.dots).toEqual(DEFAULT_SETTINGS.dots);
-    expect(applyPreset(custom, 'nanourl')).toMatchObject({ style: 'nanourl', imageSource: 'logo', version: 5 });
+  it('a preset is the defaults plus its own overrides, so it resets what it does not set', () => {
+    const ctx = { shortLink: 'qv.lc/#ABC' };
+    const custom = { ...applyPreset('nanourl', ctx), width: 400, margin: 0 };
+    expect(applyPreset('mono-dark', ctx)).toMatchObject({ dots: solid(COLOR.txt), background: solid(COLOR.ink) });
+    expect(presetOf(custom, ctx)).toBeNull();
+    const classic = applyPreset('classic', ctx);
+    expect(classic).toEqual(DEFAULT_SETTINGS);
+    expect(classic).toMatchObject({ width: 240, margin: 4 });
+    expect(applyPreset('nanourl', ctx)).toMatchObject({ style: 'nanourl', imageSource: 'logo', level: 'H', width: 240 });
     expect(sanitize(null)).toEqual(DEFAULT_SETTINGS);
+  });
+  it('every preset sanitises to itself, is recognised as itself, and has a hint', () => {
+    const ctx = { shortLink: 'qv.lc/#ABC' };
+    for (const name of PRESETS) {
+      const s = applyPreset(name, ctx);
+      expect(sanitize(JSON.parse(JSON.stringify(s))), name).toEqual(s);
+      expect(presetOf(s, ctx), name).toBe(name);
+      expect(PRESET_TABLE[name].hint.length, name).toBeGreaterThan(20);
+    }
+    expect(applyPreset('sunset', ctx).caption).toBe('qv.lc/#ABC');
+    expect(applyPreset('minimal', ctx)).toMatchObject({ scheme: false, margin: 1, padding: 0 });
+    expect(applyPreset('poster', ctx)).toMatchObject({ width: 320, margin: 2, centreLabel: 'qv.lc', level: 'H' });
+    expect(PRESETS).toHaveLength(10);
   });
   it('a centre label or a picture raises the level to H once, when it first appears', () => {
     const s = applyCentreLabel(DEFAULT_SETTINGS, 'HELLO');
@@ -235,14 +264,17 @@ describe('qrOptions', () => {
     expect(o.screen).toMatchObject({ dots: solid('#112233'), background: solid('#eeeeee'), pxPerModule: 7.5 });
     expect(o.screen.scale).toBeUndefined();
   });
-  it('draws the signature style in the theme on screen and in the chosen colours on export', () => {
+  it('draws the settings verbatim, the same on screen and in the export', () => {
     const s = applyStyle(DEFAULT_SETTINGS, 'nanourl');
-    const o = qrOptions(s);
-    expect(o.screen.dots.color).toBe(COLOR.ink);
-    expect(o.screen.dots.gradient!.stops[1].color).toBe(COLOR.ink);
-    expect(o.screen.dots.gradient!.stops[0].color).toBe(s.dots.gradient!.stops[0].color);
-    expect(o.screen).toMatchObject({ background: solid(COLOR.txt), plateFill: COLOR.txt, ink: COLOR.ink, plate: { kind: 'logo' } });
-    expect(o.export).toMatchObject({ dots: s.dots, background: solid('#ffffff'), plateFill: '#ffffff', plate: { kind: 'logo' } });
+    const o = qrOptions(s, 9);
+    expect(o.screen.dots).toEqual(s.dots);
+    expect(o.export.dots).toEqual(s.dots);
+    expect(o.screen).toMatchObject({ background: solid('#ffffff'), plateFill: '#ffffff', ink: '#000000', plate: { kind: 'logo' }, pxPerModule: 9 });
+    expect(o.export).toMatchObject({ background: solid('#ffffff'), plateFill: '#ffffff', plate: { kind: 'logo' }, scale: 8 });
+    const { pxPerModule: a, scale: b, ...screen } = o.screen;
+    const { pxPerModule: c, scale: d, ...exported } = o.export;
+    void a; void b; void c; void d;
+    expect(screen).toEqual(exported);
   });
   it('a transparent background leaves it unpainted but keeps the plate opaque', () => {
     const o = qrOptions({ ...DEFAULT_SETTINGS, transparent: true, background: solid('#abcdef'), centreLabel: 'HI' });
@@ -250,20 +282,32 @@ describe('qrOptions', () => {
     expect(o.export.plateFill).toBe('#abcdef');
     expect(o.export.plate).toEqual({ kind: 'label', text: 'HI' });
   });
-  it('on dark swaps the colours and reverses every gradient toward the light end', () => {
-    const s = { ...applyStyle(DEFAULT_SETTINGS, 'nanourl'), onDark: true, cornersSquare: { color: '#ff0000', gradient: presetGradient('#ff0000') }, background: solid('#ffffff') };
-    const o = qrOptions(s);
-    expect(o.export.dots.color).toBe('#ffffff');
-    expect(o.export.dots.gradient!.stops[1].color).toBe('#ffffff');
-    expect(o.export.dots.gradient!.stops[0].color).toBe(mix('#ffffff', s.dots.gradient!.stops[1].color, DARK_TINT));
-    expect(o.export.background).toEqual(solid('#000000'));
-    expect(o.export.plateFill).toBe('#000000');
-    expect(o.export.ink).toBe('#ffffff');
-    expect(o.export.cornersSquare!.color).toBe('#ffffff');
-    expect(o.screen.dots.color).toBe(COLOR.txt);
-    expect(o.screen.background).toEqual(solid(COLOR.ink));
-    expect(qrOptions({ ...s, transparent: true }).export.background).toBeNull();
+  it('invert colours swaps the two paints in the config, reverses stop order, and undoes itself', () => {
+    const bgGradient = { type: 'linear' as const, rotation: 0, stops: [{ offset: 0, color: '#ffffff' }, { offset: 1, color: '#dddddd' }] };
+    const s = {
+      ...applyStyle(DEFAULT_SETTINGS, 'nanourl'),
+      cornersSquare: { color: '#ff0000', gradient: presetGradient('#ff0000') },
+      background: { color: '#ffffff', gradient: bgGradient },
+    };
+    const inv = invertColours(s);
+    expect(inv.dots).toEqual({ color: '#ffffff', gradient: reverseGradient(bgGradient) });
+    expect(inv.background).toEqual({ color: s.dots.color, gradient: reverseGradient(s.dots.gradient!) });
+    expect(inv.cornersSquare).toEqual({ color: '#ff0000', gradient: reverseGradient(presetGradient('#ff0000')) });
+    expect(inv.cornersDot).toBeNull();
+    // the plate and the label follow the base colours
+    expect(qrOptions(inv).export).toMatchObject({ plateFill: s.dots.color, ink: '#ffffff' });
+    // every colour a person chose is still in the document, exactly
+    expect(JSON.stringify(qrOptions(inv).export)).toContain('#dddddd');
+    // an involution
+    expect(invertColours(inv)).toEqual(s);
+    expect(invertColours(invertColours(DEFAULT_SETTINGS))).toEqual(DEFAULT_SETTINGS);
+    // nothing else moves
+    const { dots: d1, background: b1, cornersSquare: c1, ...restS } = s;
+    const { dots: d2, background: b2, cornersSquare: c2, ...restInv } = inv;
+    void d1; void b1; void c1; void d2; void b2; void c2;
+    expect(restInv).toEqual(restS);
   });
+
   it('a centre label replaces the picture, and an upload is drawn from its data', () => {
     expect(qrOptions(applyStyle({ ...DEFAULT_SETTINGS, centreLabel: ' QV ' }, 'nanourl')).screen.plate).toEqual({ kind: 'label', text: 'QV' });
     expect(qrOptions({ ...DEFAULT_SETTINGS, imageSource: 'upload', imageData: 'data:image/png;base64,AA' }).screen.plate).toEqual({ kind: 'image', href: 'data:image/png;base64,AA' });

@@ -213,6 +213,9 @@ describe('paints', () => {
     expect(lin.fill).toBe('url(#p)');
     expect(lin.def).toMatch(/^<linearGradient id="p" gradientUnits="userSpaceOnUse" x1="5" y1="0" x2="5" y2="10">/);
     expect(lin.def).toContain('stop-color="#000000"');
+    // stops are emitted in offset order, stably, whatever order they were kept in
+    const unsorted = paintFill({ color: '#000000', gradient: { type: 'linear', rotation: 0, stops: [{ offset: 1, color: '#111111' }, { offset: 0, color: '#222222' }, { offset: 1, color: '#333333' }] } }, 'p', box);
+    expect(unsorted.def.match(/stop-color="(#\w+)"/g)).toEqual(['stop-color="#222222"', 'stop-color="#111111"', 'stop-color="#333333"']);
     const rad = paintFill({ color: '#000000', gradient: { ...presetGradient('#000000'), type: 'radial' } }, 'p', box);
     expect(rad.def).toMatch(/^<radialGradient id="p" gradientUnits="userSpaceOnUse" cx="5" cy="5" r="7.071">/);
   });
