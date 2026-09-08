@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { test, expect } from 'playwright/test';
+import { test, expect } from './fixtures';
 import type { Locator, Page } from 'playwright/test';
 import { ALPHABETS, QR_ALPHA, qrText } from '../src/lib/alphabet';
 import { CENTRE_LABEL_MAX, CORNER_TYPES, MODULE_STYLES, PRESETS, STORAGE_KEY, applyPreset, isUnscannable } from '../src/lib/qr/options';

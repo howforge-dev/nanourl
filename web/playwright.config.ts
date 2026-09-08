@@ -19,29 +19,24 @@ const PORT = Number(process.env.PW_PORT ?? DEFAULT_PREVIEW_PORT);
 export default defineConfig({
   testDir: 'e2e',
   fullyParallel: false,
-  // Playwright's default worker count (host logical CPUs / 2) assumes each
-  // test file is cheap to run concurrently with the others. That stops
-  // holding once the threads tier is in play: any cross-origin-isolated
-  // Chromium context auto-selects it, so nearly every spec's page load spins
-  // up to MAX_WORKERS (4) extra compute-worker OS threads of its own, and that
-  // cap does not shrink alongside Playwright's worker count. Playwright's own
-  // default (half the cores) would oversubscribe a many-core box sharply, and
-  // under that contention a single encode call blows past the assertion
-  // timeout: not a hang, just starved. So one Playwright worker per four
-  // cores, at most four. PW_WORKERS overrides it (CI runs 4 on 16 vCPUs, one
-  // project per job).
-  workers: Number(process.env.PW_WORKERS ?? Math.max(1, Math.min(4, Math.floor(cpus().length / 4)))),
+  // A page runs the codec on one thread: e2e/fixtures.ts hides the server's
+  // cross-origin isolation from every page unless a spec opts into the
+  // threads tier, so a Playwright worker costs about one core of wasm work
+  // plus the browser around it. Half the cores, as Playwright's own default,
+  // capped at six: the specs that do take the threads tier (offline, threads,
+  // the bench sweep) spin up to MAX_WORKERS (4) compute threads per page,
+  // and at six workers a few of those at once still leave a 12-core box
+  // headroom for the assertion timeouts. PW_WORKERS overrides it (CI runs 4
+  // on 16 vCPUs, one project per job).
+  workers: Number(process.env.PW_WORKERS ?? Math.max(1, Math.min(6, Math.floor(cpus().length / 2)))),
   timeout: 240_000,
   // A UI assertion that follows an RPC round-trip (e.g. "code changes after
-  // an alphabet toggle") clears the default 10s comfortably when a page load
-  // means one synchronous, single-thread wasm call — but an isolated
-  // Chromium page normally gets the threads tier, so that same round-trip
-  // goes through postMessage to a coordinator that dispatches across several
-  // compute workers. Plenty fast in isolation, but under the contention of
-  // this very suite's own parallel workers (see the `workers` comment above)
-  // it can occasionally exceed 10s and fail an otherwise-correct assertion.
-  // 20s keeps headroom without materially slowing passing runs (assertions
-  // still resolve the moment they're met).
+  // an alphabet toggle") is a full forward pass per token on one thread,
+  // under the contention of this very suite's own parallel workers (see the
+  // `workers` comment above), so it can occasionally exceed the default 10s
+  // and fail an otherwise-correct assertion. 20s keeps headroom without
+  // materially slowing passing runs (assertions still resolve the moment
+  // they're met).
   expect: { timeout: 20_000 },
   reporter: 'list',
   use: {

@@ -1,4 +1,4 @@
-import { test, expect } from 'playwright/test';
+import { test, expect } from './fixtures';
 import { numbers } from '../src/lib/numbers';
 import { SECTION_IDS } from '../src/pages/learn/sections';
 import { atMobile, expectNoHorizontalOverflow, watchErrors } from './helpers';

@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { test, expect } from 'playwright/test';
+import { test, expect } from './fixtures';
 import type { Page } from 'playwright/test';
 import { DIST_DIR, SW_JS } from '../scripts/paths';
 import { SHELL_CACHE_PREFIX } from '../src/lib/codec/cacheNames';

@@ -1,4 +1,4 @@
-import { test, expect } from 'playwright/test';
+import { test, expect } from './fixtures';
 import { TESTID, testIdSelector, waitForModelReady, watchErrors } from './helpers';
 import { SAMPLE } from './timeouts';
 

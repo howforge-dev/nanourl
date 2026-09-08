@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { test, expect } from 'playwright/test';
+import { test, expect } from './fixtures';
 import type { Page } from 'playwright/test';
 import type { Manifest } from '../src/lib/codec/manifest';
 import { ASSETS_JSON } from '../scripts/paths';

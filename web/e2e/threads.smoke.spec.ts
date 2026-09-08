@@ -1,4 +1,4 @@
-import { test, expect } from 'playwright/test';
+import { test, expect } from './fixtures';
 import { codeTestId } from '../src/lib/testids';
 import {
   encodeFirstExample,
@@ -19,7 +19,9 @@ import {
 // so the page is cross-origin isolated and `detectTier()` picks the threads
 // tier on any multi-core runner — this is the acceptance test for "the
 // shared-memory path actually works end to end in Chromium", not just that
-// it compiles.
+// it compiles. The suite hides that isolation by default (fixtures.ts);
+// this spec is the one that needs it.
+test.use({ threads: true });
 
 const CODE_PATTERN = /^[A-Za-z0-9_-]+$/;
 

@@ -1,4 +1,4 @@
-import { test, expect } from 'playwright/test';
+import { test, expect } from './fixtures';
 import { rowTestId } from '../src/lib/testids';
 import { openBench, readNumber, TESTID, testIdSelector, watchErrors } from './helpers';
 import { MODEL_LOAD } from './timeouts';

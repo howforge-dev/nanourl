@@ -1,4 +1,4 @@
-import { test, expect } from 'playwright/test';
+import { test, expect } from './fixtures';
 import { atMobile, expectNoHorizontalOverflow, waitForModelReady, watchErrors } from './helpers';
 import { PANEL } from './timeouts';
 

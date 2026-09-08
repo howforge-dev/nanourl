@@ -1,4 +1,4 @@
-import { test, expect } from 'playwright/test';
+import { test, expect } from './fixtures';
 import { numbers } from '../src/lib/numbers';
 import { MODEL_RELEASE_URL, RELEASES_URL, REPO_URL } from '../src/lib/links';
 import {

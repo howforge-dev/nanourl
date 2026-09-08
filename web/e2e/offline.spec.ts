@@ -1,4 +1,4 @@
-import { test, expect } from 'playwright/test';
+import { test, expect } from './fixtures';
 import type { Page } from 'playwright/test';
 import { SHELL_CACHE_PREFIX } from '../src/lib/codec/cacheNames';
 import { encodeFirstExample, NETWORK_FAILURE, waitForModelReady, watchErrors } from './helpers';
@@ -11,6 +11,10 @@ import { MODEL_RELOAD, SW_ACTIVE } from './timeouts';
 // real cross-origin-isolation headers vite preview injects (see
 // vite.config.ts's `preview.headers`). Runs under both `mobile` and
 // `desktop` projects like every other spec (playwright.config.ts).
+//
+// The isolation itself is asserted below, so the suite's default of hiding
+// it (fixtures.ts) is lifted here.
+test.use({ threads: true });
 
 /** src/sw.ts's registration (registerSw.ts) resolving only means *install
  * started* — this waits for the worker to actually be `active` and for its

@@ -110,6 +110,25 @@ export async function encodeFirstExample(page: Page): Promise<{ url: string; cod
   };
 }
 
+/** Type `url` into the compressor (under the picker's current alphabet),
+ *  submit with Enter and wait for a passing round-trip. Returns the shown
+ *  link with its scheme restored, the code it carries and the fragment it
+ *  is written behind. A link already on screen is waited past by content:
+ *  the pane keeps the old link up until the new encode lands. */
+export async function encodeUrl(page: Page, url: string): Promise<{ link: string; code: string; fragment: string }> {
+  const pane = page.locator(testIdSelector(TESTID.paneEncode));
+  const box = pane.locator(testIdSelector(TESTID.redirectLink));
+  const before = (await box.count()) ? await box.textContent() : null;
+  const field = pane.locator('textarea');
+  await field.fill(url);
+  await field.press('Enter');
+  if (before !== null) await expect(box).not.toHaveText(before, { timeout: T.CODEC_CALL });
+  await expect(box).toContainText('#', { timeout: T.CODEC_CALL });
+  await expect(pane.locator(testIdSelector(TESTID.roundtrip))).toContainText('✓', { timeout: T.CODEC_CALL });
+  const link = new URL(page.url()).protocol + '//' + ((await box.textContent()) ?? '');
+  return { link, code: parseLink(link).code, fragment: link.slice(link.indexOf('#') + 1) };
+}
+
 /** Run `fn` at the mobile viewport, then restore the desktop one. Specs
  *  toggle explicitly because they run under both projects. */
 export async function atMobile(page: Page, fn: () => Promise<void>): Promise<void> {
