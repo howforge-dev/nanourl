@@ -4,10 +4,32 @@
 # caching. Deployed by .github/workflows/ci.yml with `wrangler deploy`.
 name = "nanourl"
 compatibility_date = "2026-09-01"
-# The site is reached only through its custom domain; the account's
-# workers.dev subdomain and preview URLs stay off (and out of deploy logs).
+# The account's workers.dev subdomain and preview URLs stay off (and out of
+# deploy logs).
 workers_dev = false
 preview_urls = false
+
+# The site's own paths, as zone routes. Route patterns take a trailing
+# wildcard only, so every root-level file family is named; anything on the
+# apex that matches none of these is not the site's and goes to the zone's
+# origin, which is where the online shortener lives. The compressed links
+# live after '#' and never reach the server, so `qv.lc/` alone carries them.
+routes = [
+  { pattern = "qv.lc/", zone_name = "qv.lc" },
+  { pattern = "qv.lc/index.html", zone_name = "qv.lc" },
+  { pattern = "qv.lc/learn.html", zone_name = "qv.lc" },
+  { pattern = "qv.lc/model.html", zone_name = "qv.lc" },
+  { pattern = "qv.lc/dream.html", zone_name = "qv.lc" },
+  { pattern = "qv.lc/bench.html", zone_name = "qv.lc" },
+  { pattern = "qv.lc/assets/*", zone_name = "qv.lc" },
+  { pattern = "qv.lc/model.*", zone_name = "qv.lc" },
+  { pattern = "qv.lc/urlcodec*", zone_name = "qv.lc" },
+  { pattern = "qv.lc/tokenizer.*", zone_name = "qv.lc" },
+  { pattern = "qv.lc/atlas.*", zone_name = "qv.lc" },
+  { pattern = "qv.lc/sw.js", zone_name = "qv.lc" },
+  { pattern = "qv.lc/favicon.svg", zone_name = "qv.lc" },
+  { pattern = "qv.lc/robots.txt", zone_name = "qv.lc" },
+]
 
 [assets]
 directory = "./web/dist"
