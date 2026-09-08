@@ -20,7 +20,7 @@ env:
 jobs:
   scrub:
     name: scrub (publication gate)
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
@@ -29,7 +29,7 @@ jobs:
 
   codec:
     name: codec (fmt, clippy, tests, tier-3 glue)
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
@@ -124,7 +124,7 @@ jobs:
     #     packs whatever its toolchain emits and the gate proves something
     #     else.
     name: reproducible (wasm + the Linux CLI)
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
@@ -181,7 +181,7 @@ jobs:
     # Builds the three wasm tiers, packs the model and produces web/dist once;
     # the e2e jobs and the deploy job take that artifact instead of rebuilding.
     name: build (wasm, assets, unit, svelte-check, lint, vite)
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-16vcpu-ubuntu-2404
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
@@ -299,10 +299,11 @@ jobs:
 
   e2e:
     # One job per Playwright project: each test loads the 125 MiB model and runs
-    # the threads tier, so a 4-vCPU runner saturates at a couple of browsers;
-    # splitting by project halves the wall clock. Serves the build job's dist/.
+    # the threads tier (8 workers), so a runner saturates at a handful of
+    # browsers; splitting by project halves the wall clock. Serves the build
+    # job's dist/.
     name: e2e ${{ matrix.project }}
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-16vcpu-ubuntu-2404
     timeout-minutes: 60
     needs: [build]
     strategy:
@@ -345,7 +346,7 @@ jobs:
           PW_SKIP_BUILD: "1"
           # 4 vCPU, and every isolated page spins up its own compute workers on
           # top of this count.
-          PW_WORKERS: "2"
+          PW_WORKERS: "4"
         run: pnpm exec playwright test --project ${{ matrix.project }}
       - if: failure()
         uses: actions/upload-artifact@v7
@@ -361,7 +362,7 @@ jobs:
     # Ships the build job's artifact once the scrub and codec gates pass; the
     # e2e jobs report on the same commit in parallel rather than gating it.
     needs: [scrub, codec, build]
-    runs-on: ubuntu-24.04
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 20
     steps:
       # wrangler.toml (the Worker name and the assets directory) comes from
