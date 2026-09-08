@@ -58,7 +58,10 @@ case "$target" in
     flags+=(-C target-feature=+crt-static -C strip=symbols
             -C link-arg=/Brepro '-C' 'link-arg=/PDBALTPATH:%_PDB%') ;;
   *-apple-darwin)
-    flags+=(-C strip=symbols) ;;
+    # ld derives LC_UUID from its inputs, which include the build directory,
+    # so two builds of one commit differ in the UUID and in the ad-hoc
+    # signature that covers it. No dSYM ships, so the UUID serves nothing.
+    flags+=(-C strip=symbols -C link-arg=-Wl,-no_uuid) ;;
 esac
 
 # RUSTFLAGS is split on whitespace, so a path containing any would be read as

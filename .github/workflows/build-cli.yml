@@ -238,11 +238,13 @@ jobs:
           # `static-pie linked` is what a position-independent static musl
           # binary reports; both spellings mean no interpreter, no libc.
           file "$bin" | grep -qE 'statically linked|static-pie linked'
-          # ldd exits non-zero on a static binary, so the pipeline's verdict is
-          # grep's: the words have to be there, not merely the failure. glibc's
-          # ldd says "statically linked" for a static-pie and "not a dynamic
-          # executable" for a non-PIE static binary.
-          ldd "$bin" 2>&1 | grep -qE 'not a dynamic executable|statically linked'
+          # The ELF itself, not ldd (which runs the binary through the host's
+          # loader and answers differently per architecture): no interpreter
+          # program header and no NEEDED entry means nothing is loaded at run
+          # time.
+          readelf -l "$bin" | grep -q INTERP && { echo "has an interpreter" >&2; exit 1; }
+          readelf -d "$bin" 2>/dev/null | grep -q NEEDED && { echo "has NEEDED libraries" >&2; exit 1; }
+          echo "no interpreter, no NEEDED"
 
       - name: the Windows binary carries its own C runtime
         if: runner.os == 'Windows'
