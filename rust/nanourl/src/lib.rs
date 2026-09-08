@@ -54,13 +54,11 @@ pub const EXIT_NO_MODEL: i32 = 2;
 #[command(
     name = "nanourl",
     version,
-    about = "Compress a URL into a short code, and expand it again — offline.",
-    long_about = "Compress a URL into a short code, and expand it again — offline.\n\n\
-        A language model predicts the next piece of a URL and an arithmetic \
-        coder turns those predictions into a bitstream, so the code IS \
-        the URL: nothing is stored anywhere and no service has to be reachable for \
-        a link to resolve. The model is inside this binary, so it works with no \
-        network, no cache and no companion files -- which is why it is ~131 MB.",
+    about = "Compress a URL into a short code and expand it again, offline.",
+    long_about = "Compress a URL into a short code and expand it again, offline.\n\n\
+        The code is the URL itself, compressed by a language model and an \
+        arithmetic coder; nothing is stored anywhere. The model is built into \
+        this binary, so no network, cache or companion file is needed.",
     after_help = "Exit codes: 0 success, 1 unusable input, 2 model unavailable."
 )]
 struct Cli {
@@ -86,12 +84,8 @@ enum Cmd {
         /// Output alphabet
         #[arg(short, long, value_enum, default_value = "base64url")]
         alphabet: AlphabetArg,
-        /// Print a full link instead of the bare code, on this site
-        ///
-        /// `--link=BASE` puts the code on another origin. The `=` is required:
-        /// with a bare `--link BASE` clap cannot tell a base from the URL
-        /// argument, and `nanourl encode --link https://example.com/` would
-        /// take the URL as the base and then have nothing left to compress.
+        /// Print a full link on this site instead of the bare code; --link=BASE
+        /// puts the code on another origin
         #[arg(
             long,
             value_name = "BASE",
@@ -103,13 +97,13 @@ enum Cmd {
     },
     /// Expand a link, or a bare code, back into its URL
     Decode {
-        /// A link (`https://qv.lc/#CODE`, or `qv.lc/#CODE`) or a bare code
+        /// A link (https://qv.lc/#CODE or qv.lc/#CODE) or a bare code
         input: String,
         /// Alphabet to assume when the code does not identify itself
         #[arg(short, long, value_enum)]
         alphabet: Option<AlphabetArg>,
     },
-    /// Report on, re-check or write out the built-in model weights
+    /// Inspect, verify or export the built-in model weights
     Model {
         #[command(subcommand)]
         cmd: Option<ModelCmd>,
@@ -118,18 +112,14 @@ enum Cmd {
 
 #[derive(Subcommand)]
 enum ModelCmd {
-    /// Which weights this binary carries: digest, size, where they came from
-    /// (default)
+    /// Digest, size and origin of the weights this binary carries (default)
     Info,
-    /// Re-hash the weights and check them against the published digest
-    ///
-    /// `build.rs` already proved this when the binary was made, so a failure
-    /// here means the executable itself was damaged afterwards — a truncated
-    /// copy, a bad download, bit rot on the disk it sits on.
+    /// Re-hash the weights against the published digest; a mismatch means the
+    /// executable was damaged after it was built
     Verify,
-    /// Write the weights out as a .nurl file, for another tool
+    /// Write the weights out as a .nurl file
     Export {
-        /// Where to write them. Refused if it exists, unless --force
+        /// Where to write them; an existing file is refused unless --force
         path: PathBuf,
         /// Overwrite an existing file
         #[arg(long)]
