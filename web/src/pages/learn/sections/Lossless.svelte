@@ -4,7 +4,7 @@
   import Callout from '../../../lib/ui/Callout.svelte';
 </script>
 
-<Section id="lossless" n={8} title="Why it's perfectly lossless">
+<Section id="lossless">
   <p>"AI" usually connotes <i>approximately right</i>. Compression tolerates zero approximation, and nanourl is exact for two reasons:</p>
   <ul>
     <li>

@@ -7,7 +7,7 @@
   const chunkCount = Math.ceil(numbers.artifactBytes / (numbers.static.chunkMiB * MIB));
 </script>
 
-<Section id="small" n={10} title="How the model fits in your browser">
+<Section id="small">
   <p>
     Trained weights are 32-bit numbers — {fmtCount(numbers.params)} of them would be
     {fmtMiB(numbers.f32MiB, 0)}. The shipped model stores each weight in <b>{numbers.static.quantBits} bits</b>
@@ -41,27 +41,27 @@
       <tr><th>metric</th><th>value</th></tr>
       <tr>
         <td>parameters</td>
-        <td class="n">{fmtCount(numbers.params)} ({numbers.layers} layers × {numbers.dModel} wide, {numbers.heads} heads)</td>
+        <td>{fmtCount(numbers.params)} ({numbers.layers} layers × {numbers.dModel} wide, {numbers.heads} heads)</td>
       </tr>
       <tr>
         <td>training data</td>
-        <td class="n"
-          >{fmtCount(numbers.trainTokens)} tokens ≈ {fmtCount(numbers.trainTokens / numbers.meanTokensPerUrl)}
-          URLs' worth, sampled without epochs</td
-        >
+        <td>
+          {fmtCount(numbers.trainTokens)} tokens ≈ {fmtCount(numbers.trainTokens / numbers.meanTokensPerUrl)}
+          URLs' worth, sampled without epochs
+        </td>
       </tr>
       <tr>
         <td>compression, held-out eval</td>
-        <td class="n"
-          >{numbers.bitsPerCharKernel} bits/char through the int4 kernel, {numbers.bitsPerChar} with the same
-          weights unquantised (n={fmtExact(numbers.evalUrls - numbers.evalUrlsSkipped)})</td
-        >
+        <td>
+          {numbers.bitsPerCharKernel} bits/char through the int4 kernel, {numbers.bitsPerChar} with the same
+          weights unquantised (n={fmtExact(numbers.evalUrls - numbers.evalUrlsSkipped)})
+        </td>
       </tr>
       <tr>
         <td>shipped size</td>
-        <td class="n">{fmtMiB(numbers.artifactMiB)} at {bitsPerWeight.toFixed(2)} bits/weight ({fmtMiB(numbers.f32MiB, 0)} at full precision)</td>
+        <td>{fmtMiB(numbers.artifactMiB)} at {bitsPerWeight.toFixed(2)} bits/weight ({fmtMiB(numbers.f32MiB, 0)} at full precision)</td>
       </tr>
-      <tr><td>decode guarantee</td><td class="n">byte-exact, offline, in-browser</td></tr>
+      <tr><td>decode guarantee</td><td>byte-exact, offline, in-browser</td></tr>
     </tbody>
   </table>
 </Section>

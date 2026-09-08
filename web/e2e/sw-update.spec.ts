@@ -79,7 +79,7 @@ test('a waiting service worker only activates after the user clicks reload', asy
     const encodePane = page.locator(testIdSelector(TESTID.paneEncode));
     await encodePane.locator('.examples button').first().click();
     await expect(encodePane.locator(testIdSelector(TESTID.roundtrip))).toContainText('✓', { timeout: CODEC_CALL });
-    await encodePane.locator('summary').click();
+    await encodePane.locator(testIdSelector(TESTID.advanced)).locator('summary').click();
 
     // --- simulate a new deploy: register the fixture at the same scope ---
     await page.evaluate((url: string) => navigator.serviceWorker.register(url), `/${fixtureName}`);

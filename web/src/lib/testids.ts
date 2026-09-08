@@ -15,12 +15,28 @@ export const TESTID = {
   paneDecode: 'pane-decode',
   roundtrip: 'roundtrip',
   redirectLink: 'redirect-link',
+  /** The Advanced disclosure of either pane — the QR disclosure sits above
+   *  it in the Encode pane, so a bare `summary` locator is two elements. */
+  advanced: 'advanced',
   decodedUrl: 'decoded-url',
   redirectOverlay: 'redirect-overlay',
   redirectTarget: 'redirect-target',
   redirectCancel: 'redirect-cancel',
   redirectNote: 'redirect-note',
   outlive: 'outlive',
+  /** The QR disclosure, its rendered symbol's box, the text it encodes, its
+   *  version/segment line, its inline errors and warning, the label count,
+   *  and the two export links. */
+  qr: 'qr',
+  qrSvg: 'qr-svg',
+  qrText: 'qr-text',
+  qrInfo: 'qr-info',
+  qrError: 'qr-error',
+  qrWarning: 'qr-warning',
+  qrLabelCount: 'qr-label-count',
+  qrLabelError: 'qr-label-error',
+  qrPng: 'qr-png',
+  qrSvgDownload: 'qr-svg-download',
   // dream (src/pages/dream)
   dreamResults: 'dream-results',
   dreamUrl: 'dream-url',

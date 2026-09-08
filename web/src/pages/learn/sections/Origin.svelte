@@ -1,10 +1,11 @@
 <script lang="ts">
   import Section from '../Section.svelte';
+  import Ref from '../Ref.svelte';
   import { numbers } from '../../../lib/numbers';
   import { fmtCount, fmtMiB } from '../../../lib/format';
 </script>
 
-<Section id="origin" n={9} title="Where the model came from">
+<Section id="origin">
   <p>The model is trained from scratch, for this one job. The pipeline, end to end:</p>
   <ol>
     <li>
@@ -19,18 +20,18 @@
     </li>
     <li>
       <b>Train the tokenizer</b> on a sample, freezing the {fmtCount(numbers.vocab)}-piece
-      dictionary (section 4).
+      dictionary (<Ref to="tokens" />).
     </li>
     <li>
       <b>Train the model</b>: {fmtCount(numbers.trainTokens)} tokens — about
       {fmtCount(numbers.trainTokens / numbers.meanTokensPerUrl)} URLs' worth, drawn as random windows
       from a much larger corpus, so most URLs are seen once or not at all — on
-      {numbers.static.gpuCount} GPUs, minimizing exactly the bits-per-character bill from section 2.
+      {numbers.static.gpuCount} GPUs, minimizing exactly the bits-per-character bill from <Ref to="bits" />.
       The training objective and the product metric are the same number.
     </li>
     <li>
       <b>Shrink and ship</b>: quantize to {numbers.static.quantBits}-bit weights (with a short extra QAT round of training so
-      the model adapts to the rounding — section 10), package as one
+      the model adapts to the rounding — <Ref to="small" />), package as one
       {fmtMiB(numbers.artifactMiB)} file, addressed by content hash so a browser can never mix model
       versions.
     </li>

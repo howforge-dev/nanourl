@@ -4,7 +4,7 @@
 // Source hn trace:     scripts/fixtures/hn-trace.json
 // Source zip sizes:    scripts/fixtures/zip-sizes.json (deflate/gzip re-measured with node zlib 1.3.1-e00f703)
 // Source artifact:     ../models/target-base/ptq.nurl sha256 5e37aad1f34c420f2a3f5ea5a273ec3bd95a99b48f0c3eaa29187b1d22039fd2
-// Generated:           2026-09-08T00:23:34.023Z
+// Generated:           2026-09-08T04:13:35.085Z
 //
 // Every numeric fact the learn page shows comes from here.
 // `artifactSha256` is the gate: tests/assets-sync.test.ts fails if the model
@@ -242,12 +242,14 @@ export const numbers: Numbers = {
     "alphabets": [
       "base64url",
       "base79",
-      "emoji-1k"
+      "emoji-1k",
+      "qr-alpha"
     ],
     "alphabetSizes": {
       "base64url": 64,
       "base79": 79,
-      "emoji-1k": 1024
+      "emoji-1k": 1024,
+      "qr-alpha": 43
     },
     "int4RoundingNoTailPct": 8.3,
     "int4TailGapPct": 1.3

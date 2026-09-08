@@ -30,7 +30,7 @@ const staticFacts: StaticFacts = {
   quantHalfRange: 7,
   gpuCount: 8,
   alphabets: ALPHABETS.map((a) => a.key),
-  alphabetSizes: { base64url: 64, base79: 79, 'emoji-1k': 1024 },
+  alphabetSizes: { base64url: 64, base79: 79, 'emoji-1k': 1024, 'qr-alpha': 43 },
   int4RoundingNoTailPct: 8.3,
   int4TailGapPct: 1.3,
 };

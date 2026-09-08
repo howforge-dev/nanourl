@@ -34,6 +34,9 @@
     /** `href` only. `_blank` additionally gets `rel="noopener"`: without it the
      *  opened page can reach back through `window.opener`. */
     target,
+    /** `href` only: the file name a click saves the target as, instead of
+     *  navigating to it (the QR exports). */
+    download,
     type = 'button',
     disabled = false,
     /** A full-width row: label left, detail right. */
@@ -59,6 +62,7 @@
     tone?: ButtonTone;
     href?: string;
     target?: '_blank';
+    download?: string;
     type?: 'button' | 'submit' | 'reset';
     disabled?: boolean;
     block?: boolean;
@@ -95,6 +99,7 @@
     class={cls}
     {href}
     {target}
+    {download}
     rel={target === '_blank' ? 'noopener' : undefined}
     {title}
     aria-label={ariaLabel}

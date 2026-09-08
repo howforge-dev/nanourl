@@ -41,7 +41,7 @@ test('compressor page: encode, decode, distribution, alphabet toggle, redirect o
   expect(codeBase64url.length).toBeGreaterThan(0);
 
   // --- distribution viewer: click the 3rd token, jump to the chosen row ---
-  await encodePane.locator('summary').click();
+  await encodePane.locator(testIdSelector(TESTID.advanced)).locator('summary').click();
   const chips = encodePane.locator('.toks .tok');
   await chips.nth(2).click();
   await expect(encodePane.locator('.ctx')).not.toHaveText('computing…');

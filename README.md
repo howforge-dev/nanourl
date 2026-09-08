@@ -31,7 +31,9 @@ nanourl model info      # which weights this binary carries
 
 `decode` takes a full link, a link without its scheme, or a bare code, and
 works out the alphabet the way the site does. `--base URL` puts the code on
-another origin, `--alphabet base64url|base79|emoji` picks the output charset,
+another origin, `--alphabet base64url|base79|emoji|qr-alpha` picks the output
+charset (`--help` describes each; base79 is ~5% shorter but ends in punctuation
+that chat apps trim off a link, qr-alpha fits QR alphanumeric mode),
 `--json` prints one object per invocation, and `--model PATH` (or
 `$NANOURL_MODEL`) runs other weights. Exit codes: 0 success, 1 unusable
 input, 2 model unavailable.

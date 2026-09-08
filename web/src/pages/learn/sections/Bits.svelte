@@ -1,9 +1,10 @@
 <script lang="ts">
   import Section from '../Section.svelte';
+  import Ref from '../Ref.svelte';
   import BitsChips from './figures/BitsChips.svelte';
 </script>
 
-<Section id="bits" n={2} title="Why predictable means compressible">
+<Section id="bits">
   <p>
     Information theory has one precise rule: an event with probability <i>p</i> carries
     <b>−log₂ p bits</b> of information. Three examples make it concrete — plain arithmetic, nothing
@@ -13,7 +14,7 @@
     <li>Something <b>50% likely</b> costs 1 bit (one yes/no question settles it).</li>
     <li>
       Something <b>99.9% likely</b> costs about a 700th of a bit — nearly free, because you'd have
-      guessed it anyway. (A fraction of a bit sounds impossible to pay; section 7 shows how hundreds
+      guessed it anyway. (A fraction of a bit sounds impossible to pay; <Ref to="coder" /> shows how hundreds
       of cheap predictions genuinely share single bits.)
     </li>
     <li>Something <b>1-in-256</b> costs 8 bits — a full byte, because it genuinely was news.</li>

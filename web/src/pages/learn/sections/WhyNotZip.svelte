@@ -1,10 +1,11 @@
 <script lang="ts">
   import Section from '../Section.svelte';
+  import Ref from '../Ref.svelte';
   import { numbers } from '../../../lib/numbers';
   import { fmtMiB } from '../../../lib/format';
 </script>
 
-<Section id="whynotzip" n={3} title="Why not just zip it?">
+<Section id="whynotzip">
   <p>
     The compressors everyone already has — zip, gzip, bzip2, xz — work by finding
     <b>repetition inside the input</b>: this phrase appeared before, point back at it instead of
@@ -37,7 +38,7 @@
   <p>
     The gap isn't cleverness, it's <b>prior knowledge</b>. A classical compressor arrives knowing
     nothing and must learn everything from the message itself — hopeless when the message is a few
-    dozen characters. nanourl's model arrives already knowing what URLs look like (section 9), and
+    dozen characters. nanourl's model arrives already knowing what URLs look like (<Ref to="origin" />), and
     that knowledge lives in the {fmtMiB(numbers.artifactMiB)} you download once, not in each message:
     a big shared dictionary, paid for once, buys tiny messages forever after.
   </p>

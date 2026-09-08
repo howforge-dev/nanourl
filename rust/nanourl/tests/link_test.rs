@@ -5,10 +5,12 @@
 //! cli-goldens.test.ts` fails when they no longer describe that TypeScript,
 //! and this file fails when `nanourl::link` no longer matches them. So
 //! the site's rules and the CLI's port cannot move independently, which
-//! matters because the way they diverge is silent: a code that loses its
-//! leading '~' still decodes, to a different URL, without an error.
+//! matters because the way they diverge is silent: a code read under the
+//! wrong alphabet still decodes, to a different URL, without an error.
 
-use nanourl::link::{alphabet_key, fragment_for, parse_link, sniff, DEFAULT_ALPHABET};
+use nanourl::link::{
+    alphabet_blurb, alphabet_key, bare_for, fragment_for, parse_link, sniff, DEFAULT_ALPHABET,
+};
 use nanourl::{weights, SITE_URL};
 use serde_json::Value;
 use urlcodec::coder::Alphabet;
@@ -44,9 +46,15 @@ fn link_handling_matches_the_app() {
                     "link alpha {code:?}"
                 );
 
-                let b = parse_link(code).unwrap();
-                assert_eq!(b.code, j["bare"]["code"], "bare code {code:?}");
-                assert_eq!(b.alpha, alpha(&j["bare"]["alpha"]), "bare alpha {code:?}");
+                let bare = bare_for(code, a);
+                assert_eq!(bare, j["bare"], "bare {code:?}");
+                let b = parse_link(&bare).unwrap();
+                assert_eq!(b.code, j["fromBare"]["code"], "bare code {code:?}");
+                assert_eq!(
+                    b.alpha,
+                    alpha(&j["fromBare"]["alpha"]),
+                    "bare alpha {code:?}"
+                );
             }
             "parse" => {
                 parses += 1;
@@ -65,8 +73,8 @@ fn link_handling_matches_the_app() {
     }
     // The file is generated, so a truncated or half-written one would
     // otherwise pass by testing nothing.
-    assert!(codes >= 36, "only {codes} code cases");
-    assert!(parses >= 6, "only {parses} parse cases");
+    assert!(codes >= 48, "only {codes} code cases");
+    assert!(parses >= 10, "only {parses} parse cases");
 }
 
 #[test]
@@ -79,6 +87,7 @@ fn the_cli_constants_match_the_app() {
     for a in j["alphabets"].as_array().unwrap() {
         let id = a["id"].as_i64().unwrap() as i32;
         assert_eq!(alphabet_key(Alphabet::from_i32(id)), a["key"]);
+        assert_eq!(alphabet_blurb(Alphabet::from_i32(id)), a["blurb"]);
         assert_eq!(Alphabet::from_i32(id).id(), id);
     }
 }

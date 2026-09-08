@@ -122,7 +122,7 @@
     <span class="stat"><b>{result.coded_chars} → {result.url_chars}</b> chars</span>
     <span class="stat"><b>{fmtBitsPerChar(result.bits_per_char)}</b> bits/char</span>
   </div>
-  <details>
+  <details data-testid={TESTID.advanced}>
     <summary>Advanced — per-token cost and build info</summary>
     <CostChips tokens={result.tokens} />
     <FactsGrid title="Cost">

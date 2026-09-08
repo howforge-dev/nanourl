@@ -1,5 +1,6 @@
 <script lang="ts">
   import Section from '../Section.svelte';
+  import Ref from '../Ref.svelte';
   import AttentionFig from './figures/AttentionFig.svelte';
   import { numbers } from '../../../lib/numbers';
   import { fmtBytes, fmtCount, fmtShare, probPct } from '../../../lib/format';
@@ -19,7 +20,7 @@
   const tiedSharePct = (tiedParams / numbers.params) * 100;
 </script>
 
-<Section id="transformer" n={6} title="Inside the transformer">
+<Section id="transformer">
   <p>
     The particular network shape nanourl uses is a <b>transformer</b> — the same architecture as
     ChatGPT-style models, just {numbers.layers} layers and {fmtCount(numbers.params)} parameters
@@ -121,7 +122,7 @@
       Schematic, not measured weights: one head predicting the story-id digits of this page's worked
       example leans on the host span, because the site decides what kind of id follows
       <code>item?id=</code> — Hacker News ids are eight-ish digits, other sites differ. The
-      observatory draws the real thing (section 12).
+      observatory draws the real thing (<Ref to="viz" />).
     </div>
   </ScrollBox>
 

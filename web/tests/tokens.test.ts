@@ -9,7 +9,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { COLOR, COLOR_VAR } from '../src/lib/ui/tokens';
+import { COLOR, COLOR_VAR, FONT, FONT_VAR } from '../src/lib/ui/tokens';
 import { LOGO_RECTS, logoSvg } from '../src/lib/ui/logo';
 import { WEB_ROOT } from '../scripts/paths';
 
@@ -39,6 +39,13 @@ describe('theme tokens', () => {
   it('every tokens.ts colour equals its custom property in app.css', () => {
     for (const [key, value] of Object.entries(COLOR)) {
       const name = COLOR_VAR[key as keyof typeof COLOR];
+      expect(props.get(name), `${key} (${name})`).toBe(value);
+    }
+  });
+
+  it('every tokens.ts font stack equals its custom property in app.css', () => {
+    for (const [key, value] of Object.entries(FONT)) {
+      const name = FONT_VAR[key as keyof typeof FONT];
       expect(props.get(name), `${key} (${name})`).toBe(value);
     }
   });

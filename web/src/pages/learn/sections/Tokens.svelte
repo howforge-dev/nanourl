@@ -9,7 +9,7 @@
   const pieces = numbers.hn.tokens.filter((t) => t.piece !== '<eos>').map((t) => t.piece);
 </script>
 
-<Section id="tokens" n={4} title="Tokens: the model's alphabet">
+<Section id="tokens">
   <p>
     The model doesn't read characters one at a time, and it doesn't see the URL you typed either.
     Two exact, reversible transforms run first:

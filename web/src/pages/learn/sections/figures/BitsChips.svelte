@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Ref from '../../Ref.svelte';
   // The real per-token bill for the worked HN example, measured on the
   // shipped model (numbers.hn — see web/scripts/fixtures/hn-trace.json and
   // scripts/numbers.ts for how it is captured). The strip itself is
@@ -29,7 +30,7 @@
     <code>{numbers.hn.canonical}</code>). The host's well-known pieces (<code>com</code>,
     <code>news</code>, and the merges that spell <code>ycombinator</code>) are near-free; the story
     id's digits are not — <code>000000</code> alone costs {digitsTok.bits.toFixed(1)} bits.
-    (<code>&lt;eos&gt;</code> is the end marker, {lastBits.toFixed(2)} bits here — section 7.) Total:
+    (<code>&lt;eos&gt;</code> is the end marker, {lastBits.toFixed(2)} bits here — <Ref to="coder" />.) Total:
     {numbers.hn.model_bits.toFixed(1)} bits of model cost, {numbers.hn.coded_bits} bits once the coder's
     fixed-grid rounding and bookkeeping are added, for a {numbers.hn.url_chars}-character URL.
   </div>

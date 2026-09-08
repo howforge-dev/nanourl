@@ -5,7 +5,7 @@
 /** The wasm coder's alphabet enum. Which id is which — and which one is the
  *  default — is spelled once, in `lib/alphabet.ts`'s `ALPHABETS`; this comment
  *  would otherwise be a third restatement of the mapping. */
-export type Alphabet = 0 | 1 | 2;
+export type Alphabet = 0 | 1 | 2 | 3;
 
 export interface Tok {
   piece: string;

@@ -24,7 +24,7 @@
   const urlEquivalents = numbers.trainTokens / numbers.meanTokensPerUrl;
 </script>
 
-<Section id="idea" n={1} title="The whole idea in one paragraph">
+<Section id="idea">
   <p>
     A URL like <code>{numbers.hn.url}</code> looks like {numbers.hn.url_chars} characters of arbitrary
     text, but almost none of it is a surprise. nanourl stores hosts TLD-first, so the URL opens

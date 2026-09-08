@@ -172,14 +172,32 @@ pub fn quantize(probs: &[f64]) -> Vec<u64> {
 
 // ---------------------------------------------------------------------------
 // base-N framing: the bit stream is one big number written in the chosen
-// alphabet, which is therefore the digit table — freeze it or every code ever
-// emitted decodes to garbage. base-79 is the RFC 3986 path-segment charset
-// (matches codec.py).
+// alphabet, which is therefore the digit table — frozen, or every code ever
+// emitted decodes to garbage. `bits_to_string_in` never writes a leading
+// zero digit (the sentinel bit makes the number non-zero and the loop stops
+// at zero), so digit 0 of a table doubles as a marker its callers can write
+// in front of a code: a leading zero leaves the value unchanged, so nothing
+// ever has to be stripped and a marker can never truncate a code.
 
+/// base79: the RFC 3986 path-segment charset, with `~` at digit 0 as the
+/// marker `nanourl::link` and `web/src/lib/alphabet.ts` write in front of a
+/// base79 code that could pass as base64url or as qr-alpha. Frozen in this
+/// order.
 pub const ALPHABET: &[u8; 79] =
-    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~!$&'()*+,;=:@";
+    b"~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._!$&'()*+,;=:@";
 pub const ALPHABET64: &[u8; 64] =
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+/// qr-alpha: 43 of the 45 characters of QR alphanumeric mode (ISO/IEC 18004
+/// §7.4.4: `0-9 A-Z space $ % * + - . / :`), so a link in it is encoded by a
+/// QR generator at 5.5 bits per character instead of byte mode's 8. `/` is
+/// digit 0, the marker written in front of a code that could pass as
+/// base64url. The two left out, space and `%`, do not survive a URL fragment
+/// intact — space is percent-encoded and `%` starts an escape that
+/// `decodeURIComponent` rejects. Uppercase only: the QR charset has no
+/// lowercase, and the codec does not case-fold because its guarantee is
+/// byte-exact.
+pub const ALPHABET_QR: &[u8; 43] = b"/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$*+-.:";
 
 /// emoji-1k: 1024 single-code-point emoji, exactly 10 bits per glyph. ~37% fewer visible
 /// characters than base79 buys in exchange for 4 UTF-8 bytes per glyph instead
@@ -225,20 +243,36 @@ pub const ALPHABET_EMOJI_1K: &str = concat!(
 /// base64url is a strict SUBSET of the base79 charset, so choosing between
 /// those two is out-of-band (deployment/UI), never auto-detected from the
 /// string. emoji-1k shares no character with either, so it does self-identify.
+/// qr-alpha's digits other than `/` are all base79 digits too, and all but
+/// `$ * + . :` are base64url digits: its callers tell it from base64url by one
+/// of those five or, when a code has none, by writing its digit 0 (`/`) in
+/// front of it.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Alphabet {
     Base79,
     Base64,
     Emoji1k,
+    QrAlpha,
 }
 
 impl Alphabet {
+    /// Every variant, in wire order — the list every per-alphabet test and
+    /// the fuzz harness's case cycle iterate, so adding a variant without
+    /// covering it is a compile error here rather than a gap in a test.
+    pub const ALL: [Alphabet; 4] = [
+        Alphabet::Base79,
+        Alphabet::Base64,
+        Alphabet::Emoji1k,
+        Alphabet::QrAlpha,
+    ];
+
     /// Wire values for the wasm C ABI, where 0/1 were the original
     /// base79/base64url flag — old callers keep their meaning.
     pub fn from_i32(v: i32) -> Self {
         match v {
             1 => Alphabet::Base64,
             2 => Alphabet::Emoji1k,
+            3 => Alphabet::QrAlpha,
             _ => Alphabet::Base79,
         }
     }
@@ -251,6 +285,7 @@ impl Alphabet {
             Alphabet::Base79 => 0,
             Alphabet::Base64 => 1,
             Alphabet::Emoji1k => 2,
+            Alphabet::QrAlpha => 3,
         }
     }
 
@@ -262,6 +297,7 @@ impl Alphabet {
             Alphabet::Base79 => ALPHABET.iter().map(|&b| b as char).collect(),
             Alphabet::Base64 => ALPHABET64.iter().map(|&b| b as char).collect(),
             Alphabet::Emoji1k => ALPHABET_EMOJI_1K.chars().collect(),
+            Alphabet::QrAlpha => ALPHABET_QR.iter().map(|&b| b as char).collect(),
         }
     }
 }
@@ -414,17 +450,85 @@ pub fn string_to_bits_in(s: &str, alpha: Alphabet) -> Result<(u32, Vec<u8>), Str
 mod tests {
     use super::*;
 
-    /// `id` and `from_i32` are a bijection over the three variants and over
-    /// their three wire values. A gap either way is a silent wrong decode: the
-    /// coder would charge bits against a different digit table than the one
-    /// the caller asked for, and still return a plausible string.
+    /// `id` and `from_i32` are a bijection over the variants and over their
+    /// wire values. A gap either way is a silent wrong decode: the coder
+    /// would charge bits against a different digit table than the one the
+    /// caller asked for, and still return a plausible string.
     #[test]
     fn the_alphabet_wire_values_round_trip_both_ways() {
-        for a in [Alphabet::Base79, Alphabet::Base64, Alphabet::Emoji1k] {
+        for a in Alphabet::ALL {
             assert_eq!(Alphabet::from_i32(a.id()), a);
         }
-        for id in 0..3 {
+        for id in 0..Alphabet::ALL.len() as i32 {
             assert_eq!(Alphabet::from_i32(id).id(), id);
+        }
+        assert_eq!(Alphabet::ALL.map(Alphabet::id), [0, 1, 2, 3]);
+    }
+
+    /// The QR digit table is what makes a qr-alpha link cheap in a QR code,
+    /// so every digit has to be in QR alphanumeric mode's charset, with the
+    /// marker at digit 0 and in no other table, so that a `/` anywhere in a
+    /// code means qr-alpha and nothing else.
+    #[test]
+    fn qr_alpha_alphabet_is_43_distinct_qr_alphanumeric_characters() {
+        const QR_ALPHANUMERIC: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:";
+        assert_eq!(ALPHABET_QR.len(), 43);
+        let mut sorted = ALPHABET_QR.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), 43, "alphabet has duplicates");
+        assert!(ALPHABET_QR.iter().all(|b| QR_ALPHANUMERIC.contains(b)));
+        assert_eq!(ALPHABET_QR[0], b'/');
+        assert!(!ALPHABET_QR.contains(&b' '));
+        assert!(!ALPHABET_QR.contains(&b'%'));
+        assert!(!ALPHABET.contains(&b'/'));
+        assert!(!ALPHABET64.contains(&b'/'));
+    }
+
+    /// base79's marker is its digit 0 and is in no other ASCII table, so a
+    /// `~` anywhere in a code means base79 and nothing else.
+    #[test]
+    fn base79_digit_zero_is_the_tilde_and_the_table_is_the_rfc_3986_charset() {
+        assert_eq!(ALPHABET[0], b'~');
+        assert_eq!(ALPHABET.len(), 79);
+        let mut sorted = ALPHABET.to_vec();
+        sorted.sort_unstable();
+        sorted.dedup();
+        assert_eq!(sorted.len(), 79, "alphabet has duplicates");
+        assert!(!ALPHABET64.contains(&b'~'));
+        assert!(!ALPHABET_QR.contains(&b'~'));
+        // base64url is a strict subset of base79
+        assert!(ALPHABET64.iter().all(|b| ALPHABET.contains(b)));
+    }
+
+    /// A code never starts with digit 0, and leading zero digits decode to
+    /// the same stream — the two facts that let digit 0 serve as a marker
+    /// that is never stripped.
+    #[test]
+    fn leading_zero_digits_are_never_written_and_always_accepted() {
+        for alpha in Alphabet::ALL {
+            let zero = alpha.digits()[0];
+            let mut state = 0x9e37_79b9_7f4a_7c15u64;
+            for len in 0..120 {
+                let bits: Vec<u8> = (0..len).map(|_| (rng(&mut state) & 1) as u8).collect();
+                for version in [0, 1, 2, 3, 65, 66, 320] {
+                    let s = bits_to_string_in(&bits, version, alpha);
+                    assert_ne!(s.chars().next(), Some(zero), "{alpha:?} v{version} {s:?}");
+                    let want = string_to_bits_in(&s, alpha).unwrap();
+                    for k in 1..=3 {
+                        let padded: String =
+                            std::iter::repeat_n(zero, k).chain(s.chars()).collect();
+                        assert_eq!(
+                            string_to_bits_in(&padded, alpha).unwrap(),
+                            want,
+                            "{alpha:?} v{version} {k} leading zeros"
+                        );
+                    }
+                }
+            }
+            // zeros alone are no stream at all
+            let zeros: String = std::iter::repeat_n(zero, 3).collect();
+            assert!(string_to_bits_in(&zeros, alpha).is_err());
         }
     }
 
@@ -452,7 +556,7 @@ mod tests {
 
     #[test]
     fn framing_round_trips_every_alphabet() {
-        for alpha in [Alphabet::Base79, Alphabet::Base64, Alphabet::Emoji1k] {
+        for alpha in Alphabet::ALL {
             let mut state = 0x243f_6a88_85a3_08d3u64;
             for len in 0..200 {
                 let bits: Vec<u8> = (0..len).map(|_| (rng(&mut state) & 1) as u8).collect();
@@ -473,7 +577,7 @@ mod tests {
     /// base change is most likely to break.
     #[test]
     fn framing_preserves_leading_zeros() {
-        for alpha in [Alphabet::Base79, Alphabet::Base64, Alphabet::Emoji1k] {
+        for alpha in Alphabet::ALL {
             for len in 1..40 {
                 let bits = vec![0u8; len];
                 let s = bits_to_string_in(&bits, 0, alpha);
@@ -491,5 +595,28 @@ mod tests {
         assert!(string_to_bits_in("AAAA", Alphabet::Emoji1k).is_err());
         assert!(string_to_bits_in("🌍🌍", Alphabet::Base64).is_err());
         assert!(string_to_bits_in("A.A", Alphabet::Base64).is_err());
+        // qr-alpha: no case folding, and neither of the two QR alphanumeric
+        // characters the table leaves out
+        assert!(string_to_bits_in("AB", Alphabet::QrAlpha).is_ok());
+        assert!(string_to_bits_in("/AB", Alphabet::QrAlpha).is_ok());
+        assert!(string_to_bits_in("ab", Alphabet::QrAlpha).is_err());
+        assert!(string_to_bits_in("Ab", Alphabet::QrAlpha).is_err());
+        assert!(string_to_bits_in("A B", Alphabet::QrAlpha).is_err());
+        assert!(string_to_bits_in("A%B", Alphabet::QrAlpha).is_err());
+        assert!(string_to_bits_in("A_B", Alphabet::QrAlpha).is_err());
+        assert!(string_to_bits_in("A/B", Alphabet::Base79).is_err());
+        assert!(string_to_bits_in("~AB", Alphabet::Base64).is_err());
+    }
+
+    /// Every qr-alpha code is made of QR alphanumeric characters — over
+    /// random streams, not only the table.
+    #[test]
+    fn qr_alpha_codes_use_only_the_table() {
+        let mut state = 0x9e37_79b9_7f4a_7c15u64;
+        for len in 0..200 {
+            let bits: Vec<u8> = (0..len).map(|_| (rng(&mut state) & 1) as u8).collect();
+            let s = bits_to_string_in(&bits, STREAM_VERSION, Alphabet::QrAlpha);
+            assert!(s.bytes().all(|b| ALPHABET_QR.contains(&b)), "{s:?}");
+        }
     }
 }

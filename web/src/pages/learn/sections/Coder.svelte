@@ -13,7 +13,7 @@
   const floorFrac16 = numbers.vocab / 2 ** 16;
 </script>
 
-<Section id="coder" n={7} title="From probabilities to a short string">
+<Section id="coder">
   <p>
     Now the classical half. <b>Arithmetic coding</b> turns the model's predictions into a short string
     with one move, repeated once per token, on a number line. Start with the whole line from 0 to 1 as
@@ -158,7 +158,9 @@ encode A  (50% of that)   interval = [0.500, 0.625)   width 0.125</pre>
       >{name}</code
     > ({Math.log2(numbers.static.alphabetSizes[name]).toFixed(1)} bits/char){/each}. emoji-1k trades
     bytes for fewer visible characters: each glyph is 4 bytes of UTF-8 where a base64url character is
-    one. Every coded string carries a stream version tag (currently
+    one. qr-alpha is the other way round: fewer bits per character, but every character is one a QR
+    code's alphanumeric mode can carry at 5.5 bits, where any other link costs 8 per byte. Every coded
+    string carries a stream version tag (currently
     {numbers.static.streamVersion}), so a decoder refuses an incompatible string rather than silently
     corrupting it.
   </p>

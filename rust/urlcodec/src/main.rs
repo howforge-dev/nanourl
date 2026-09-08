@@ -171,8 +171,12 @@ fn main() {
         };
         for i in (shard..n).step_by(shards as usize) {
             let url = urlcodec::fuzzgen::gen_url(seed, i);
-            let alpha = (i % 3) as i32;
-            let alph = ["b79", "b64", "emoji-1k"][alpha as usize];
+            // The alphabet cycle is offset by one every 8 cases: fuzzgen
+            // cycles its 8 URL modes on idx % 8, and a plain idx % 4 would
+            // pair each mode with one alphabet forever. Identical in
+            // fuzz/driver_common.js, which the gate compares this against.
+            let alpha = ((i + i / 8) % 4) as i32;
+            let alph = ["b79", "b64", "emoji-1k", "qr-alpha"][alpha as usize];
             let ub = url.as_bytes();
             unsafe { urlcodec::codec_encode(ub.as_ptr(), ub.len(), alpha) };
             let ej = urlcodec::last_result_str();
@@ -316,6 +320,7 @@ fn main() {
         alpha: match arg_value(&args, "--alphabet").as_deref() {
             Some("base79") => coder::Alphabet::Base79,
             Some("emoji-1k") => coder::Alphabet::Emoji1k,
+            Some("qr-alpha") => coder::Alphabet::QrAlpha,
             _ => coder::Alphabet::Base64,
         },
     };

@@ -1,5 +1,6 @@
 <script lang="ts">
   import Section from '../Section.svelte';
+  import Ref from '../Ref.svelte';
   import { numbers } from '../../../lib/numbers';
   import { paramsM } from '../../../lib/format';
 
@@ -10,7 +11,7 @@
   if (!digits) throw new Error('lib/numbers.ts: expected a "000000" token in numbers.hn.tokens');
 </script>
 
-<Section id="limits" n={11} title="What it's bad at">
+<Section id="limits">
   <p>Knowing where the gains stop is part of understanding the system:</p>
   <ul>
     <li>
@@ -29,12 +30,12 @@
       prose or JSON pays badly through this model. The prior <i>is</i> the product.
     </li>
     <li>
-      <b>The worst case is capped, not avoided</b>: the probability floor from section 7 means no
+      <b>The worst case is capped, not avoided</b>: the probability floor from <Ref to="coder" /> means no
       token can cost more than {numbers.static.probGridBits} bits, however wrong the model's guess.
       Pathological inputs get bounded damage, not miracles.
     </li>
     <li>
-      <b>Codes are tied to their model version</b> (section 8). A shortened URL is a contract with
+      <b>Codes are tied to their model version</b> (<Ref to="lossless" />). A shortened URL is a contract with
       one exact set of {paramsM(numbers.params)} numbers; the stream's version tag
       and the site's content-hashed model files enforce it.
     </li>

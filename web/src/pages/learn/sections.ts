@@ -1,17 +1,12 @@
 // The learn page's sections: stable id + title, in reading order.
 //
-// The id half is a public contract — the observatory deep-links to
-// `/learn.html#coder`, `#viz` and friends — and it was written out twice: here
-// (as `Toc.svelte`'s own array) and again in `e2e/learn.smoke.spec.ts`. The
-// spec then asserted `toHaveCount(SECTION_IDS.length)` against its *own* copy,
-// so renaming a section in the TOC and its `<Section id=…>` without touching
-// the spec left the spec asserting nothing about the new id while still
-// reporting green — the same self-consistent-and-blind shape the specs already
-// guard against elsewhere.
-//
-// The `<Section>` elements themselves still spell their own `id` in App.svelte
-// markup; this list is what the TOC renders and what the E2E checks against,
-// so a section whose markup id drifts from this list now fails the spec.
+// The id half is a public contract: the observatory deep-links to
+// `/learn.html#coder`, `#viz` and friends, and `e2e/learn.smoke.spec.ts`
+// checks every id here against the rendered headings. The NUMBER of a section
+// is its position in this list and nothing else: `Section.svelte` renders it,
+// `Toc.svelte` lists it and `Ref.svelte` links to it, so inserting or
+// reordering a section renumbers every heading and every cross-reference at
+// once. A hand-typed "section 7" anywhere in the prose is a defect.
 export const SECTIONS = [
   ['idea', 'The whole idea in one paragraph'],
   ['bits', 'Why predictable means compressible'],
@@ -28,3 +23,18 @@ export const SECTIONS = [
 ] as const satisfies readonly (readonly [id: string, title: string])[];
 
 export const SECTION_IDS: readonly string[] = SECTIONS.map(([id]) => id);
+
+export type SectionId = (typeof SECTIONS)[number][0];
+
+/** 1-based position in reading order; the number a heading and a `Ref` show. */
+export function sectionNumber(id: SectionId): number {
+  const i = SECTIONS.findIndex(([sid]) => sid === id);
+  if (i < 0) throw new Error(`unknown learn section: ${id}`);
+  return i + 1;
+}
+
+export function sectionTitle(id: SectionId): string {
+  const entry = SECTIONS.find(([sid]) => sid === id);
+  if (!entry) throw new Error(`unknown learn section: ${id}`);
+  return entry[1];
+}

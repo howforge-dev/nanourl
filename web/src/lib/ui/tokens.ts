@@ -36,6 +36,23 @@ export const CANVAS_SCALE = 2;
 export const CANVAS_FONT = '20px ui-monospace, monospace';
 
 /**
+ * The two font stacks, for text that is drawn rather than styled: the QR
+ * renderer's caption and centre label go into an SVG document that is also
+ * rasterised on its own, with no stylesheet in scope. Pinned to `app.css`'s
+ * `--font-sans` / `--font-mono` by `tests/tokens.test.ts`, like `COLOR`.
+ */
+export const FONT = {
+  sans: 'system-ui, sans-serif',
+  mono: 'ui-monospace, monospace',
+} as const;
+
+/** `FONT` key -> the custom property in `app.css` that owns the value. */
+export const FONT_VAR: Readonly<Record<keyof typeof FONT, string>> = {
+  sans: '--font-sans',
+  mono: '--font-mono',
+};
+
+/**
  * Lengths TypeScript passes into CSS as a value rather than writing as a
  * declaration — a component prop, a `style:` directive — where a stylesheet's
  * `var()` has nowhere to live. Multiples of the 8px step, like app.css's

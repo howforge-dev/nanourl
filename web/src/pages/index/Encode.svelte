@@ -1,7 +1,8 @@
 <script lang="ts">
   // Encode pane: auto-submitting textarea (debounce + Enter), the compressed
-  // code with a redirect link, stats, and the advanced disclosure (token
-  // chips → distribution viewer, round-trip check, build info).
+  // code with a redirect link, stats, the QR disclosure, and the advanced
+  // disclosure (token chips → distribution viewer, round-trip check, build
+  // info).
   import { untrack } from 'svelte';
   import type { Codec } from '../../lib/codec/client';
   import type { Alphabet, EncodeResult } from '../../lib/codec/types';
@@ -14,6 +15,7 @@
   import FactsGrid from '../../lib/ui/FactsGrid.svelte';
   import TextArea from '../../lib/ui/TextArea.svelte';
   import Dist from './Dist.svelte';
+  import Qr from './Qr.svelte';
   import { TESTID } from '../../lib/testids';
   import { costParts, fmtBitsPerChar, fmtMs } from '../../lib/format';
   import { PLACEHOLDER_URL as placeholder } from '../../lib/examples';
@@ -162,7 +164,10 @@
     <span class="stat"><b>{fmtBitsPerChar(result.bits_per_char)}</b> bits/char</span>
     <span class="stat"><b>{result.coded_bits}</b> coded bits</span>
   </div>
-  <details>
+  {#if resultAlpha !== null}
+    <Qr link={redirectLink} code={result.coded} alpha={resultAlpha} />
+  {/if}
+  <details data-testid={TESTID.advanced}>
     <summary>Advanced — per-token cost and build info</summary>
     <p class="caption">click a token to see the model's predictions at that position</p>
     <CostChips tokens={result.tokens} selected={selectedTok ?? undefined} onselect={(i) => (selectedTok = i)} />

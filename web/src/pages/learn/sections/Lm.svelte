@@ -5,7 +5,7 @@
   import Callout from '../../../lib/ui/Callout.svelte';
 </script>
 
-<Section id="lm" n={5} title="What a language model actually is">
+<Section id="lm">
   <h3 id="nn">First: what a neural network is</h3>
   <p>
     Forget the brain metaphors. A neural network is a calculator with millions of

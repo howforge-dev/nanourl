@@ -16,11 +16,13 @@
 //! from disk is what proves the two are the same model.
 //!
 
+use nanourl::link::bare_for;
 use nanourl::weights::{MODEL_BYTES, MODEL_SHA256};
 use nanourl::SITE_URL;
 use serde_json::Value;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use urlcodec::coder::Alphabet;
 
 const NANOURL: &str = env!("CARGO_BIN_EXE_nanourl");
 
@@ -46,10 +48,11 @@ const CLI_GOLDEN: &str = "tests/goldens/cli.json";
 
 /// `--alphabet` as each binary spells it: the dev tool takes the wire name,
 /// the shipped CLI takes the one a person types.
-const ALPHABETS: [(&str, &str); 3] = [
-    ("base64url", "base64url"),
-    ("base79", "base79"),
-    ("emoji", "emoji-1k"),
+const ALPHABETS: [(&str, &str, Alphabet); 4] = [
+    ("base64url", "base64url", Alphabet::Base64),
+    ("base79", "base79", Alphabet::Base79),
+    ("emoji", "emoji-1k", Alphabet::Emoji1k),
+    ("qr-alpha", "qr-alpha", Alphabet::QrAlpha),
 ];
 
 fn model() -> String {
@@ -134,7 +137,7 @@ fn nanourl_mints_the_same_codes_as_the_developer_encoder() {
     }
     let m = model();
     for url in examples() {
-        for (cli_name, dev_name) in ALPHABETS {
+        for (cli_name, dev_name, alpha) in ALPHABETS {
             let dev = run(
                 &urlcodec_bin().to_string_lossy(),
                 &[
@@ -151,7 +154,14 @@ fn nanourl_mints_the_same_codes_as_the_developer_encoder() {
             assert!(dev.status.success(), "urlcodec encode failed for {url}");
             let ship = run(NANOURL, &["encode", &url, "--alphabet", cli_name, "--bare"]);
             assert!(ship.status.success(), "nanourl encode failed for {url}");
-            assert_eq!(stdout(&dev), stdout(&ship), "{cli_name} code for {url}");
+            // The developer encoder prints the digits the codec emitted;
+            // `--bare` prints them as they are written on their own, which
+            // for qr-alpha adds the marker.
+            assert_eq!(
+                bare_for(&stdout(&dev), alpha),
+                stdout(&ship),
+                "{cli_name} code for {url}"
+            );
         }
     }
 }
@@ -162,7 +172,7 @@ fn a_link_it_minted_decodes_back_to_the_url_it_came_from() {
         return;
     }
     for url in examples() {
-        for (cli_name, _) in ALPHABETS {
+        for (cli_name, _, alpha) in ALPHABETS {
             // The default output is the link, written through `fragment_for`,
             // so feeding it straight back exercises the marker and the sniffing
             // together: the round trip a person actually performs.
@@ -172,6 +182,16 @@ fn a_link_it_minted_decodes_back_to_the_url_it_came_from() {
             let dec = run(NANOURL, &["decode", &link]);
             assert!(dec.status.success(), "decode {link}");
             assert_eq!(stdout(&dec), url, "{cli_name} round trip via {link}");
+
+            // The bare spelling too, unaided: a code that could pass as
+            // another alphabet carries its marker digit, so every alphabet's
+            // bare output identifies itself (base64url by being the default).
+            let enc = run(NANOURL, &["encode", &url, "--alphabet", cli_name, "--bare"]);
+            let bare = stdout(&enc);
+            let dec = run(NANOURL, &["decode", &bare]);
+            assert!(dec.status.success(), "decode --bare {bare}");
+            assert_eq!(stdout(&dec), url, "{cli_name} bare round trip via {bare}");
+            let _ = alpha;
         }
     }
 }

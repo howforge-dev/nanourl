@@ -25,7 +25,7 @@ pub mod weights;
 
 use clap::builder::PossibleValue;
 use clap::{Parser, Subcommand, ValueEnum};
-use link::{alphabet_key, fragment_for, parse_link, DEFAULT_ALPHABET};
+use link::{alphabet_blurb, alphabet_key, bare_for, fragment_for, parse_link, DEFAULT_ALPHABET};
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use urlcodec::coder::Alphabet;
@@ -88,7 +88,10 @@ enum Cmd {
         /// Print the code on this base URL
         #[arg(long, value_name = "BASE", default_value = SITE_URL)]
         base: String,
-        /// Print only the code, without a base URL
+        /// Print only the code, without a base URL. A base79 or qr-alpha
+        /// code that could pass as base64url carries its marker digit ('~'
+        /// or '/'), which decodes as a leading zero
+        ///
         #[arg(long)]
         bare: bool,
     },
@@ -139,15 +142,19 @@ impl ValueEnum for AlphabetArg {
             AlphabetArg(Alphabet::Base64),
             AlphabetArg(Alphabet::Base79),
             AlphabetArg(Alphabet::Emoji1k),
+            AlphabetArg(Alphabet::QrAlpha),
         ]
     }
 
     fn to_possible_value(&self) -> Option<PossibleValue> {
         let key = alphabet_key(self.0);
-        Some(match self.0 {
-            Alphabet::Emoji1k => PossibleValue::new("emoji").alias(key),
-            _ => PossibleValue::new(key),
-        })
+        Some(
+            match self.0 {
+                Alphabet::Emoji1k => PossibleValue::new("emoji").alias(key),
+                _ => PossibleValue::new(key),
+            }
+            .help(alphabet_blurb(self.0)),
+        )
     }
 }
 
@@ -266,6 +273,10 @@ fn cmd_encode(
         Err(e) => return out.err(EXIT_BAD_INPUT, &e),
     };
     let code = v["coded"].as_str().unwrap_or_default().to_string();
+    // `code` is what the codec emitted; `bare` is how it is written down,
+    // behind its alphabet's marker digit when it could pass as another
+    // alphabet — the spelling `decode` (and the site's Decode pane) reads.
+    let bare_code = bare_for(&code, alpha);
     let fragment = fragment_for(&code, alpha);
     let link = link_with(base, &fragment);
     out.ok(
@@ -273,6 +284,7 @@ fn cmd_encode(
             "ok": true,
             "url": url,
             "code": code,
+            "bare": bare_code,
             "alphabet": alphabet_key(alpha),
             "fragment": fragment,
             "link": link,
@@ -280,7 +292,7 @@ fn cmd_encode(
             "bits": v["coded_bits"],
             "bits_per_char": v["bits_per_char"],
         }),
-        &[if bare { code } else { link }],
+        &[if bare { bare_code } else { link }],
     )
 }
 

@@ -132,8 +132,10 @@ function runFuzz(w, mem, { modelPath, tokPath, n, seed, threads, shard, shards }
   const SHARD = BigInt(shard), SHARDS = BigInt(shards);
   for (let i = SHARD; i < N; i += SHARDS) {
     const url = readPacked(w.fuzz_url(SEED, i));
-    const alpha = Number(i % 3n);
-    const alph = ['b79', 'b64', 'emoji-1k'][alpha];
+    // The same cycle as `urlcodec fuzz` (src/main.rs): offset by one every 8
+    // cases so no fuzzgen URL mode is paired with a single alphabet forever.
+    const alpha = Number((i + i / 8n) % 4n);
+    const alph = ['b79', 'b64', 'emoji-1k', 'qr-alpha'][alpha];
     const [up, ul] = put(Buffer.from(url, 'utf8'));
     const ej = readPacked(w.codec_encode(up, ul, alpha));
     w.ufree(up, ul);
