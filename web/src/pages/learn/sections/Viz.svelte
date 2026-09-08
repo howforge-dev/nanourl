@@ -2,7 +2,7 @@
   import Section from '../Section.svelte';
   import Ref from '../Ref.svelte';
   import { numbers } from '../../../lib/numbers';
-  import { fmtCount, fmtMiB } from '../../../lib/format';
+  import { fmtExact, fmtMiB } from '../../../lib/format';
 </script>
 
 <Section id="viz">
@@ -43,7 +43,7 @@
       the {fmtMiB(numbers.artifactMiB)} download.
     </li>
     <li>
-      Embedding atlas: <Ref to="transformer" />'s geometry, all {fmtCount(numbers.vocab)} piece-embeddings
+      Embedding atlas: <Ref to="transformer" />'s geometry, all {fmtExact(numbers.vocab)} piece-embeddings
       on one map. Drag a box to zoom; labels appear up close.
     </li>
   </ul>

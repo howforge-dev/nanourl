@@ -1,7 +1,7 @@
 <script lang="ts">
   import Section from '../Section.svelte';
   import { numbers } from '../../../lib/numbers';
-  import { fmtCount } from '../../../lib/format';
+  import { fmtExact } from '../../../lib/format';
   import ScrollBox from '../../../lib/ui/ScrollBox.svelte';
   import Chip from '../../../lib/ui/Chip.svelte';
 
@@ -33,7 +33,7 @@
   </ol>
   <p>
     Only then does <b>byte-pair encoding</b> (BPE) run, chopping each alphanumeric run into pieces
-    from a fixed dictionary of {fmtCount(numbers.vocab)} entries, at most
+    from a fixed dictionary of {fmtExact(numbers.vocab)} entries, at most
     {numbers.static.maxTokenLength} characters each. The dictionary was built once by repeatedly
     merging the most frequent adjacent pair across tens of millions of URLs: common fragments earn
     their own entry, rare text falls back to smaller ones, down to single bytes, so <i>any</i> text
@@ -44,7 +44,7 @@
         >BUILD-DICTIONARY(tens of millions of pre-split URLs)</b
       >   <span class="dim"># done once, before training</span>
   dictionary ← the 256 single bytes, plus &lt;eos&gt;
-  repeat until the dictionary has {fmtCount(numbers.vocab)} entries:
+  repeat until the dictionary has {fmtExact(numbers.vocab)} entries:
       count every adjacent pair of entries across all the pre-split pieces
       take the most frequent pair and glue it into ONE new entry
       (skip it if the result would exceed {numbers.static.maxTokenLength} characters)
@@ -80,7 +80,7 @@
     <div class="cap">
       <code>ycombinator</code> did not earn one big piece: BPE only ever sees the alphanumeric run
       between delimiters, and here it merges that run into <code>y</code> · <code>com</code> ·
-      <code>bin</code> · <code>ator</code>. The {fmtCount(numbers.vocab)} entries still go to whatever
+      <code>bin</code> · <code>ator</code>. The {fmtExact(numbers.vocab)} entries still go to whatever
       recurs often enough to earn one; pieces just compete for them one delimiter-run at a time
       rather than across a whole label.
     </div>

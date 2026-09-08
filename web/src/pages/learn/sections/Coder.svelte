@@ -2,7 +2,7 @@
   import Section from '../Section.svelte';
   import CoderRows from './figures/CoderRows.svelte';
   import { numbers } from '../../../lib/numbers';
-  import { fmtCount, fmtShare } from '../../../lib/format';
+  import { fmtCount, fmtExact, fmtShare } from '../../../lib/format';
   import ScrollBox from '../../../lib/ui/ScrollBox.svelte';
   import Callout from '../../../lib/ui/Callout.svelte';
 
@@ -22,7 +22,7 @@
   <ol>
     <li>
       Slice: ask the model for its probabilities given the tokens so far, and cut the working
-      interval into {fmtCount(numbers.vocab)} slices, each as wide as its piece is likely. Likely
+      interval into {fmtExact(numbers.vocab)} slices, each as wide as its piece is likely. Likely
       pieces get fat slices, unlikely ones slivers.
     </li>
     <li>
@@ -147,7 +147,7 @@ encode A  (50% of that)   interval = [0.500, 0.625)   width 0.125</pre>
     <li>
       Snapped probabilities: encoder and decoder must slice at <i>identical</i> boundaries, so
       the probabilities are rounded onto a fixed grid of {fmtCount(gridTotal)} steps
-      ({numbers.static.probGridBits} bits) first. Every one of the {fmtCount(numbers.vocab)} pieces
+      ({numbers.static.probGridBits} bits) first. Every one of the {fmtExact(numbers.vocab)} pieces
       gets a floor of one step, even one the model rates at a billion to one, which costs about
       {(inflationPerToken * 1000).toFixed(2)} thousandths of a bit per token
       ({inflationPerUrl.toFixed(3)} bits on a {numbers.meanTokensPerUrl.toFixed(0)}-token URL, invisible

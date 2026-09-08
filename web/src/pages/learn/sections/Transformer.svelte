@@ -3,7 +3,7 @@
   import Ref from '../Ref.svelte';
   import AttentionFig from './figures/AttentionFig.svelte';
   import { numbers } from '../../../lib/numbers';
-  import { fmtBytes, fmtCount, fmtShare, probPct } from '../../../lib/format';
+  import { fmtBytes, fmtCount, fmtExact, fmtShare, probPct } from '../../../lib/format';
   import ScrollBox from '../../../lib/ui/ScrollBox.svelte';
 
   const urlsPerWindow = numbers.block / numbers.meanTokensPerUrl;
@@ -30,7 +30,7 @@
 
   <h3 id="embeddings">Embeddings: pieces become number-lists</h3>
   <p>
-    Each of the {fmtCount(numbers.vocab)} pieces owns a learned list of {numbers.dModel} numbers, its
+    Each of the {fmtExact(numbers.vocab)} pieces owns a learned list of {numbers.dModel} numbers, its
     embedding, which is the coordinates of a point in {numbers.dModel}-dimensional space; pieces
     used in similar contexts land near each other there. You can't draw that many
     dimensions, so the <a href="/model.html">observatory</a>'s atlas flattens them onto paper with a
@@ -191,20 +191,20 @@
   <h3 id="readout">Readout: one score per piece</h3>
   <p>
     After layer {numbers.layers}, the final {numbers.dModel}-number summary is compared against
-    every piece's embedding, giving {fmtCount(numbers.vocab)} scores, and a fixed formula called the
+    every piece's embedding, giving {fmtExact(numbers.vocab)} scores, and a fixed formula called the
     softmax converts scores into percentages that are all positive and sum to exactly 100%, which
     makes them probabilities.
   </p>
   <details class="surface mathbox">
     <summary><span class="sig">∑</span> show the math: readout</summary>
     <div class="eq">
-      <i>z</i> = <i>W</i><sub>wte</sub>·LN<sub>f</sub>(<i>x</i>)&emsp;({fmtCount(numbers.vocab)}
+      <i>z</i> = <i>W</i><sub>wte</sub>·LN<sub>f</sub>(<i>x</i>)&emsp;({fmtExact(numbers.vocab)}
       scores)&emsp;&emsp; <i>p</i><sub><i>i</i></sub> = e<sup><i>z</i><sub>i</sub></sup> / <span
         style="font-size:1.2em">∑</span
       ><sub><i>j</i></sub> e<sup><i>z</i><sub>j</sub></sup>
       <div class="c">
         Symbols: <i>x</i> is the pad after layer {numbers.layers} · LN<sub>f</sub> is one final
-        normalize · <i>W</i><sub>wte</sub> is the {fmtCount(numbers.vocab)}×{numbers.dModel} embedding
+        normalize · <i>W</i><sub>wte</sub> is the {fmtExact(numbers.vocab)}×{numbers.dModel} embedding
         table · <i>z</i><sub><i>i</i></sub> is piece <i>i</i>'s raw score · <i>p</i><sub><i>i</i></sub
         > is its probability after the softmax.
       </div>

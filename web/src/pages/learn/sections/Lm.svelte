@@ -1,7 +1,7 @@
 <script lang="ts">
   import Section from '../Section.svelte';
   import { numbers } from '../../../lib/numbers';
-  import { fmtCount } from '../../../lib/format';
+  import { fmtCount, fmtExact } from '../../../lib/format';
   import Callout from '../../../lib/ui/Callout.svelte';
 </script>
 
@@ -36,7 +36,7 @@
   <p>A language model is a neural network with one specific job:</p>
   <Callout>
     Given the tokens so far, output a probability for every one of the
-    {fmtCount(numbers.vocab)} possible next pieces (all positive, summing to 1).
+    {fmtExact(numbers.vocab)} possible next pieces (all positive, summing to 1).
   </Callout>
   <p>
     Feed it <code>&lt;eos&gt;</code> (the model's one marker, which ends a URL and so also starts

@@ -2,7 +2,7 @@
   import Section from '../Section.svelte';
   import Ref from '../Ref.svelte';
   import { numbers } from '../../../lib/numbers';
-  import { fmtCount, fmtMiB } from '../../../lib/format';
+  import { fmtCount, fmtExact, fmtMiB } from '../../../lib/format';
 </script>
 
 <Section id="origin">
@@ -19,7 +19,7 @@
       measured on that held-back shard.
     </li>
     <li>
-      Train the tokenizer on a sample, freezing the {fmtCount(numbers.vocab)}-piece
+      Train the tokenizer on a sample, freezing the {fmtExact(numbers.vocab)}-piece
       dictionary (<Ref to="tokens" />).
     </li>
     <li>
