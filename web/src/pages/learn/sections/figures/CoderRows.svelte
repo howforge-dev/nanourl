@@ -49,6 +49,17 @@
   // render. `detailed` adds the two lanes below the last bar: v's own label,
   // then the caption naming it.
   const height = $derived(y(Math.max(0, rows - 1)) + (detailed ? 56 : 18));
+  // Each row's line as a range of the ORIGINAL [0,1): row i+1 is row i's kept
+  // slice, so its ends are that slice's ends mapped through every zoom above.
+  const ranges = $derived.by(() => {
+    const out: [number, number][] = [[0, 1]];
+    for (const t of toks) {
+      const [lo, hi] = out[out.length - 1];
+      out.push([lo + (hi - lo) * (t.clo ?? 0), lo + (hi - lo) * (t.chi ?? 1)]);
+    }
+    return out;
+  });
+  const fmt = (x: number) => (x === 0 ? '0' : x === 1 ? '1' : x.toPrecision(4).replace(/\.?0+$/, '').replace(/e-(\d)$/, 'e-0$1'));
   // v is one number, but each row's line is a different zoom of [0,1), so v
   // sits at a different fraction of each bar. Working back from the last row,
   // where it is the midpoint of the kept slice: in row i it is that position
@@ -81,11 +92,9 @@
       />
       <line x1={s.x1} y1={gapTop(i)} x2={X0} y2={gapBot(i)} stroke={COLOR.acc} stroke-opacity="0.7" />
       <line x1={s.x2} y1={gapTop(i)} x2={X1} y2={gapBot(i)} stroke={COLOR.acc} stroke-opacity="0.7" />
-      {#if i === 0}
-        <text x={(X0 + X1) / 2} y={(gapTop(i) + gapBot(i)) / 2 + 4} text-anchor="middle" fill={COLOR.acc}>
-          zoom: the kept slice becomes the whole next line
-        </text>
-      {/if}
+      <text x={(X0 + X1) / 2} y={(gapTop(i) + gapBot(i)) / 2 + 4} text-anchor="middle" fill={COLOR.acc}>
+        {i === 0 ? 'zoom: this slice becomes the next line' : 'next line'} = [{fmt(ranges[i + 1][0])}, {fmt(ranges[i + 1][1])}){i === 0 ? '' : ' of the original'}
+      </text>
     {/if}
     <line x1={X0} y1={y(i)} x2={X1} y2={y(i)} stroke={COLOR.line} stroke-width={BAR} stroke-linecap="round" />
     <line x1={s.x1} y1={y(i)} x2={s.x2} y2={y(i)} stroke={last ? COLOR.ok : COLOR.acc} stroke-width={BAR} stroke-linecap="round" />
@@ -109,7 +118,7 @@
          would sit on the bar. -->
     <text x={vAt[last]} y={y(last) + V_LABEL_DY} class="big" text-anchor="middle" fill={COLOR.txt}>v</text>
     <text x={X0} y={height - 8}>
-      the white dot is v: one number, inside every kept slice; any number in the last one is a valid code
+      the white dot is v: in every kept slice; any number in the last one is a valid code
     </text>
   {/if}
 </svg>

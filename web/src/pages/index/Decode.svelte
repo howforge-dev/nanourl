@@ -104,7 +104,7 @@
 <TextField
   bind:value={code}
   ariaLabel="compressed code or redirect link"
-  placeholder="pDkLHLL — or paste a full redirect link"
+  placeholder="pDkLHLL, or paste a full redirect link"
   oninput={autoDecode}
   onkeydown={onKeydown}
 />
@@ -123,7 +123,7 @@
     <span class="stat"><b>{fmtBitsPerChar(result.bits_per_char)}</b> bits/char</span>
   </div>
   <details data-testid={TESTID.advanced}>
-    <summary>Advanced — per-token cost and build info</summary>
+    <summary>Advanced: per-token cost and build info</summary>
     <CostChips tokens={result.tokens} />
     <FactsGrid title="Cost">
         <dt>input</dt>

@@ -42,11 +42,11 @@ pub fn alphabet_blurb(a: Alphabet) -> &'static str {
     match a {
         Alphabet::Base64 => "conservative base64url charset (default)",
         Alphabet::Base79 => {
-            "RFC 3986 path-segment charset, ~5% shorter — but its digits include punctuation \
+            "RFC 3986 path-segment charset, ~5% shorter, but its digits include punctuation \
              () , ; ! ' .) that chat apps and Markdown trim from the end of a link, so a pasted \
              link can lose its last character"
         }
-        Alphabet::Emoji1k => "1024 emoji, 10 bits per glyph — ~37% fewer characters",
+        Alphabet::Emoji1k => "1024 emoji, 10 bits per glyph, ~37% fewer characters",
         Alphabet::QrAlpha => "QR alphanumeric charset (uppercase), for QR codes",
     }
 }

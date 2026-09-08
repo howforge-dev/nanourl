@@ -73,7 +73,7 @@
           class="stage blk layer {l === selLayer ? 'sel' : ''}"
           onclick={() => onGoto({ layer: l === selLayer ? -1 : l })}
         >
-          <span>layer {l} — LN → attention ({info.n_head} heads × {headDim}d) → LN → think (SwiGLU)</span>
+          <span>layer {l}: LN → attention ({info.n_head} heads × {headDim}d) → LN → think (SwiGLU)</span>
           <span class="dims"
             >qkv {info.d_model}→{3 * info.d_model} · {weightsMiB(info.d_model * 3 * info.d_model)} | proj {weightsMiB(
               info.d_model * info.d_model,

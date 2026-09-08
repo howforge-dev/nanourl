@@ -22,9 +22,9 @@ export const ALPHABETS = [
     key: 'base79',
     size: 79,
     blurb:
-      "RFC 3986 path-segment charset, ~5% shorter — but its digits include punctuation () , ; ! ' .) that chat apps and Markdown trim from the end of a link, so a pasted link can lose its last character",
+      "RFC 3986 path-segment charset, ~5% shorter, but its digits include punctuation () , ; ! ' .) that chat apps and Markdown trim from the end of a link, so a pasted link can lose its last character",
   },
-  { id: 2, key: 'emoji-1k', size: 1024, blurb: '1024 emoji, 10 bits per glyph — ~37% fewer characters' },
+  { id: 2, key: 'emoji-1k', size: 1024, blurb: '1024 emoji, 10 bits per glyph, ~37% fewer characters' },
   { id: 3, key: 'qr-alpha', size: 43, blurb: 'QR alphanumeric charset (uppercase), for QR codes' },
 ] as const satisfies readonly { id: Alphabet; key: string; size: number; blurb: string }[];
 

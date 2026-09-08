@@ -311,7 +311,7 @@
 {/snippet}
 
 <details bind:open data-testid={TESTID.qr}>
-  <summary>QR code — scan the link</summary>
+  <summary>QR code: scan the link</summary>
   {#if open}
     {#if offer}
       <div data-testid={TESTID.qrOffer}>

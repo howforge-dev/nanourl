@@ -29,8 +29,8 @@
   </Card>
   <p class="caption">
     Every URL here was invented by a {paramsM(codec.info.params)}-parameter model that has only ever
-    seen URLs — no page content. They can look real, be nonsense, or echo the spammier corners of the crawl.
-    <span class="warn-text">Nothing is fetched and nothing is a link</span> unless it starts with http(s); they are text.
+    seen URLs, not page content. They can look real, be nonsense, or echo the spammier corners of the crawl.
+    <span class="warn-text">The page fetches nothing and links nothing</span> unless it starts with http(s); the rest is plain text.
   </p>
 {/if}
 

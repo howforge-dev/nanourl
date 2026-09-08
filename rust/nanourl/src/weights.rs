@@ -53,14 +53,14 @@ include!("../sha256_file.rs");
 pub fn verify(model: &[u8]) -> Result<String, String> {
     if model.len() as u64 != MODEL_BYTES {
         return Err(format!(
-            "embedded weights are {} bytes, expected {MODEL_BYTES} — this binary is damaged",
+            "embedded weights are {} bytes, expected {MODEL_BYTES}; this binary is damaged",
             model.len()
         ));
     }
     let got = sha256_bytes(model);
     if got != MODEL_SHA256 {
         return Err(format!(
-            "embedded weights have sha256 {got}, expected {MODEL_SHA256} — this binary is damaged"
+            "embedded weights have sha256 {got}, expected {MODEL_SHA256}; this binary is damaged"
         ));
     }
     Ok(got)
@@ -83,7 +83,7 @@ pub fn export(model: &[u8], dest: &Path, force: bool) -> Result<u64, String> {
     };
     if !force && dest.exists() {
         return Err(format!(
-            "{}: exists — pass --force to overwrite it",
+            "{}: exists; pass --force to overwrite it",
             dest.display()
         ));
     }

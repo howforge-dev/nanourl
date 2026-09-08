@@ -118,7 +118,7 @@
       oninput={onFilterInput}
       autocomplete="off"
       ariaLabel="filter the token distribution"
-      placeholder="filter tokens — e.g. .com"
+      placeholder="filter tokens, e.g. .com"
       style="flex:1;min-width:var(--m-filter)"
     />
     <span class="count">{filterText ? `${fmtExact(visibleCount)} of ${fmtExact(rows.length)} tokens` : ''}</span>

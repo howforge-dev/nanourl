@@ -44,7 +44,7 @@
   const ROUNDTRIP_TEXT = {
     wait: 'verifying…',
     ok: '✓ byte-identical',
-    fail: '✗ FAILED — decode does not match input',
+    fail: '✗ FAILED: decode does not match input',
   } as const;
   let roundtripText = $derived(ROUNDTRIP_TEXT[roundtrip]);
   let selectedTok: number | null = $state(null);
@@ -179,7 +179,7 @@
     <Qr link={redirectLink} {altLink} code={result.coded} alpha={resultAlpha} onalpha={(a) => onalpha?.(a)} />
   {/if}
   <details data-testid={TESTID.advanced}>
-    <summary>Advanced — per-token cost and build info</summary>
+    <summary>Advanced: per-token cost and build info</summary>
     <p class="caption">click a token to see the model's predictions at that position</p>
     <CostChips tokens={result.tokens} selected={selectedTok ?? undefined} onselect={(i) => (selectedTok = i)} />
     {#if selectedTok !== null && codec}
@@ -188,13 +188,13 @@
 
     <FactsGrid title="Cost">
         <dt>model</dt>
-        <dd><span class="n">{cost?.model}</span> bits <span class="dim">— what the predictions actually cost</span></dd>
+        <dd><span class="n">{cost?.model}</span> bits <span class="dim">(what the predictions cost)</span></dd>
         <dt>coder overhead</dt>
-        <dd><span class="n">{cost?.overhead}</span> bits <span class="dim">— fixed-grid rounding and bookkeeping</span></dd>
+        <dd><span class="n">{cost?.overhead}</span> bits <span class="dim">(fixed-grid rounding and bookkeeping)</span></dd>
         <dt>total coded</dt>
         <dd><span class="n">{result.coded_bits}</span> bits <span class="dim">→</span> <span class="n">{result.coded_chars}</span> chars</dd>
         <dt>input</dt>
-        <dd><span class="n">{result.url_chars}</span> chars <span class="dim">— hosts shown TLD-first, the model's canonical form</span></dd>
+        <dd><span class="n">{result.url_chars}</span> chars <span class="dim">(hosts shown TLD-first, the model's canonical form)</span></dd>
         <dt>bits per char</dt>
         <dd><span class="n">{fmtBitsPerChar(result.bits_per_char)}</span></dd>
         <dt>encode time</dt>
@@ -212,7 +212,7 @@
           class={roundtrip === 'ok' ? 'ok' : roundtrip === 'fail' ? 'bad' : ''}
         >
           <span>{roundtripText}</span>{#if roundtripTokens}<span class="dim"
-              >&nbsp;— decoded <span class="n">{roundtripTokens}</span> tokens</span
+              >&nbsp;(decoded <span class="n">{roundtripTokens}</span> tokens)</span
             >{/if}
         </dd>
         {#if roundtripUrl}

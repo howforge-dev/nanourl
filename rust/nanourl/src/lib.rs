@@ -417,9 +417,9 @@ fn cmd_model(
                 &[format!(
                     "{what} sha256 {got}{}",
                     if published {
-                        " — matches the published model"
+                        ", matches the published model"
                     } else {
-                        " — not the published model (explicit override)"
+                        ", not the published model (explicit override)"
                     }
                 )],
             )

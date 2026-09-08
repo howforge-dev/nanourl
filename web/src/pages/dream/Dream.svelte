@@ -101,7 +101,7 @@
   autocorrect="off"
   onkeydown={onPrefixKeydown}
 />
-<p class="caption">prefixes are typed in the model's canonical form — hosts TLD-first, e.g. https://com.example.www/ — results are shown un-reordered</p>
+<p class="caption">type the prefix in the model's canonical form, hosts TLD-first (e.g. https://com.example.www/); results are shown un-reordered</p>
 
 <div class="grid">
   <div>

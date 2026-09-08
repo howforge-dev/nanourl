@@ -126,7 +126,7 @@
   async function loadAtlas(): Promise<void> {
     const atlasEntry = manifest.atlas;
     if (!atlasEntry) {
-      error = 'atlas not built — run `task web:assets ATLAS=atlas/atlas.bin` after `uv run --extra atlas python -m training.atlas ...`';
+      error = 'atlas not built: run `task web:assets ATLAS=atlas/atlas.bin` after `uv run --extra atlas python -m training.atlas ...`';
       return;
     }
     fetching = true;
@@ -161,7 +161,7 @@
       // be silently truncated/reinterpreted into a wrong-looking scatter.
       const expectedBytes = info.vocab * 4;
       if (atlasBytes.byteLength !== expectedBytes) {
-        throw new Error(`atlas.bin is ${atlasBytes.byteLength} bytes, expected ${expectedBytes} (vocab ${info.vocab} × 4) — rebuild it with training/atlas.py`);
+        throw new Error(`atlas.bin is ${atlasBytes.byteLength} bytes, expected ${expectedBytes} (vocab ${info.vocab} × 4); rebuild it with training/atlas.py`);
       }
       atlasXY = new Uint16Array(atlasBytes.buffer, atlasBytes.byteOffset, info.vocab * 2);
       computed = true;
@@ -361,7 +361,7 @@
 
 <Panel bind:this={panel} bind:open title="embedding atlas">
   {#snippet sub()}
-    all {fmtExact(info.vocab)} piece embeddings from the shipped weights, UMAP-projected to 2D — hover to
+    all {fmtExact(info.vocab)} piece embeddings from the shipped weights, UMAP-projected to 2D. Hover to
     identify, drag a box to zoom (labels appear up close), double-click to reset;
     <span class="acc">blue rings</span> mark the current URL's tokens
   {/snippet}

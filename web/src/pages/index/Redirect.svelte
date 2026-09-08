@@ -96,7 +96,7 @@
     // decode is byte-exact, so a code can name any scheme — never auto-open
     // javascript:/data:/anything that isn't plain web
     if (!isHttp(r.url)) {
-      note = 'not auto-opening a non-http(s) target — copy it only if you trust it';
+      note = 'not auto-opening a non-http(s) target; copy it only if you trust it';
       return;
     }
     let n = 2;
