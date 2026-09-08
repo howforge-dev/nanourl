@@ -268,7 +268,7 @@ self.onmessage = async (e: MessageEvent) => {
         if (usable < 1) {
           throw new Error(
             `no usable compute worker within 5s (threads_ready()=${ex.threads_ready()} of ${threads}, ` +
-              `first ${threads === 1 ? 'and only ' : ''}worker did not report ready) — the threads tier has nothing to run on`,
+              `first ${threads === 1 ? 'and only ' : ''}worker did not report ready), so the threads tier has nothing to run on`,
           );
         }
         if (usable < threads) {

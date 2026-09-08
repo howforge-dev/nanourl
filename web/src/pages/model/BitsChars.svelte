@@ -63,7 +63,7 @@
   {#snippet sub()}
     the final step is mechanical: the bit stream (guard bit, version bits, then the coder's payload) is read six
     bits at a time, and each six-bit number picks one of 64 URL-safe characters. base79 instead treats all the
-    bits as one big number and rewrites it in base 79 — ~5% shorter, no per-character alignment
+    bits as one big number and rewrites it in base 79, which is ~5% shorter and needs no per-character alignment
   {/snippet}
   {#if open}
     {#if !lastEnc}

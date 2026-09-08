@@ -47,9 +47,9 @@ export interface PageDef {
 export const PAGES: readonly PageDef[] = [
   { id: 'index', href: '/', nav: 'home', suffix: 'offline URL shortener' },
   { id: 'model', href: '/model.html', nav: 'observatory', suffix: 'observatory', tagline: 'inspect the weights and predictions behind the compressor', width: 'wide' },
-  { id: 'learn', href: '/learn.html', nav: 'how it works', suffix: 'how it works', tagline: 'a from-scratch explanation — no machine-learning background assumed' },
-  { id: 'dream', href: '/dream.html', nav: 'dream', suffix: 'dream', tagline: 'the model run backwards — one imagined URL at a time' },
-  { id: 'bench', href: '/bench.html', nav: 'benchmark', suffix: 'bench', tagline: 'kernel benchmark — times every wasm tier on this device' },
+  { id: 'learn', href: '/learn.html', nav: 'how it works', suffix: 'how it works', tagline: 'a from-scratch explanation that assumes no machine-learning background' },
+  { id: 'dream', href: '/dream.html', nav: 'dream', suffix: 'dream', tagline: 'the model run backwards, one imagined URL at a time' },
+  { id: 'bench', href: '/bench.html', nav: 'benchmark', suffix: 'bench', tagline: 'a kernel benchmark that times every wasm tier on this device' },
 ];
 
 const page = (id: PageId): PageDef => {

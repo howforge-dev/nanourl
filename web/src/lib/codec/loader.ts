@@ -90,7 +90,7 @@ export const weightsFor = (chunkBytes: number[], ...others: number[]): number[] 
 
 const INSECURE_CONTEXT =
   'this page is not a secure context, so crypto.subtle is unavailable and downloaded ' +
-  'model chunks cannot be verified — serve the app over https (or from localhost)';
+  'model chunks cannot be verified; serve the app over https (or from localhost)';
 
 /** Throws a *named* error when the page is not a secure context, instead of
  * letting `crypto.subtle.digest` fail with a bare `TypeError: Cannot read

@@ -26,7 +26,7 @@ export interface LoadOptions {
 /** What `rpc()` returns once the worker is gone. Pages already render a
  * `Fail`'s `error` (an `.err` panel, a status line), so a dead codec surfaces
  * through the path they already have instead of hanging forever. */
-const DEAD: T.Fail = { ok: false, error: 'the codec worker is gone — reload the page' };
+const DEAD: T.Fail = { ok: false, error: 'the codec worker is gone; reload the page' };
 
 /** What a call gets once a tier-3 fault has been detected and no replacement
  * instance could be loaded. Distinct from DEAD: the worker did not crash, the
@@ -212,11 +212,11 @@ export class Codec {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (picked.kind === 'threads') {
-        onProgress({ fraction: 0, text: `threads tier failed (${message}) — retrying without threads…` });
+        onProgress({ fraction: 0, text: `threads tier failed (${message}), retrying without threads…` });
         return Codec.attemptWithFallback(onProgress, opts, { relaxed: tier.relaxed, threads: 0 }, FAULTED_TIER, afterFault);
       }
       if (picked.kind === 'relaxed') {
-        onProgress({ fraction: 0, text: `relaxed tier failed (${message}) — retrying on portable simd128…` });
+        onProgress({ fraction: 0, text: `relaxed tier failed (${message}), retrying on portable simd128…` });
         return Codec.attemptWithFallback(onProgress, opts, { relaxed: false, threads: 0 }, 'relaxed', afterFault);
       }
       throw err; // simd itself failed — nothing left to degrade to

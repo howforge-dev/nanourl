@@ -132,7 +132,7 @@
 {#if running}<div class="busy">dreaming {current} / {activeN}…</div>{/if}
 {#if errorMsg}<div class="err" role="alert">{errorMsg}</div>{/if}
 <div class="caption">
-  temperature 0 is greedy — the single most likely URL the model can imagine (the same one every
+  temperature 0 is greedy: the single most likely URL the model can imagine (the same one every
   time). 1.0 samples the true distribution. Above ~1.2 it falls apart.
 </div>
 

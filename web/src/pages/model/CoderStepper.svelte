@@ -151,7 +151,7 @@
     const clampedSubB = Math.max(0, Math.min(extMaxSub, subB));
     const isFinishStep = k === n - 1 && clampedSubB === realActs + 1;
 
-    const label = `token <b>${k + 1}/${n}</b> — encoding <b class="mono">${escapeHtml(t.piece)}</b> (${fmtBits(t.bits, 1, 'bits')}) · <b>${cumBits(k).toFixed(1)}</b>/${lastEnc.coded_bits} bits so far`;
+    const label = `token <b>${k + 1}/${n}</b>: encoding <b class="mono">${escapeHtml(t.piece)}</b> (${fmtBits(t.bits, 1, 'bits')}) · <b>${cumBits(k).toFixed(1)}</b>/${lastEnc.coded_bits} bits so far`;
     const hdr = headerBits(lastEnc.version);
     const done = cumBits(k);
     const total = lastEnc.coded_bits;
@@ -169,9 +169,9 @@
       const flipped = finishBit === '0' ? '1' : '0';
       const actionHtml =
         `<b>finish:</b> the stream must pin down exactly where the interval ended up, so the coder appends one ` +
-        `final settle bit — <b style="color:var(--ok)">writes ${finishBit}</b> — followed by ${flush} complementary ` +
+        `final settle bit (<b style="color:var(--ok)">writes ${finishBit}</b>), then ${flush} complementary ` +
         `bit${flush > 1 ? 's' : ''} (<b style="color:var(--ok)">${flipped.repeat(flush)}</b>) that resolve whatever ` +
-        `was still deferred, completing the stream`;
+        `was still deferred and complete the stream`;
       const bitstreamHtml =
         `<span style="color:var(--warn)">1</span>` +
         `<span style="color:var(--ok)">${hdr}</span>` +
@@ -180,7 +180,7 @@
         `<span style="color:var(--ink);background:var(--ok);border-radius:var(--r-1);padding:0 1px;font-weight:700">${lastEnc.bitstr.slice(prevWritten, written)}</span>`;
       const stepBitsHtml =
         `written <b>${written}</b> of ${total} payload bits` +
-        ` · after this token the interval is 2<sup>−${done.toFixed(1)}</sup> of the original line — worth <b>${done.toFixed(1)}</b> bits`;
+        ` · after this token the interval is 2<sup>−${done.toFixed(1)}</sup> of the original line, worth <b>${done.toFixed(1)}</b> bits`;
       return {
         label,
         before: lastKnown,
@@ -189,7 +189,7 @@
         zoom: false,
         zone: null,
         actionHtml,
-        afterCaption: 'after: the stream is complete — every deferred bit is now resolved',
+        afterCaption: 'after: the stream is complete; every deferred bit is now resolved',
         bitstreamHtml,
         stepBitsHtml,
         progressPct: 100,
@@ -207,9 +207,9 @@
       slice = after;
       const fr = t.chi! - t.clo!;
       actionHtml =
-        `<b>zoom:</b> the model gives this token the bright slice of the current interval (${fmtPct(fr, t.bits)} of it = ${fmtBits(t.bits, 1, 'bits')}) — the coder makes that slice the new interval` +
+        `<b>zoom:</b> the model gives this token the bright slice of the current interval (${fmtPct(fr, t.bits)} of it = ${fmtBits(t.bits, 1, 'bits')}); the coder makes that slice the new interval` +
         (realActs === 0
-          ? `. The new interval still straddles 1/2 too loosely to settle any bit — this token's information gets written by ${k === n - 1 ? 'the final flush' : 'later tokens'}`
+          ? `. The new interval still straddles 1/2 too loosely to settle any bit, so this token's information gets written by ${k === n - 1 ? 'the final flush' : 'later tokens'}`
           : '');
     } else {
       const a = st.acts[clampedSubB - 1];
@@ -223,7 +223,7 @@
           text: '1/4 – 3/4 straddle zone',
         };
         actionHtml =
-          'the interval hugs 1/2 (inside the shaded amber zone): the next stream bits are either 0<i>111…</i> or 1<i>000…</i> — undecidable until a later step. The coder <b style="color:var(--warn)">defers one bit</b> (amber ? in the stream) and doubles around 1/2';
+          'the interval hugs 1/2 (inside the shaded amber zone): the next stream bits are either 0<i>111…</i> or 1<i>000…</i>, undecidable until a later step. The coder <b style="color:var(--warn)">defers one bit</b> (amber ? in the stream) and doubles around 1/2';
       } else {
         zone = {
           left: a.t === '0' ? '0' : '50%',
@@ -231,10 +231,10 @@
           bg: 'rgba(88,166,255,.28)',
           border: '1px dashed var(--acc)',
           color: 'var(--acc)',
-          text: (a.t === '0' ? 'left' : 'right') + ' half — settled',
+          text: (a.t === '0' ? 'left' : 'right') + ' half (settled)',
         };
         actionHtml =
-          `the whole interval sits in the <b>${a.t === '0' ? 'left' : 'right'} half</b> (shaded blue above) — that half is now certain, so the coder <b style="color:var(--ok)">writes ${a.t}</b>` +
+          `the whole interval sits in the ${a.t === '0' ? 'left' : 'right'} half (shaded blue above). That half is now certain, so the coder <b style="color:var(--ok)">writes ${a.t}</b>` +
           (a.flush
             ? `, which also resolves the ${a.flush} deferred bit${a.flush > 1 ? 's' : ''}: the amber ?${a.flush > 1 ? 's' : ''} → <b style="color:var(--ok)">${(a.t === '0' ? '1' : '0').repeat(a.flush)}</b> (a carry works exactly like 0.0999… vs 0.1000… in decimal)`
             : '') +
@@ -246,8 +246,8 @@
       clampedSubB === 0
         ? 'after the zoom: the slice is the new working interval (same number line)'
         : st.acts[clampedSubB - 1].t === 'E3'
-          ? 'after: the middle of the line stretched ×2 — the interval re-centered around 1/2'
-          : `after: the kept ${st.acts[clampedSubB - 1].t === '0' ? 'left' : 'right'} half stretched to become the new 0–1 line — the interval appears twice as wide`;
+          ? 'after: the middle of the line stretched ×2; the interval is re-centered around 1/2'
+          : `after: the kept ${st.acts[clampedSubB - 1].t === '0' ? 'left' : 'right'} half stretched to become the new 0–1 line, so the interval appears twice as wide`;
 
     const written = clampedSubB === 0 ? st.prevEmitted : st.acts[clampedSubB - 1].emitted;
     const pendNow = clampedSubB === 0 ? (k > 0 ? replayResult!.steps[k - 1].pend : 0) : st.acts[clampedSubB - 1].pend;
@@ -261,15 +261,15 @@
       `<span style="color:var(--ok);background:rgba(63,185,80,.14)">${lastEnc.bitstr.slice(stepStart, prevWritten)}</span>` +
       `<span style="color:var(--ink);background:var(--ok);border-radius:var(--r-1);padding:0 1px;font-weight:700">${lastEnc.bitstr.slice(prevWritten, written)}</span>` +
       (pendNow
-        ? `<span style="color:var(--dim)" title="the next written bit — its value decides the deferred ?s">·</span>` +
-          `<span style="color:var(--warn)" title="deferred bits — they will be the complement of the next written bit">${'?'.repeat(pendNow)}</span>`
+        ? `<span style="color:var(--dim)" title="the next written bit: its value decides the deferred ?s">·</span>` +
+          `<span style="color:var(--warn)" title="deferred bits, which will be the complement of the next written bit">${'?'.repeat(pendNow)}</span>`
         : '') +
       `<span style="color:var(--dim)">${'·'.repeat(Math.max(0, lastEnc.bitstr.length - written - pendNow - (pendNow ? 1 : 0)))}</span>`;
 
     const stepBitsHtml =
       `written <b>${written}</b> of ${total} payload bits` +
       (pendNow ? ` (+${pendNow} deferred)` : '') +
-      ` · after this token the interval is 2<sup>−${done.toFixed(1)}</sup> of the original line — worth <b>${done.toFixed(1)}</b> bits`;
+      ` · after this token the interval is 2<sup>−${done.toFixed(1)}</sup> of the original line, worth <b>${done.toFixed(1)}</b> bits`;
 
     return {
       label,
@@ -319,11 +319,11 @@
       let html = `position ${f.toFixed(5)} = ${binFrac(f, 12)}<br>`;
       if (vm.zoom && which === 'A' && vm.slice && f >= vm.slice.lo && f < vm.slice.hi) {
         const sw = vm.slice.hi - vm.slice.lo;
-        html += `inside the token's slice [${vm.slice.lo.toFixed(5)}, ${vm.slice.hi.toFixed(5)}) — <span style="white-space:nowrap">width 2<sup>−${(-Math.log2(sw)).toFixed(1)}</sup></span>`;
+        html += `inside the token's slice [${vm.slice.lo.toFixed(5)}, ${vm.slice.hi.toFixed(5)}), <span style="white-space:nowrap">width 2<sup>−${(-Math.log2(sw)).toFixed(1)}</sup></span>`;
       } else if (inIv) {
-        html += `inside the working interval [${iv.lo.toFixed(5)}, ${iv.hi.toFixed(5)}) — <span style="white-space:nowrap">width 2<sup>−${(-Math.log2(w)).toFixed(1)}</sup></span>; everything the URL has said so far survives in here`;
+        html += `inside the working interval [${iv.lo.toFixed(5)}, ${iv.hi.toFixed(5)}), <span style="white-space:nowrap">width 2<sup>−${(-Math.log2(w)).toFixed(1)}</sup></span>; everything the URL has said so far survives in here`;
       } else {
-        html += `outside the working interval — URLs that made different choices live here`;
+        html += `outside the working interval: URLs that made different choices live here`;
       }
       tooltip.show(ev, html);
     };
@@ -354,8 +354,8 @@
 
 <Panel bind:this={panel} bind:open title="arithmetic coder">
   {#snippet sub()}
-    step through the encoding: at every token the number line is split into slices — one per candidate piece,
-    width = its probability — and the interval zooms into the slice of the piece the URL actually contains. Thin
+    step through the encoding: at every token the number line is split into slices (one per candidate piece,
+    width = its probability) and the interval zooms into the slice of the piece the URL actually contains. Thin
     slice = many bits, fat slice = almost free
   {/snippet}
   {#if open}
@@ -363,8 +363,8 @@
       <p class="note">select a token above…</p>
     {:else if diverged}
       <p class="err" role="alert">
-        stepper unavailable — the page-side coder replay did not match the wasm bitstream. This is a bug in
-        web/src/lib/coderReplay.ts, not in the compressed URL — refusing to show a stepper that might lie.
+        stepper unavailable: the page-side coder replay did not match the wasm bitstream. This is a bug in
+        web/src/lib/coderReplay.ts, not in the compressed URL, so the panel refuses to show a stepper that might lie.
       </p>
     {:else if vm}
       <div class="row nowrap">

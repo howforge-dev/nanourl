@@ -117,7 +117,7 @@
   {#snippet after()}
     {#if updateAvailable}
       <div class="sw-update" data-testid={TESTID.swUpdateBanner}>
-        a new version is ready — <Button variant="ghost" size="sm" tone="accent" onclick={applyUpdate}>reload</Button>
+        a new version is ready: <Button variant="ghost" size="sm" tone="accent" onclick={applyUpdate}>reload</Button>
       </div>
     {/if}
   {/snippet}

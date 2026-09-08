@@ -189,7 +189,7 @@
   // measurement is done, so `loader.codec` is null again by then and the
   // shared "model ready — …" line would be wrong.
   let statusText = $derived.by(() =>
-    kernelLabel && !loader.error ? `loaded — ${kernelShort(kernelLabel)}` : loader.statusText,
+    kernelLabel && !loader.error ? `loaded: ${kernelShort(kernelLabel)}` : loader.statusText,
   );
   let statusParts = $derived(kernelLabel || loader.error ? undefined : loader.statusParts);
   let statusFraction = $derived(kernelLabel ? 1 : loader.statusFraction);
@@ -339,8 +339,8 @@
     </Button>
   </div>
   <p class="caption">
-    one load, ten encodes of the same URL, then the codec is terminated. Past production's 8-worker cap
-    is deliberate — oversubscription is a real measurement on some devices.
+    one load, ten encodes of the same URL, then the codec is terminated. Going past production's 8-worker
+    cap is deliberate, because oversubscription is measurable on some devices.
   </p>
 </Card>
 
@@ -362,9 +362,9 @@
     </FactsGrid>
     {#if degradedFrom}
       <div class="err" data-testid={TESTID.degradedFrom}>
-        degraded from the {degradedFrom} tier — {degradedAfterFault
+        degraded from the {degradedFrom} tier ({degradedAfterFault
           ? 'it faulted mid-session and the instance was discarded'
-          : 'it failed to load'}, running on {kernelLabel} instead
+          : 'it failed to load'}), running on {kernelLabel} instead
       </div>
     {/if}
     <div class="dim">{bench.tokenCount} tokens, median of 10 encodes</div>

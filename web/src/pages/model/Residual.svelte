@@ -254,7 +254,7 @@
 
 <Panel bind:this={panel} bind:open title="residual stream">
   {#snippet sub()}
-    the {info.d_model} numbers each layer hands the next, one row per layer — each cell shows the strongest of
+    the {info.d_model} numbers each layer hands the next, one row per layer. Each cell shows the strongest of
     several neighboring channels (blue positive, amber negative), each row scaled to its own maximum; hover for
     the channels behind a cell, drag sideways to zoom into a channel range, double-click to reset, click a row
     for that layer's full vector (click again to close)
@@ -306,7 +306,7 @@
       {#if fpSel >= 0}
         <div class="detail">
           <div class="stat">
-            layer <b>{fpSel}</b> exit — all {info.d_model} channels, tallest bar = {detailTop.max.toFixed(1)} · dominant:
+            layer <b>{fpSel}</b> exit: all {info.d_model} channels, tallest bar = {detailTop.max.toFixed(1)} · dominant:
             {#each detailTop.dominant as d, i (d.c)}{i > 0 ? ' · ' : ' '}<span class="mono"
                 >#{d.c} {d.v >= 0 ? '+' : ''}{d.v.toFixed(1)}</span
               >{/each}

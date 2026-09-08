@@ -491,7 +491,7 @@ export function renderSvg(m: Matrix, o: RenderOptions, idPrefix = 'qr'): Rendere
   let plate = plateBox(size, o.plate, o.imageSize, imageMargin);
   let error: string | null = null;
   if (o.plate && !plate) {
-    error = `the centre label needs more than ${Math.round(PLATE_SHARE_MAX * 100)}% of the symbol — shorten it, or force a larger version`;
+    error = `the centre label needs more than ${Math.round(PLATE_SHARE_MAX * 100)}% of the symbol: shorten it, or force a larger version`;
     plate = null;
   }
   const hole = plate && o.plate?.kind !== 'label' && o.hideBackgroundDots ? plate : null;

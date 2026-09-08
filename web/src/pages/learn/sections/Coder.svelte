@@ -80,13 +80,18 @@
       without changing an output bit.
     </div>
   </ScrollBox>
-  <p>One more token. Each funnel zooms a kept slice out to the full width of the next line; the white dot is <i>v</i>, one number inside the final kept slice, shown where it sits on every line:</p>
+  <p>
+    Four tokens from the end of the same URL, where the pieces stop being predictable: a slice can sit
+    anywhere on its line, and a narrow one costs many bits. Each funnel zooms a kept slice out to the
+    full width of the next line; the white dot is <i>v</i>, one number inside the final kept slice,
+    shown where it sits on every line:
+  </p>
   <ScrollBox class="surface fig">
-    <CoderRows rows={4} detailed />
+    <CoderRows rows={4} from={13} detailed />
     <div class="cap">
       Where a kept slice sits depends only on which piece the URL actually has next. The decoder,
-      holding just <i>v</i> and the model, reads token 1 off row 1, feeds it back to slice row 2, and
-      walks the nesting out.
+      holding just <i>v</i> and the model, reads the first token off the first row, feeds it back to
+      slice the next, and walks the nesting out.
     </div>
   </ScrollBox>
 

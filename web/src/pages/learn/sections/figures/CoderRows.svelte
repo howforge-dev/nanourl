@@ -9,7 +9,8 @@
   import { numbers } from '../../../../lib/numbers';
   import { COLOR } from '../../../../lib/ui/tokens';
 
-  let { rows, detailed = false }: { rows: number; detailed?: boolean } = $props();
+  /** `from` picks the window: token index (0-based) of the first row. */
+  let { rows, from = 0, detailed = false }: { rows: number; from?: number; detailed?: boolean } = $props();
 
   const X0 = 20;
   const X1 = 620;
@@ -24,10 +25,10 @@
   /** a kept slice narrower than this is drawn this wide: a late token's slice
    *  of a fresh line can be a fraction of a pixel, and an invisible slice reads
    *  as "nothing kept", the opposite of what happened */
-  const MIN_SLICE = 6;
+  const MIN_SLICE = 12;
   /** v's label baseline, below the last bar */
   const V_LABEL_DY = 24;
-  const toks = $derived(numbers.hn.tokens.slice(0, rows));
+  const toks = $derived(numbers.hn.tokens.slice(from, from + rows));
   const y = (i: number) => 30 + i * ROW_H;
   /** the ink-free band under bar `i`, stopping short of row `i+1`'s label */
   const gapTop = (i: number) => y(i) + BAR / 2 + 2;
@@ -42,15 +43,16 @@
   /** the slice as a share of its line, worded for the label beside it */
   const share = (t: { clo?: number; chi?: number }) => {
     const p = ((t.chi ?? 1) - (t.clo ?? 0)) * 100;
-    return p >= 99.5 ? '~100% kept' : p >= 10 ? `${p.toFixed(0)}% kept` : `${p.toFixed(1)}% kept`;
+    return p >= 99.5 ? '~100% kept' : p >= 10 ? `${p.toFixed(0)}% kept` : p >= 0.1 ? `${p.toFixed(1)}% kept` : `${p.toPrecision(2)}% kept`;
   };
   // Height reaches just past the LAST row, not one whole row past it: a row's
   // worth of empty card below the final line reads as a row that failed to
   // render. `detailed` adds the two lanes below the last bar: v's own label,
   // then the caption naming it.
   const height = $derived(y(Math.max(0, rows - 1)) + (detailed ? 56 : 18));
-  // Each row's line as a range of the ORIGINAL [0,1): row i+1 is row i's kept
-  // slice, so its ends are that slice's ends mapped through every zoom above.
+  // Each row's line as a range of the FIRST row's [0,1): row i+1 is row i's
+  // kept slice, so its ends are that slice's ends mapped through every zoom
+  // above.
   const ranges = $derived.by(() => {
     const out: [number, number][] = [[0, 1]];
     for (const t of toks) {
@@ -60,6 +62,10 @@
     return out;
   });
   const fmt = (x: number) => (x === 0 ? '0' : x === 1 ? '1' : x.toPrecision(4).replace(/\.?0+$/, '').replace(/e-(\d)$/, 'e-0$1'));
+  /** A range too narrow for four digits is given as a start and a width,
+   *  or both ends would print the same number. */
+  const rangeText = ([lo, hi]: [number, number]) =>
+    hi - lo < 1e-3 ? `${fmt(lo)}…, width ${(hi - lo).toExponential(1)}` : `${fmt(lo)}, ${fmt(hi)}`;
   // v is one number, but each row's line is a different zoom of [0,1), so v
   // sits at a different fraction of each bar. Working back from the last row,
   // where it is the midpoint of the kept slice: in row i it is that position
@@ -93,13 +99,13 @@
       <line x1={s.x1} y1={gapTop(i)} x2={X0} y2={gapBot(i)} stroke={COLOR.acc} stroke-opacity="0.7" />
       <line x1={s.x2} y1={gapTop(i)} x2={X1} y2={gapBot(i)} stroke={COLOR.acc} stroke-opacity="0.7" />
       <text x={(X0 + X1) / 2} y={(gapTop(i) + gapBot(i)) / 2 + 4} text-anchor="middle" fill={COLOR.acc}>
-        {i === 0 ? 'zoom: this slice becomes the next line' : 'next line'} = [{fmt(ranges[i + 1][0])}, {fmt(ranges[i + 1][1])}){i === 0 ? '' : ' of the original'}
+        {i === 0 ? 'zoom: this slice becomes the next line' : 'next line'} = [{rangeText(ranges[i + 1])}){i === 0 ? '' : ' of the first line'}
       </text>
     {/if}
     <line x1={X0} y1={y(i)} x2={X1} y2={y(i)} stroke={COLOR.line} stroke-width={BAR} stroke-linecap="round" />
     <line x1={s.x1} y1={y(i)} x2={s.x2} y2={y(i)} stroke={last ? COLOR.ok : COLOR.acc} stroke-width={BAR} stroke-linecap="round" />
     <text x={X0} y={y(i) - LABEL_DY} class="big">
-      token {i + 1} (<tspan class="piece-label">{t.piece}</tspan>) — its slice of this line
+      token {from + i + 1} (<tspan class="piece-label">{t.piece}</tspan>) — its slice of this line
     </text>
     <!-- The share, beside the slice's end (or before it when the slice fills
          the line), is the number the caption's claim rests on. -->

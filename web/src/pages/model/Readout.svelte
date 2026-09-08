@@ -89,7 +89,7 @@
 <Panel bind:this={panel} bind:open title="prediction readout">
   {#snippet sub()}
     the pipeline's product at the selected token: {info.d_model} numbers become one probability for each of
-    {fmtExact(info.vocab)} pieces — the full ranked table below; the green row is the piece the URL
+    {fmtExact(info.vocab)} pieces, ranked in full below; the green row is the piece the URL
     actually contains.
   {/snippet}
   {#if open}
@@ -103,7 +103,7 @@
       <div class="h2sub info">
         predicting after <span class="mono">{result.context.slice(-46)}</span><br />
         distribution entropy <b class="txt">{fmtBits(entropy, 2, 'bits')}</b> (the expected cost of whatever comes next) ·
-        actual: <b class="ok mono">{result.actual.piece}</b> — rank {result.actual.rank},
+        actual: <b class="ok mono">{result.actual.piece}</b>, rank {result.actual.rank},
         {fmtPct(result.actual.prob, result.actual.bits)}, {fmtBits(result.actual.bits, 2, 'bits')}
       </div>
       <Button size="sm" onclick={jumpToActual}>jump to actual (#{result.actual.rank})</Button>

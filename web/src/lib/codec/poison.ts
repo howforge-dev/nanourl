@@ -122,7 +122,7 @@ export const FAULTED_TIER = 'threads';
 /** What the status line says after recovering. Deliberately different from
  *  the load-time degrade wording ("threads tier failed to load"): this tier
  *  loaded fine and ran, and then a worker was lost mid-session. */
-export const THREAD_FAULT_NOTE = 'threads tier faulted mid-session — reloaded without it';
+export const THREAD_FAULT_NOTE = 'threads tier faulted mid-session; reloaded without it';
 
 /** What a page shows when recovery itself failed and there is no codec left. */
-export const THREAD_FAULT_UNRECOVERED = 'the threads kernel faulted and no fallback could be loaded — reload the page';
+export const THREAD_FAULT_UNRECOVERED = 'the threads kernel faulted and no fallback could be loaded; reload the page';

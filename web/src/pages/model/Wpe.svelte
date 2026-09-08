@@ -255,7 +255,7 @@
 <Panel bind:this={panel} bind:open title="position embedding">
   {#snippet sub()}
     what the model learned about "where am I": the {info.block} position vectors projected to 2D trace an
-    <b>ordered path</b> — position is a learned ruler, not {info.block} arbitrary labels.
+    <b>ordered path</b>, so position is a learned ruler rather than {info.block} arbitrary labels.
   {/snippet}
   {#if open}
     {#if !computed}
@@ -286,14 +286,14 @@
              in, rather than a clip that hides the overflow entirely. -->
         <ScrollBox>
           <svg width={curves.W} height={curves.height}>
-            <text x={curves.P} y="10">how similar is each position to its next? cos(i, i+1)</text>
+            <text x={curves.P} y="10">similarity of each position to its next: cos(i, i+1)</text>
             <line x1={curves.P} y1={curves.cos.y0 + curves.hh - 14} x2={curves.W - 10} y2={curves.cos.y0 + curves.hh - 14} stroke={COLOR.line} />
             <polyline fill="none" stroke={COLOR.acc} stroke-width="1.5" points={curves.cos.points} />
             <line x1={curves.lx(curves.markerI)} y1="14" x2={curves.lx(curves.markerI)} y2={curves.cos.y0 + curves.hh - 14} stroke={COLOR.ok} stroke-dasharray="3,3" />
             <text x={curves.P - 26} y={curves.cos.y0 + 24}>{curves.cos.mx2.toFixed(2)}</text>
             <text x={curves.P - 26} y={curves.cos.y0 + curves.hh - 16}>{curves.cos.mn2.toFixed(2)}</text>
 
-            <text x={curves.P} y={curves.norm.y0 + 10}>how strong is each position's signal? |wpe(i)|</text>
+            <text x={curves.P} y={curves.norm.y0 + 10}>strength of each position's signal: |wpe(i)|</text>
             <line x1={curves.P} y1={curves.norm.y0 + curves.hh - 14} x2={curves.W - 10} y2={curves.norm.y0 + curves.hh - 14} stroke={COLOR.line} />
             <polyline fill="none" stroke={COLOR.warn} stroke-width="1.5" points={curves.norm.points} />
             <line x1={curves.lx(curves.markerI)} y1={curves.norm.y0 + 14} x2={curves.lx(curves.markerI)} y2={curves.norm.y0 + curves.hh - 14} stroke={COLOR.ok} stroke-dasharray="3,3" />
