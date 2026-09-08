@@ -61,7 +61,7 @@ fn main() {
     };
     if len != MODEL_BYTES {
         fail(&format!(
-            "{path}: {len} bytes, expected {MODEL_BYTES} — this is not the published model"
+            "{path}: {len} bytes, expected {MODEL_BYTES}; this is not the published model"
         ));
     }
     let got = match sha256_file(Path::new(&path)) {
@@ -70,7 +70,7 @@ fn main() {
     };
     if got != MODEL_SHA256 {
         fail(&format!(
-            "{path}: sha256 {got}, expected {MODEL_SHA256} — this is not the published model"
+            "{path}: sha256 {got}, expected {MODEL_SHA256}; this is not the published model"
         ));
     }
 

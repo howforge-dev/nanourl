@@ -26,11 +26,11 @@
 <ScrollBox class="surface fig breakout chip-strip">
   <CostChips tokens={numbers.hn.tokens} digits={2} minWidth={SIZE.chipWide} />
   <div class="cap">
-    The real bill for <code>{numbers.hn.url}</code>, measured on the shipped model (canonical form
+    The bill for <code>{numbers.hn.url}</code>, measured on the shipped model (canonical form
     <code>{numbers.hn.canonical}</code>). The host's well-known pieces (<code>com</code>,
     <code>news</code>, and the merges that spell <code>ycombinator</code>) are near-free; the story
-    id's digits are not — <code>000000</code> alone costs {digitsTok.bits.toFixed(1)} bits.
-    (<code>&lt;eos&gt;</code> is the end marker, {lastBits.toFixed(2)} bits here — <Ref to="coder" />.) Total:
+    id's digits are not: <code>000000</code> alone costs {digitsTok.bits.toFixed(1)} bits.
+    (<code>&lt;eos&gt;</code> is the end marker, {lastBits.toFixed(2)} bits here; see <Ref to="coder" />.) Total:
     {numbers.hn.model_bits.toFixed(1)} bits of model cost, {numbers.hn.coded_bits} bits once the coder's
     fixed-grid rounding and bookkeeping are added, for a {numbers.hn.url_chars}-character URL.
   </div>

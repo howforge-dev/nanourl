@@ -105,7 +105,7 @@
     <line x1={X0} y1={y(i)} x2={X1} y2={y(i)} stroke={COLOR.line} stroke-width={BAR} stroke-linecap="round" />
     <line x1={s.x1} y1={y(i)} x2={s.x2} y2={y(i)} stroke={last ? COLOR.ok : COLOR.acc} stroke-width={BAR} stroke-linecap="round" />
     <text x={X0} y={y(i) - LABEL_DY} class="big">
-      token {from + i + 1} (<tspan class="piece-label">{t.piece}</tspan>) — its slice of this line
+      token {from + i + 1} (<tspan class="piece-label">{t.piece}</tspan>): its slice of this line
     </text>
     <!-- The share, beside the slice's end (or before it when the slice fills
          the line), is the number the caption's claim rests on. -->

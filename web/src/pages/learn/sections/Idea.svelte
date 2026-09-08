@@ -28,14 +28,14 @@
   <p>
     A URL like <code>{numbers.hn.url}</code> looks like {numbers.hn.url_chars} characters of arbitrary
     text, but almost none of it is a surprise. nanourl stores hosts TLD-first, so the URL opens
-    <code>https://</code> · <code>{tld}</code> · <code>{dot}</code> · <code>{host}</code> — and by
+    <code>https://</code> · <code>{tld}</code> · <code>{dot}</code> · <code>{host}</code>, and by
     then a Hacker News link is a strong guess, which makes <code>{path}</code> nearly certain. So
-    nanourl trains a <b>neural network</b> — a program whose behaviour comes from hundreds of millions
-    of adjustable numbers rather than hand-written rules — on {fmtCount(numbers.trainTokens)} tokens
+    nanourl trains a <b>neural network</b> (a program whose behaviour comes from hundreds of millions
+    of adjustable numbers rather than hand-written rules) on {fmtCount(numbers.trainTokens)} tokens
     of real URLs, about {fmtCount(urlEquivalents)} URLs' worth, until it is an expert at this one
-    guessing game. Then <b>arithmetic coding</b>, a classical technique, turns "how surprised was the
+    guessing game. Then arithmetic coding, a classical technique, turns "how surprised was the
     model" into a short string: predictable pieces cost almost nothing, surprising ones cost more.
     The same model, run by whoever receives the string, plays the game backwards and recovers the URL
-    <b>exactly</b>.
+    exactly.
   </p>
 </Section>

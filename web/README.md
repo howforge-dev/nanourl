@@ -57,10 +57,10 @@ dev server after changing `PAGES`.
 `dist/` is a plain static site. Any host that serves files over HTTPS and can
 set response headers works.
 
-- **Cloudflare Worker (assets only).** `wrangler deploy` with the repo's
+- **Cloudflare Worker (assets only):** `wrangler deploy` with the repo's
   `wrangler.toml`. `_headers` and `_redirects` are copied into `dist/` by the
   build and applied by the platform. Netlify reads the same files.
-- **nginx.** `tools/web/nginx-nanourl.conf` mirrors `_headers`; fill in
+- **nginx:** `tools/web/nginx-nanourl.conf` mirrors `_headers`; fill in
   `server_name` and the certificate paths. `tests/headers.test.ts` parses both
   files and compares the headers per path, so they cannot drift apart.
 
@@ -78,7 +78,7 @@ Every response needs:
   bytes and never depends on the type.
 - Byte ranges, so an interrupted model download resumes.
 
-HTTPS is required, not just recommended. Over plain HTTP `crypto.subtle` is
+HTTPS is required. Over plain HTTP `crypto.subtle` is
 missing, so the loader cannot verify chunks and refuses to load;
 `SharedArrayBuffer` and the Cache API are unavailable too.
 
@@ -94,7 +94,7 @@ Two caches make every page work with the network off:
   It never touches `.bin` requests.
 
 A new build gets a new shell cache. When the new worker activates, open tabs
-show "a new version is ready, reload" in `BuildInfo.svelte`. Nothing reloads
+show "a new version is ready" with a reload button in `BuildInfo.svelte`. Nothing reloads
 on its own, since that would interrupt an encode in progress. `/sw.js` is
 served `no-cache` so the browser's update check always sees the current file.
 
@@ -120,5 +120,5 @@ override detection.
 `web:e2e` needs `web:assets` first, because the smoke specs load the real
 codec. Specs run under two Playwright projects, `mobile` (375x667, touch) and
 `desktop` (1280x800). The server is `e2e/serve.ts`, which applies
-`dist/_headers` verbatim, so the header surface is tested rather than
+`dist/_headers` as written, so the header surface is tested rather than
 assumed. It binds port 4173; set `PW_PORT` when a sibling checkout holds it.

@@ -68,7 +68,7 @@ export const waitForModelReady = (page: Page, timeout: number = T.MODEL_LOAD): P
  * The bench page's ready signal.
  *
  * bench.html never shows "model ready" — its Status line reads
- * "loaded — <kernel>" instead (see bench/App.svelte's `statusText`). Wait for
+ * "loaded: <kernel>" instead (see bench/App.svelte's `statusText`). Wait for
  * `example-codes`, not `kernel`: `onMount` sets `kernelLabel` (which un-hides
  * the kernel testid) via `benchOnce()`, *before* `codes` (which un-hides
  * `example-codes`, holding the four encoded strings — often the page's widest

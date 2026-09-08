@@ -11,19 +11,19 @@
 
 <Section id="tokens">
   <p>
-    The model doesn't read characters one at a time, and it doesn't see the URL you typed either.
-    Two exact, reversible transforms run first:
+    The model reads pieces rather than single characters, and it reads a transformed form of the
+    URL you typed. Two exact, reversible transforms run first:
   </p>
   <ol>
     <li>
-      <b>Canonicalisation</b> reorders host labels TLD-first, so the vocabulary's host hierarchy
+      Canonicalisation reorders host labels TLD-first, so the vocabulary's host hierarchy
       matches the naming tree: <code>https://www.example.com/a</code> becomes
-      <code>https://com.example.www/a</code>. It's an <b>involution</b> —
-      canonicalising twice returns the original — so one function serves both directions and they
+      <code>https://com.example.www/a</code>. It's an involution
+      (canonicalising twice returns the original), so one function serves both directions and they
       cannot disagree.
     </li>
     <li>
-      <b>Structural pre-split</b> cuts at {numbers.static.rfcDelimiters} punctuation characters —
+      Structural pre-split cuts at {numbers.static.rfcDelimiters} punctuation characters:
       RFC 3986's gen- and sub-delimiters, the older "unwise" set, <code>%</code>, and
       <code>.</code> <code>-</code> <code>_</code>, which are split anyway so host labels and slug
       joints become reusable pieces. Each becomes its own piece; <code>http://</code>,
@@ -36,7 +36,7 @@
     from a fixed dictionary of {fmtCount(numbers.vocab)} entries, at most
     {numbers.static.maxTokenLength} characters each. The dictionary was built once by repeatedly
     merging the most frequent adjacent pair across tens of millions of URLs: common fragments earn
-    their own entry, rare text falls back to smaller ones, down to single bytes — so <i>any</i> text
+    their own entry, rare text falls back to smaller ones, down to single bytes, so <i>any</i> text
     can be encoded.
   </p>
   <ScrollBox class="surface fig">
@@ -60,12 +60,12 @@
       merge every occurrence of that pair
   return symbols — each is now a dictionary piece</pre>
     <div class="cap">
-      Priority is the determinism story: when several merges could apply, the earliest-learned one
-      always wins, so the same URL splits the same way on every machine, forever — which the decoder
-      depends on. A pre-split boundary is a hard barrier: BPE never merges across one.
+      Priority is what makes tokenization deterministic: when several merges could apply, the
+      earliest-learned one always wins, so the same URL splits the same way on every machine, which
+      the decoder depends on. A pre-split boundary is a hard barrier: BPE never merges across one.
     </div>
   </ScrollBox>
-  <p>The real thing, on the worked example this page uses throughout:</p>
+  <p>The output on the worked example this page uses throughout:</p>
   <ScrollBox class="surface fig">
     <div class="cap head">
       <code>{numbers.hn.url}</code>
@@ -81,13 +81,13 @@
       <code>ycombinator</code> did not earn one big piece: BPE only ever sees the alphanumeric run
       between delimiters, and here it merges that run into <code>y</code> · <code>com</code> ·
       <code>bin</code> · <code>ator</code>. The {fmtCount(numbers.vocab)} entries still go to whatever
-      recurs often enough to earn one — pieces just compete for them one delimiter-run at a time
+      recurs often enough to earn one; pieces just compete for them one delimiter-run at a time
       rather than across a whole label.
     </div>
   </ScrollBox>
   <p>
-    Both properties the codec needs: tokenization is <b>deterministic</b> and <b>reversible</b> —
-    glue the pieces back together, undo the canonicalisation, and the exact original bytes return. It
+    Tokenization has both properties the codec needs: it is deterministic and reversible. Glue the
+    pieces back together, undo the canonicalisation, and the exact original bytes return. It
     averages {numbers.meanTokensPerUrl.toFixed(1)} tokens per URL on the training data.
   </p>
 </Section>

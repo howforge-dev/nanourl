@@ -15,34 +15,34 @@
 
 <Section id="coder">
   <p>
-    Now the classical half. <b>Arithmetic coding</b> turns the model's predictions into a short string
-    with one move, repeated once per token, on a number line. Start with the whole line from 0 to 1 as
-    the <b>working interval</b>; then, for each token in order:
+    <b>Arithmetic coding</b> is the classical half: it turns the model's predictions into a short
+    string with one move, repeated once per token, on a number line. Start with the whole line from
+    0 to 1 as the working interval; then, for each token in order:
   </p>
   <ol>
     <li>
-      <b>Slice.</b> Ask the model for its probabilities given the tokens so far, and cut the working
+      Slice: ask the model for its probabilities given the tokens so far, and cut the working
       interval into {fmtCount(numbers.vocab)} slices, each as wide as its piece is likely. Likely
       pieces get fat slices, unlikely ones slivers.
     </li>
     <li>
-      <b>Keep.</b> The piece the URL <i>actually has</i> next: its slice becomes the whole working
-      interval. Every other slice is gone forever.
+      Keep: the slice of the piece the URL <i>actually has</i> next becomes the whole working
+      interval. Every other slice is gone.
     </li>
-    <li><b>Repeat.</b> The next token subdivides that smaller interval the same way.</li>
+    <li>Repeat: the next token subdivides that smaller interval the same way.</li>
   </ol>
   <p>
     After the last token the working interval is a very narrow segment, and its <i>position</i> is a
     record of every keep along the way. The code is enough binary digits to name one number inside
-    it. Below, the real thing on the first three tokens of this page's worked example. Each row
+    it. Below, the measured intervals for the first three tokens of this page's worked example. Each row
     redraws that step's surviving interval at full width so its slices are visible; in the coder the
     interval only ever shrinks.
   </p>
   <ScrollBox class="surface fig">
     <CoderRows rows={3} />
     <div class="cap">
-      Each row's real slice, measured on the shipped model. Likely pieces have fat slices, so keeping
-      them barely shrinks the region — that's why predictable tokens cost almost nothing.
+      Each row's slice, measured on the shipped model. Likely pieces have fat slices, so keeping
+      them barely shrinks the region, which is why predictable tokens cost almost nothing.
     </div>
   </ScrollBox>
 
@@ -75,7 +75,7 @@
       hi ← lo + w · (C(s) + P(s))         <span class="dim"># identical update to ENCODE</span>
       lo ← lo + w · C(s)</pre>
     <div class="cap">
-      One model forward pass per token, each direction — that pass is the entire cost. The loops above
+      One model forward pass per token in each direction, and that pass is the entire cost. The loops above
       assume unbounded precision; "what the real coder adds" turns them into finite integer arithmetic
       without changing an output bit.
     </div>
@@ -97,9 +97,9 @@
 
   <h3 id="worked">A tiny example, by hand</h3>
   <p>
-    Pretend the dictionary has three pieces, rated <b>A&nbsp;50%</b>, <b>B&nbsp;25%</b>,
-    <b>C&nbsp;25%</b>: A owns [0,&nbsp;0.50), B [0.50,&nbsp;0.75), C [0.75,&nbsp;1). Encode
-    <b>"B, then A"</b>:
+    Pretend the dictionary has three pieces, rated A&nbsp;50%, B&nbsp;25%,
+    C&nbsp;25%: A owns [0,&nbsp;0.50), B [0.50,&nbsp;0.75), C [0.75,&nbsp;1). Encode
+    "B, then A":
   </p>
   <ScrollBox class="surface fig">
     <pre class="pseudo wide-lines">start                     interval = [0.000, 1.000)   width 1
@@ -110,55 +110,55 @@ encode A  (50% of that)   interval = [0.500, 0.625)   width 0.125</pre>
     </div>
   </ScrollBox>
   <p>
-    Now transmit any number inside [0.500,&nbsp;0.625). In binary, 0.5 is <code>.100</code> — and
+    Now transmit any number inside [0.500,&nbsp;0.625). In binary, 0.5 is <code>.100</code>, and
     three binary digits, <code>100</code>, pin it down unambiguously at this width. So the message
-    "B,&nbsp;A" costs <b>3 bits</b>.
+    "B,&nbsp;A" costs 3 bits.
   </p>
   <Callout>
     Check the bill. The width is 0.25 × 0.5 = 0.125 = 2⁻³, and width multiplies by each piece's
-    probability — so the digits needed, −log₂ of the width, are exactly the sum of the pieces' −log₂
+    probability, so the digits needed, −log₂ of the width, are exactly the sum of the pieces' −log₂
     p: 2 bits for B + 1 for A. Nothing has to cost a whole number of bits: a 90% piece costs 0.15,
-    and ten of them together cost 1.5. Huffman codes, which spend whole bits per symbol, cannot.
+    and ten of them together cost 1.5. Huffman codes, which spend whole bits per symbol, cannot do that.
   </Callout>
   <h3>Decoding is the same walk</h3>
   <p>
-    The receiver gets <code>100</code> — the number 0.5 — and the same model. First distribution:
-    0.5 falls in B's slice, so the first piece <b>was B</b>. Zoom into B's slice, ask again, and 0.5
-    now falls in A's: second piece <b>A</b>. Decoding never guesses; the number's position <i>is</i>
-    the answer. And note what the decoder never needs: token boundaries. There are no delimiters in
-    the stream, and a streaming decoder holds only a small window of upcoming bits, never the whole
+    The receiver gets <code>100</code> (the number 0.5) and the same model. First distribution:
+    0.5 falls in B's slice, so the first piece was B. Zoom into B's slice, ask again, and 0.5 now
+    falls in A's: the second piece is A. Decoding never guesses; the number's position <i>is</i>
+    the answer. The decoder also never needs token boundaries: there are no delimiters in the
+    stream, and a streaming decoder holds only a small window of upcoming bits, never the whole
     code.
   </p>
   <h3>What the real coder adds</h3>
   <p>Three engineering moves turn the idea into shippable code, each of them for exactness:</p>
   <ul>
     <li>
-      <b>No infinite decimals.</b> The interval is two 64-bit integers, and whenever both endpoints
+      The interval is two 64-bit integers rather than an ever-longer decimal: whenever both endpoints
       agree on their leading binary digit, that digit is written out at once and the interval
-      re-stretched. Output streams as you go; precision never grows.
+      re-stretched. Output streams as you go, and precision never grows.
     </li>
     <li>
-      <b>The carry problem.</b> An interval can shrink while <i>straddling</i> 1/2 — say
-      [0.4999,&nbsp;0.5001) — where the next bit is genuinely undecided, exactly as you cannot write
-      the first digit of 0.0999999… vs 0.1000000… until a later carry settles it. The fix: record
-      "one bit deferred", re-centre and double, move on. When a later token finally tips the interval
+      The carry problem: an interval can shrink while <i>straddling</i> 1/2, say
+      [0.4999,&nbsp;0.5001), where the next bit is undecided, exactly as you cannot write the first
+      digit of 0.0999999… vs 0.1000000… until a later carry settles it. The fix is to record
+      "one bit deferred", re-centre and double, and move on. When a later token finally tips the interval
       into one half, every deferred bit resolves at once, to the complement of the bit just written.
     </li>
     <li>
-      <b>Snapped probabilities.</b> Encoder and decoder must slice at <i>identical</i> boundaries, so
+      Snapped probabilities: encoder and decoder must slice at <i>identical</i> boundaries, so
       the probabilities are rounded onto a fixed grid of {fmtCount(gridTotal)} steps
       ({numbers.static.probGridBits} bits) first. Every one of the {fmtCount(numbers.vocab)} pieces
       gets a floor of one step, even one the model rates at a billion to one, which costs about
-      {(inflationPerToken * 1000).toFixed(2)} thousandths of a bit per token —
-      {inflationPerUrl.toFixed(3)} bits on a {numbers.meanTokensPerUrl.toFixed(0)}-token URL, invisible
-      beside its real cost. In exchange no slice is narrower than a step, so <b>no token can cost more
-      than {numbers.static.probGridBits} bits</b> however badly the model misjudges it. It is
+      {(inflationPerToken * 1000).toFixed(2)} thousandths of a bit per token
+      ({inflationPerUrl.toFixed(3)} bits on a {numbers.meanTokensPerUrl.toFixed(0)}-token URL, invisible
+      beside the rest of its cost). In exchange no slice is narrower than a step, so no token can cost
+      more than {numbers.static.probGridBits} bits however badly the model misjudges it. It is
       {numbers.static.probGridBits} bits rather than 16 because at 16 those mandatory floors would eat
       {fmtShare(floorFrac16)} of the grid.
     </li>
   </ul>
   <p>
-    Finally the bits are respelled in a URL-safe alphabet —
+    Finally the bits are respelled in a URL-safe alphabet:
     {#each numbers.static.alphabets as name, i (name)}{i > 0 ? (i === numbers.static.alphabets.length - 1 ? ', or ' : ', ') : ''}<code
       >{name}</code
     > ({Math.log2(numbers.static.alphabetSizes[name]).toFixed(1)} bits/char){/each}. emoji-1k trades

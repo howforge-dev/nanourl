@@ -22,71 +22,71 @@
 
 <Section id="transformer">
   <p>
-    The particular network shape nanourl uses is a <b>transformer</b> — the same architecture as
-    ChatGPT-style models, just {numbers.layers} layers and {fmtCount(numbers.params)} parameters
+    The particular network shape nanourl uses is a <b>transformer</b>, the same architecture as
+    ChatGPT-style models, with {numbers.layers} layers and {fmtCount(numbers.params)} parameters
     instead of dozens of layers and hundreds of billions. A single prediction flows through five
     stages:
   </p>
 
   <h3 id="embeddings">Embeddings: pieces become number-lists</h3>
   <p>
-    Each of the {fmtCount(numbers.vocab)} pieces owns a learned list of {numbers.dModel} numbers — its
-    <b>embedding</b> — which is really the coordinates of a point in {numbers.dModel}-dimensional
-    space, and pieces used in similar contexts land near each other there. You can't draw that many
+    Each of the {fmtCount(numbers.vocab)} pieces owns a learned list of {numbers.dModel} numbers, its
+    embedding, which is the coordinates of a point in {numbers.dModel}-dimensional space; pieces
+    used in similar contexts land near each other there. You can't draw that many
     dimensions, so the <a href="/model.html">observatory</a>'s atlas flattens them onto paper with a
-    map-projection algorithm (UMAP), which keeps neighbours neighbours. Like a world map, exact
-    distances get distorted; <i>neighbourhoods</i> are honest.
+    map-projection algorithm (UMAP), which keeps neighbours neighbours. Like a world map, it
+    distorts exact distances but keeps <i>neighbourhoods</i>.
   </p>
 
   <h3 id="positions">Position embeddings: knowing where you are</h3>
   <p>
-    The next stage, <b>attention</b>, lets tokens gather information from each other by weighted
-    averaging — and a weighted average treats the earlier tokens as an unordered bag, caring neither
+    The next stage, attention, lets tokens gather information from each other by weighted
+    averaging, and a weighted average treats the earlier tokens as an unordered bag, caring neither
     who came first nor how far away anyone is. For URLs, position is meaning: the piece at position 1
     is almost certainly a scheme, and a digit right after <code>item?id=</code> is a different
     situation from a digit five pieces later. The fix is blunt: every position, 0 to
-    {numbers.block - 1}, gets its own learned {numbers.dModel}-number list (the <b>wpe</b> table), and
-    each token's pad starts as its piece embedding <b>plus</b> its position's embedding.
+    {numbers.block - 1}, gets its own learned {numbers.dModel}-number list (the wpe table), and
+    each token's pad starts as its piece embedding plus its position's embedding.
   </p>
   <p>
-    <b>Every URL is its own context.</b> Training packs about {urlsPerWindow.toFixed(0)} URLs into one
+    Every URL is its own context. Training packs about {urlsPerWindow.toFixed(0)} URLs into one
     {numbers.block}-token window, but each attends only within itself, and positions restart at 0
     after every <code>&lt;eos&gt;</code>. The {numbers.block}-row table is also the model's hard
-    horizon — there is no {numbers.block + 1}th position — but because it resets per URL rather than
+    horizon (there is no {numbers.block + 1}th position), but because it resets per URL rather than
     sliding through a document, it binds only on a URL longer than {numbers.block} tokens:
     {numbers.evalUrlsSkipped} of the {fmtCount(numbers.evalUrls)} held-out URLs,
     {fmtShare(numbers.evalUrlsSkipped / numbers.evalUrls, 2)}. The {numbers.static.chainCarry}-token
-    carry-window scheme is the fallback for those, not the normal path.
+    carry-window scheme is the fallback for those.
   </p>
 
   <h3 id="attention">Attention: tokens look back</h3>
   <p>
-    The defining trick of the transformer. At each position the model asks "to predict what comes
+    This is the defining trick of the transformer. At each position the model asks "to predict what comes
     next, how much should I consult each earlier token?", answers with a weight for every one of them
     inside the same URL, and mixes what they carry into the current position. One rule governs all of
-    it: a position may consult only positions <b>before</b> it. The future is walled off because the
+    it: a position may consult only positions before it. The future is walled off because the
     decoder, mid-decode, has no future to show it.
   </p>
   <p>
-    The model runs <b>{numbers.heads} of these lookups side by side</b>, each with its own learned
-    criterion ({numbers.headDim} numbers each — {numbers.dModel} ÷ {numbers.heads} heads): think of
+    The model runs {numbers.heads} of these lookups side by side, each with its own learned
+    criterion ({numbers.headDim} numbers each, {numbers.dModel} ÷ {numbers.heads} heads): think of
     {numbers.heads} researchers reading the same URL, one tracking the host, one watching the piece
     just before, one counting digits. Nobody assigned those roles; each head drifted into a specialty
     because the division of labour reduced errors. One pattern shows up in almost every transformer,
     ours very likely included: a head with nothing to contribute dumps its attention on
     <code>&lt;eos&gt;</code> instead, because the weights must sum to 1 and that is the one position
-    always present and content-free. It's called the <b>attention sink</b>.
+    always present and content-free. It's called the attention sink.
   </p>
   <details class="surface mathbox">
-    <summary><span class="sig">∑</span> show the math — one attention head</summary>
+    <summary><span class="sig">∑</span> show the math: one attention head</summary>
     <div class="eq">
       <i>q</i><sub><i>i</i></sub> = <i>W</i><sub>Q</sub><i>x</i><sub><i>i</i></sub>&emsp; <i
         >k</i
       ><sub><i>j</i></sub> = <i>W</i><sub>K</sub><i>x</i><sub><i>j</i></sub>&emsp; <i>v</i
       ><sub><i>j</i></sub> = <i>W</i><sub>V</sub><i>x</i><sub><i>j</i></sub>
       <div class="c">
-        Each position's (normalized) pad is projected three ways: a <b>query</b> ("what am I looking
-        for"), a <b>key</b> ("what I can be found by"), a <b>value</b> ("what I contribute if
+        Each position's (normalized) pad is projected three ways: a query ("what am I looking
+        for"), a key ("what I can be found by"), a value ("what I contribute if
         chosen"). In nanourl each is {numbers.headDim} numbers ({numbers.dModel} ÷ {numbers.heads}
         heads).
       </div>
@@ -104,12 +104,12 @@
         >a</i
       ><sub><i>ij</i></sub> <i>v</i><sub><i>j</i></sub>
       <div class="c">
-        <b>Symbols:</b> <i>x</i><sub><i>i</i></sub> — position <i>i</i>'s normalized pad
-        ({numbers.dModel} numbers) · <i>i</i> — the position doing the predicting; <i>j</i> — an
+        Symbols: <i>x</i><sub><i>i</i></sub> is position <i>i</i>'s normalized pad
+        ({numbers.dModel} numbers) · <i>i</i> is the position doing the predicting; <i>j</i> is an
         earlier position in the same URL · <i>W</i><sub>Q</sub>, <i>W</i><sub>K</sub>, <i>W</i
-        ><sub>V</sub> — learned weight matrices that squeeze {numbers.dModel} numbers down to
-        {numbers.headDim} · <i>a</i>·<i>b</i> — dot product · <i>e</i> — 2.718… · ∑ — add up over
-        the positions named under it.
+        ><sub>V</sub> are learned weight matrices that squeeze {numbers.dModel} numbers down to
+        {numbers.headDim} · <i>a</i>·<i>b</i> is the dot product · <i>e</i> is 2.718… · ∑ adds up
+        over the positions named under it.
       </div>
     </div>
   </details>
@@ -121,22 +121,22 @@
     <div class="cap">
       Schematic, not measured weights: one head predicting the story-id digits of this page's worked
       example leans on the host span, because the site decides what kind of id follows
-      <code>item?id=</code> — Hacker News ids are eight-ish digits, other sites differ. The
-      observatory draws the real thing (<Ref to="viz" />).
+      <code>item?id=</code>: Hacker News ids are eight-ish digits, other sites differ. The
+      observatory draws the measured weights (<Ref to="viz" />).
     </div>
   </ScrollBox>
 
   <h3 id="layers">Layers: refinement passes</h3>
   <p>
-    One <b>layer</b> = one round of attention (positions consulting each other) plus a "think" step
-    where each position works on what it gathered, alone — a plain multiply-and-add stage, no looking
-    around (the jargon is MLP). nanourl stacks {numbers.layers}. Early layers pick up local structure;
+    One layer is one round of attention (positions consulting each other) plus a "think" step
+    where each position works on what it gathered alone: a plain multiply-and-add stage with no
+    looking around (the jargon is MLP). nanourl stacks {numbers.layers}. Early layers pick up local structure;
     later ones hold the big picture.
   </p>
   <p>
     Between layers, everything travels in a running {numbers.dModel}-number scratchpad each position
-    carries: the <b>residual stream</b>. A layer never replaces it — it reads the pad, computes its
-    attention and think-step contributions, and <b>adds</b> them on top, like notes accumulating on a
+    carries: the residual stream. A layer never replaces it; it reads the pad, computes its
+    attention and think-step contributions, and adds them on top, like notes accumulating on a
     whiteboard nobody erases. That pad is the <i>only</i> thing a layer hands the next, and by layer
     {numbers.layers} it holds everything the model has concluded about this position.
   </p>
@@ -156,14 +156,14 @@
     </div>
   </ScrollBox>
   <details class="surface mathbox">
-    <summary><span class="sig">∑</span> show the math — one full layer</summary>
+    <summary><span class="sig">∑</span> show the math: one full layer</summary>
     <div class="eq">
       <i>x</i> ← <i>x</i> + <i>W</i><sub>O</sub>·[out<sup>(1)</sup> ‖ … ‖ out<sup
         >({numbers.heads})</sup
       >]&emsp; where each out<sup>(<i>h</i>)</sup> reads <i>x̂</i> = LN₁(<i>x</i>)
       <div class="c">
         Steps 1–3: the {numbers.heads} heads run on a normalized copy, their outputs are stitched
-        together, mixed by one more matrix, and <b>added</b> to the pad.
+        together, mixed by one more matrix, and added to the pad.
       </div>
       <i>x</i> ← <i>x</i> + <i>W</i><sub>down</sub>·( silu(<i>W</i><sub>gate</sub><i>x̂</i>) ⊙ <i
         >W</i
@@ -176,14 +176,14 @@
       </div>
       LN(<i>x</i>) = <i>w</i> ⊙ (<i>x</i> − mean(<i>x</i>)) / std(<i>x</i>)
       <div class="c">
-        <b>Symbols:</b> <i>x</i> — the pad ({numbers.dModel} numbers) · ← — "becomes" · ‖ — stitch
+        Symbols: <i>x</i> is the pad ({numbers.dModel} numbers) · ← reads "becomes" · ‖ stitches
         side by side: {numbers.heads} head outputs of {numbers.headDim} numbers become
-        {numbers.dModel} · <i>W</i><sub>O</sub> — a learned {numbers.dModel}→{numbers.dModel} mixing
-        matrix; <i>W</i><sub>gate</sub>, <i>W</i><sub>up</sub> — learned
-        {numbers.dModel}→{numbers.dMlp}; <i>W</i><sub>down</sub> — learned
-        {numbers.dMlp}→{numbers.dModel} · ⊙ — multiply element by element · <i>x̂</i> — the
-        normalized copy · mean, std — average and spread · <i>w</i> in LN — a learned volume knob
-        per channel.
+        {numbers.dModel} · <i>W</i><sub>O</sub> is a learned {numbers.dModel}→{numbers.dModel} mixing
+        matrix; <i>W</i><sub>gate</sub>, <i>W</i><sub>up</sub> are learned
+        {numbers.dModel}→{numbers.dMlp}; <i>W</i><sub>down</sub> is learned
+        {numbers.dMlp}→{numbers.dModel} · ⊙ multiplies element by element · <i>x̂</i> is the
+        normalized copy · mean, std are average and spread · <i>w</i> in LN is a learned volume
+        knob per channel.
       </div>
     </div>
   </details>
@@ -192,24 +192,24 @@
   <p>
     After layer {numbers.layers}, the final {numbers.dModel}-number summary is compared against
     every piece's embedding, giving {fmtCount(numbers.vocab)} scores, and a fixed formula called the
-    <b>softmax</b> converts scores into percentages that are all positive and sum to exactly 100% —
-    real probabilities.
+    softmax converts scores into percentages that are all positive and sum to exactly 100%, which
+    makes them probabilities.
   </p>
   <details class="surface mathbox">
-    <summary><span class="sig">∑</span> show the math — readout</summary>
+    <summary><span class="sig">∑</span> show the math: readout</summary>
     <div class="eq">
       <i>z</i> = <i>W</i><sub>wte</sub>·LN<sub>f</sub>(<i>x</i>)&emsp;({fmtCount(numbers.vocab)}
       scores)&emsp;&emsp; <i>p</i><sub><i>i</i></sub> = e<sup><i>z</i><sub>i</sub></sup> / <span
         style="font-size:1.2em">∑</span
       ><sub><i>j</i></sub> e<sup><i>z</i><sub>j</sub></sup>
       <div class="c">
-        <b>Symbols:</b> <i>x</i> — the pad after layer {numbers.layers} · LN<sub>f</sub> — one final
-        normalize · <i>W</i><sub>wte</sub> — the {fmtCount(numbers.vocab)}×{numbers.dModel} embedding
-        table · <i>z</i><sub><i>i</i></sub> — piece <i>i</i>'s raw score · <i>p</i><sub><i>i</i></sub
-        > — its probability after the softmax.
+        Symbols: <i>x</i> is the pad after layer {numbers.layers} · LN<sub>f</sub> is one final
+        normalize · <i>W</i><sub>wte</sub> is the {fmtCount(numbers.vocab)}×{numbers.dModel} embedding
+        table · <i>z</i><sub><i>i</i></sub> is piece <i>i</i>'s raw score · <i>p</i><sub><i>i</i></sub
+        > is its probability after the softmax.
       </div>
       <div class="c">
-        <i>W</i><sub>wte</sub> is the input embedding table again — "tied weights". Partly thrift: a
+        <i>W</i><sub>wte</sub> is the input embedding table again ("tied weights"). Partly thrift: a
         separate output table would be another {numbers.vocab}×{numbers.dModel} =
         {fmtCount(tiedParams)} dials, {fmtShare(tiedSharePct / 100)} of the model and
         {fmtBytes(tiedBytes)} of the download, restating what the input table already encodes. Partly

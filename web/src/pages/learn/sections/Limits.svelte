@@ -15,27 +15,26 @@
   <p>Knowing where the gains stop is part of understanding the system:</p>
   <ul>
     <li>
-      <b>True randomness is incompressible</b> — by anyone, ever. The worked example's
+      Random data is incompressible. The worked example's
       <code>000000</code> piece alone costs {digits.bits.toFixed(1)} bits: the model strips the
       predictable shell and pays full price for the random core. A URL that is <i>mostly</i> random id
-      — a UUID link, a signed token — barely compresses.
+      (a UUID link, a signed token) barely compresses.
     </li>
     <li>
-      <b>Hosts it has never seen cost several bits per character.</b> The model falls back to
+      Hosts it has never seen cost several bits per character. The model falls back to
       spelling them out letter by letter with only generic URL statistics to lean on. Popular hosts
       are nearly free; your weekend project's domain is not.
     </li>
     <li>
-      <b>It only knows URLs.</b> Any text encodes — the tokenizer bottoms out at single bytes — but
-      prose or JSON pays badly through this model. The prior <i>is</i> the product.
+      It only knows URLs. Any text encodes, because the tokenizer bottoms out at single bytes, but
+      prose or JSON pays badly through this model.
     </li>
     <li>
-      <b>The worst case is capped, not avoided</b>: the probability floor from <Ref to="coder" /> means no
+      The worst case is capped: the probability floor from <Ref to="coder" /> means no
       token can cost more than {numbers.static.probGridBits} bits, however wrong the model's guess.
-      Pathological inputs get bounded damage, not miracles.
     </li>
     <li>
-      <b>Codes are tied to their model version</b> (<Ref to="lossless" />). A shortened URL is a contract with
+      Codes are tied to their model version (<Ref to="lossless" />). A shortened URL is a contract with
       one exact set of {paramsM(numbers.params)} numbers; the stream's version tag
       and the site's content-hashed model files enforce it.
     </li>
