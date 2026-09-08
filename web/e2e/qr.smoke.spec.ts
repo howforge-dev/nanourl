@@ -123,17 +123,17 @@ test('QR section: renders, follows every control, exports, persists, and every s
   const level = (l: string): Locator => qr.getByRole('group', { name: 'error correction' }).getByRole('button', { name: new RegExp(`^${l} `) });
   const offer = qr.locator(testIdSelector(TESTID.qrOffer));
   await expect(offer).toBeVisible({ timeout: CODEC_CALL });
-  await expect(offer).toContainText(/same QR version \(\d+, \d+×\d+\s+modules\)/);
+  await expect(offer).toContainText(/would not make the QR smaller: it stays \d+×\d+ squares/);
   await expect(qr.locator(testIdSelector(TESTID.qrSwitch))).toHaveCount(0);
   await level('H').click();
-  await expect(offer).toContainText(/version\s+\d+\s+→\s+version\s+\d+/);
+  await expect(offer).toContainText(/A smaller QR is possible/);
   const offerText = ((await offer.textContent()) ?? '').replace(/\s+/g, ' ');
-  expect(offerText).toMatch(/version \d+ → version \d+, \d+×\d+ → \d+×\d+ modules/);
+  expect(offerText).toMatch(/shrinks it from \d+×\d+ to \d+×\d+ squares/);
   await qr.locator(testIdSelector(TESTID.qrSwitch)).click();
   await expect(alphaStrip.locator('button[aria-pressed="true"]')).toHaveText('qr-alpha');
   await expect(linkBox).not.toContainText('#' + codeBase64url, { timeout: CODEC_CALL });
   await expect(encodePane.locator(testIdSelector(TESTID.roundtrip))).toContainText('✓', { timeout: CODEC_CALL });
-  await expect(info.locator('.chip').first()).toContainText('Alphanumeric');
+  await expect(info).toContainText(/characters stored in the compact mode/);
   await expect(offer).toHaveCount(0);
   await alphaStrip.getByText(ALPHABETS[0].key, { exact: true }).click();
   await expect(linkBox).toContainText('#' + codeBase64url, { timeout: CODEC_CALL });
@@ -142,8 +142,7 @@ test('QR section: renders, follows every control, exports, persists, and every s
 
   // --- the text in the symbol is the link as shown, and it scans ---
   await expect(readout).toHaveText(await shownLink());
-  await expect(info).toContainText(/version \d+, \d+×\d+ modules · \d+ bytes of text · level M recovers 15%/);
-  await expect(info.locator('.chip')).not.toHaveCount(0);
+  await expect(info).toContainText(/\d+×\d+ squares \(version \d+\) · level M survives 15% damage · all \d+ characters stored as plain bytes/);
   await expectScans(page, (await readout.textContent()) ?? '', 'the default');
   const dBase = await modules(qr).getAttribute('d');
 
@@ -153,18 +152,18 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await level('H').click();
   await expect(level('H')).toHaveAttribute('aria-pressed', 'true');
   await expect(modules(qr)).not.toHaveAttribute('d', dBase ?? '');
-  await expect(info).toContainText('level H recovers 30%');
-  const bytesOf = async (): Promise<string> => /(\d+) bytes/.exec((await info.textContent()) ?? '')?.[1] ?? '';
-  const bytesBefore = await bytesOf();
+  await expect(info).toContainText('level H survives 30% damage');
+  // the text is the same whatever the level, so the character count is too
+  const charsOf = async (): Promise<string> => /(\d+) characters/.exec((await info.textContent()) ?? '')?.[1] ?? '';
+  const charsBefore = await charsOf();
   await level('M').click();
   await expect(modules(qr)).toHaveAttribute('d', dBase ?? '');
-  expect(await bytesOf()).toBe(bytesBefore);
+  expect(await charsOf()).toBe(charsBefore);
 
   // --- byte mode: one segment, a note, still scans ---
   await opt('segment mode', 'byte').click();
   await expect(qr.locator(testIdSelector(TESTID.qrModeNote))).toBeVisible();
-  await expect(info.locator('.chip')).toHaveCount(1);
-  await expect(info.locator('.chip')).toContainText('Byte');
+  await expect(info).toContainText(/all \d+ characters stored as plain bytes/);
   await expectScans(page, (await readout.textContent()) ?? '', 'byte mode');
   await opt('segment mode', 'auto').click();
 
@@ -262,7 +261,7 @@ test('QR section: renders, follows every control, exports, persists, and every s
     await expect(readout).toHaveText(expected);
     if (a.id === QR_ALPHA) {
       expect(expected).toMatch(/^HTTP:\/\/[A-Z0-9.:-]+\/#[/0-9A-Z$*+\-.:]+$/);
-      await expect(info.locator('.chip').first()).toContainText('Alphanumeric');
+      await expect(info).toContainText(/\d+ of \d+ characters stored in the compact mode/);
     }
     await expectScans(page, expected, `${a.key} on classic`);
   }

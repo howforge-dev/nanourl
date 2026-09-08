@@ -4,7 +4,7 @@
 // Source hn trace:     scripts/fixtures/hn-trace.json
 // Source zip sizes:    scripts/fixtures/zip-sizes.json (deflate/gzip re-measured with node zlib 1.3.1-e00f703)
 // Source artifact:     ../models/target-base/ptq.nurl sha256 5e37aad1f34c420f2a3f5ea5a273ec3bd95a99b48f0c3eaa29187b1d22039fd2
-// Generated:           2026-09-08T05:52:52.812Z
+// Generated:           2026-09-08T06:17:29.313Z
 //
 // Every numeric fact the learn page shows comes from here.
 // `artifactSha256` is the gate: tests/assets-sync.test.ts fails if the model

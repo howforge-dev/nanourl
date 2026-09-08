@@ -15,7 +15,7 @@
   import QRCode from 'qrcode';
   import { tick, untrack } from 'svelte';
   import type { Alphabet } from '../../lib/codec/types';
-  import { ALPHABETS, QR_ALPHA, qrText } from '../../lib/alphabet';
+  import { QR_ALPHA, qrText } from '../../lib/alphabet';
   import { EC_LABEL, HINTS, type HintKey } from '../../lib/qr/hints';
   import {
     CENTRE_LABEL_MAX,
@@ -70,7 +70,6 @@
   import { circlePadding, renderSvg } from '../../lib/qr/render';
   import Button from '../../lib/ui/Button.svelte';
   import Callout from '../../lib/ui/Callout.svelte';
-  import Chip from '../../lib/ui/Chip.svelte';
   import Hint from '../../lib/ui/Hint.svelte';
   import Segmented from '../../lib/ui/Segmented.svelte';
   import TextField from '../../lib/ui/TextField.svelte';
@@ -121,6 +120,17 @@
   let screen = $derived(built.qr ? renderSvg(built.qr.modules, opts.screen) : null);
   let exported = $derived(built.qr ? renderSvg(built.qr.modules, opts.export) : null);
   let segments = $derived(built.qr ? built.qr.segments.map((s) => ({ mode: s.mode.id, length: s.getLength() })) : []);
+  /** How the text is packed, in words: QR stores capitals and digits in a
+   *  compact mode and everything else as plain bytes, which is the whole
+   *  reason qr-alpha exists. */
+  let packing = $derived.by(() => {
+    const total = segments.reduce((n, s) => n + s.length, 0);
+    const plain = segments.filter((s) => s.mode === 'Byte').reduce((n, s) => n + s.length, 0);
+    if (!total) return '';
+    if (plain === total) return `all ${total} characters stored as plain bytes; the compact mode needs capital letters and digits only`;
+    if (plain === 0) return `all ${total} characters stored in the compact mode for capitals and digits`;
+    return `${total - plain} of ${total} characters stored in the compact mode for capitals and digits, ${plain} as plain bytes`;
+  });
   let svgHref = $derived(exported ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(exported.svg) : '');
   /** The on-screen width: the setting, snapped to whole pixels per module
    *  when asked. */
@@ -161,7 +171,6 @@
       return null;
     }
   });
-  let alphaKey = $derived(ALPHABETS.find((a) => a.id === alpha)?.key ?? '');
 
   const opt = <T extends string>(values: readonly T[]) => values.map((v) => ({ value: v, label: v }));
   const STYLE_OPTIONS = opt(MODULE_STYLES);
@@ -299,16 +308,14 @@
       <div data-testid={TESTID.qrOffer}>
         <Callout>
           {#if offer.gain}
-            This code is in {alphaKey}; qr-alpha packs the link into the QR at 5.5 bits per character instead of 8, for a smaller code: version
-            {offer.from.version} → version {offer.to.version}, {offer.from.modules.size}×{offer.from.modules.size} → {offer.to.modules.size}×{offer.to.modules.size}
-            modules.
+            A smaller QR is possible. Switching this link to the qr-alpha alphabet shrinks it from {offer.from.modules.size}×{offer.from.modules.size} to
+            {offer.to.modules.size}×{offer.to.modules.size} squares, because QR codes store capital letters and digits more compactly.
             <span class="offer-actions">
               <Button size="sm" variant="primary" testid={TESTID.qrSwitch} onclick={() => onalpha?.(QR_ALPHA)}>switch to qr-alpha</Button>
               <Button size="sm" variant="ghost" onclick={dismiss}>dismiss</Button>
             </span>
           {:else}
-            This code is in {alphaKey}; for this link qr-alpha would give the same QR version ({offer.from.version}, {offer.from.modules.size}×{offer.from.modules.size}
-            modules), so there is nothing to gain by switching.
+            Switching this link to the qr-alpha alphabet would not make the QR smaller: it stays {offer.from.modules.size}×{offer.from.modules.size} squares.
             <span class="offer-actions"><Button size="sm" variant="ghost" onclick={dismiss}>dismiss</Button></span>
           {/if}
         </Callout>
@@ -332,12 +339,9 @@
       <div class="segs" data-testid={TESTID.qrInfo}>
         {#if built.qr}
           <span class="stat"
-            >version <b>{built.qr.version}</b>, <b>{built.qr.modules.size}×{built.qr.modules.size}</b> modules · <b>{bytes}</b> bytes of text · level
-            <b>{settings.level}</b> recovers <b>{EC_RECOVERS[settings.level]}</b></span
+            ><b>{built.qr.modules.size}×{built.qr.modules.size}</b> squares (version {built.qr.version}) · level <b>{settings.level}</b> survives
+            <b>{EC_RECOVERS[settings.level]}</b> damage · {packing}</span
           >
-          {#each segments as seg, i (i)}
-            <Chip mono title="{seg.mode} mode, {seg.length} characters">{seg.mode} · {seg.length}</Chip>
-          {/each}
         {/if}
       </div>
     </div>
@@ -571,20 +575,25 @@
   .segs .stat { margin: 0; }
   .presets { margin-top: var(--s-3); }
   .offer-actions { display: inline-flex; gap: var(--s-2); margin-left: var(--s-2); vertical-align: middle; }
-  /* Collapsible groups, the way qr-code-styling arranges its options; the
-     site's one <details> chrome applies. */
-  .group { margin-top: var(--s-3); }
+  /* Collapsible groups, the way qr-code-styling arranges its options. The
+     site's one <details> chrome applies, but a group is subordinate to the
+     section it sits in: a rule down its left edge and a smaller, spaced
+     summary keep it from reading as a sibling of "QR code" or "advanced". */
+  .group { margin-top: var(--s-2); padding-left: var(--s-3); border-left: var(--border); }
+  .group > summary { font-size: var(--fs-xs); letter-spacing: 0.04em; text-transform: uppercase; }
   /* Label column, control column; one column on a phone. */
   .controls {
     display: grid;
     grid-template-columns: max-content minmax(0, 1fr);
-    align-items: start;
+    /* Label text and the first control's text share a baseline, whatever
+       the control's height. */
+    align-items: baseline;
     column-gap: var(--s-4);
     row-gap: var(--s-3);
     margin-top: var(--s-3);
   }
-  .lbl { color: var(--dim); font-size: var(--fs-sm); padding-top: var(--s-1); white-space: nowrap; }
-  .row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); }
+  .lbl { color: var(--dim); font-size: var(--fs-sm); white-space: nowrap; }
+  .row { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s-2); }
   .stack { display: flex; flex-direction: column; gap: var(--s-2); }
   .row .dim { font-size: var(--fs-xs); }
   .num { width: 5.5em; display: inline-block; }

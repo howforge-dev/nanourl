@@ -161,7 +161,7 @@ describe('the QR section', () => {
     const app = open({ link: 'https://qv.lc/#BAddTS_zj', code: 'BAddTS_zj', alpha: DEFAULT_ALPHABET });
     const group = host.querySelector('[aria-label="error correction"]')!;
     expect([...group.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['L 7%', 'M 15%', 'Q 25%', 'H 30%']);
-    expect(host.querySelector(testIdSelector(TESTID.qrInfo))!.textContent).toContain('level M recovers 15%');
+    expect(host.querySelector(testIdSelector(TESTID.qrInfo))!.textContent).toContain('level M survives 15%');
     unmount(app);
   });
 
@@ -175,8 +175,8 @@ describe('the QR section', () => {
       onalpha: (a) => picked.push(a),
     });
     const offer = host.querySelector(testIdSelector(TESTID.qrOffer))!.textContent!.replace(/\s+/g, ' ');
-    expect(offer).toMatch(/version \d+ → version \d+/);
-    expect(offer).toMatch(/\d+×\d+ → \d+×\d+ modules/);
+    expect(offer).toMatch(/A smaller QR is possible/);
+    expect(offer).toMatch(/shrinks it from \d+×\d+ to \d+×\d+ squares/);
     host.querySelector<HTMLButtonElement>(testIdSelector(TESTID.qrSwitch))!.click();
     expect(picked).toEqual([QR_ALPHA]);
     unmount(app);
