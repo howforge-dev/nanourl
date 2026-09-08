@@ -23,16 +23,18 @@ site sets `COOP` and `COEP` headers.
 ## The `nanourl` command line
 
 ```bash
-nanourl encode https://example.com/some/long/url --link
+nanourl encode https://example.com/some/long/url   # prints https://qv.lc/#CODE
+nanourl encode https://example.com/some/long/url --bare   # just the code
 nanourl decode https://qv.lc/#CODE
 nanourl model info      # which weights this binary carries
 ```
 
 `decode` takes a full link, a link without its scheme, or a bare code, and
-works out the alphabet the way the site does. `--alphabet
-base64url|base79|emoji` picks the output charset, `--json` prints one object
-per invocation, and `--model PATH` (or `$NANOURL_MODEL`) runs other weights.
-Exit codes: 0 success, 1 unusable input, 2 model unavailable.
+works out the alphabet the way the site does. `--base URL` puts the code on
+another origin, `--alphabet base64url|base79|emoji` picks the output charset,
+`--json` prints one object per invocation, and `--model PATH` (or
+`$NANOURL_MODEL`) runs other weights. Exit codes: 0 success, 1 unusable
+input, 2 model unavailable.
 
 The tokenizer and the weights are compiled into the binary, which is why it is
 about 131 MB. The tool opens no socket, keeps no cache and carries no TLS

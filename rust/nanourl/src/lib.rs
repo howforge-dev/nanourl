@@ -36,8 +36,9 @@ use urlcodec::coder::Alphabet;
 /// plausible garbage.
 pub const TOKENIZER_JSON: &str = include_str!("../../../models/url-bpe-8k-cap24-s0/tokenizer.json");
 
-/// Where a link points when `--link` is given no value. The site's own origin,
-/// spelled in `web/src/lib/links.ts` and pinned to it by `tests/link_test.rs`.
+/// The base a link is printed on unless `--base` says otherwise. The site's
+/// own origin, spelled in `web/src/lib/links.ts` and pinned to it by
+/// `tests/link_test.rs`.
 pub const SITE_URL: &str = "https://qv.lc/";
 
 /// Everything worked.
@@ -84,16 +85,12 @@ enum Cmd {
         /// Output alphabet
         #[arg(short, long, value_enum, default_value = "base64url")]
         alphabet: AlphabetArg,
-        /// Print a full link on this site instead of the bare code; --link=BASE
-        /// puts the code on another origin
-        #[arg(
-            long,
-            value_name = "BASE",
-            num_args = 0..=1,
-            require_equals = true,
-            default_missing_value = SITE_URL
-        )]
-        link: Option<String>,
+        /// Print the code on this base URL
+        #[arg(long, value_name = "BASE", default_value = SITE_URL)]
+        base: String,
+        /// Print only the code, without a base URL
+        #[arg(long)]
+        bare: bool,
     },
     /// Expand a link, or a bare code, back into its URL
     Decode {
@@ -249,7 +246,8 @@ fn cmd_encode(
     model: Option<PathBuf>,
     url: &str,
     alpha: Alphabet,
-    base: Option<String>,
+    base: &str,
+    bare: bool,
 ) -> i32 {
     // Before the model is loaded, because it is the answer either way: an
     // empty input is not a URL, and a code minted from one would decode back
@@ -269,7 +267,7 @@ fn cmd_encode(
     };
     let code = v["coded"].as_str().unwrap_or_default().to_string();
     let fragment = fragment_for(&code, alpha);
-    let link = link_with(base.as_deref().unwrap_or(SITE_URL), &fragment);
+    let link = link_with(base, &fragment);
     out.ok(
         json!({
             "ok": true,
@@ -282,7 +280,7 @@ fn cmd_encode(
             "bits": v["coded_bits"],
             "bits_per_char": v["bits_per_char"],
         }),
-        &[if base.is_some() { link } else { code }],
+        &[if bare { code } else { link }],
     )
 }
 
@@ -453,8 +451,17 @@ pub fn run(embedded: &'static [u8]) -> i32 {
         Cmd::Encode {
             url,
             alphabet,
-            link,
-        } => cmd_encode(&out, embedded, cli.model, &url, alphabet.into(), link),
+            base,
+            bare,
+        } => cmd_encode(
+            &out,
+            embedded,
+            cli.model,
+            &url,
+            alphabet.into(),
+            &base,
+            bare,
+        ),
         Cmd::Decode { input, alphabet } => cmd_decode(
             &out,
             embedded,

@@ -149,7 +149,7 @@ fn nanourl_mints_the_same_codes_as_the_developer_encoder() {
                 ],
             );
             assert!(dev.status.success(), "urlcodec encode failed for {url}");
-            let ship = run(NANOURL, &["encode", &url, "--alphabet", cli_name]);
+            let ship = run(NANOURL, &["encode", &url, "--alphabet", cli_name, "--bare"]);
             assert!(ship.status.success(), "nanourl encode failed for {url}");
             assert_eq!(stdout(&dev), stdout(&ship), "{cli_name} code for {url}");
         }
@@ -163,10 +163,10 @@ fn a_link_it_minted_decodes_back_to_the_url_it_came_from() {
     }
     for url in examples() {
         for (cli_name, _) in ALPHABETS {
-            // `--link` writes the fragment through `fragment_for`, so feeding
-            // it straight back exercises the marker and the sniffing together
-            // — the round trip a person actually performs.
-            let enc = run(NANOURL, &["encode", &url, "--alphabet", cli_name, "--link"]);
+            // The default output is the link, written through `fragment_for`,
+            // so feeding it straight back exercises the marker and the sniffing
+            // together: the round trip a person actually performs.
+            let enc = run(NANOURL, &["encode", &url, "--alphabet", cli_name]);
             assert!(enc.status.success(), "encode {cli_name} {url}");
             let link = stdout(&enc);
             let dec = run(NANOURL, &["decode", &link]);
@@ -182,13 +182,15 @@ fn json_output_carries_the_same_answer_as_the_lines() {
         return;
     }
     let url = &examples()[1];
-    let plain = run(NANOURL, &["encode", url]);
+    let plain = run(NANOURL, &["encode", url, "--bare"]);
+    let linked = run(NANOURL, &["encode", url]);
     let js = run(NANOURL, &["encode", url, "--json"]);
     let v: Value = serde_json::from_str(&stdout(&js)).unwrap();
     assert_eq!(v["code"], stdout(&plain));
     assert_eq!(v["alphabet"], "base64url");
     assert_eq!(v["url"], url.as_str());
     assert_eq!(v["link"], format!("{SITE_URL}#{}", stdout(&plain)));
+    assert_eq!(v["link"], stdout(&linked));
 }
 
 /// The exit codes are the CLI's contract with a script, so they are asserted
@@ -298,35 +300,29 @@ fn the_model_subcommand_reports_verifies_and_exports_the_built_in_weights() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// `--link` takes an optional value, which is exactly the shape that can eat
-/// the positional argument next to it: `encode --link URL` would otherwise
-/// read the URL as the base and leave nothing to compress.
+/// The link is the default output; `--bare` drops the base and `--base` moves
+/// it, in either argument order.
 #[test]
-fn link_does_not_swallow_the_url_beside_it() {
+fn the_link_is_the_default_and_base_and_bare_change_it() {
     if !should_run() {
         return;
     }
     let url = "https://example.com/a?b=1";
-    let bare = run(NANOURL, &["encode", url, "--link"]);
-    assert_eq!(bare.status.code(), Some(0), "--link with no value");
+    let linked = run(NANOURL, &["encode", url]);
+    assert_eq!(linked.status.code(), Some(0));
     assert!(
-        stdout(&bare).starts_with(&format!("{SITE_URL}#")),
+        stdout(&linked).starts_with(&format!("{SITE_URL}#")),
         "{}",
-        stdout(&bare)
+        stdout(&linked)
     );
 
-    // The flag BEFORE the positional: the arrangement in which an optional
-    // value can consume the argument next to it.
-    let before = run(NANOURL, &["encode", "--link", url]);
-    assert_eq!(before.status.code(), Some(0), "--link before the URL");
-    assert_eq!(stdout(&before), stdout(&bare), "the URL is still the URL");
+    let bare = run(NANOURL, &["encode", url, "--bare"]);
+    assert_eq!(bare.status.code(), Some(0));
+    assert_eq!(format!("{SITE_URL}#{}", stdout(&bare)), stdout(&linked));
 
-    // A base is given with '=', and only with '='.
-    let based = run(NANOURL, &["encode", url, "--link=https://x.test/"]);
-    assert_eq!(based.status.code(), Some(0), "--link=BASE");
-    assert!(
-        stdout(&based).starts_with("https://x.test/#"),
-        "{}",
-        stdout(&based)
-    );
+    let based = run(NANOURL, &["encode", "--base", "https://x.test/", url]);
+    assert_eq!(based.status.code(), Some(0), "--base before the URL");
+    assert_eq!(stdout(&based), format!("https://x.test/#{}", stdout(&bare)));
+    let after = run(NANOURL, &["encode", url, "--base", "https://x.test/"]);
+    assert_eq!(stdout(&after), stdout(&based), "--base after the URL");
 }
