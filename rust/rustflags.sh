@@ -49,8 +49,14 @@ flags+=("--remap-path-prefix=$sysroot=/rust")
 # library and nothing else. `strip=symbols` on all six: what ships is the same
 # shape everywhere, and a rebuild has no symbol table to differ in.
 case "$target" in
-  *-linux-musl | *-pc-windows-msvc)
+  *-linux-musl)
     flags+=(-C target-feature=+crt-static -C strip=symbols) ;;
+  *-pc-windows-msvc)
+    # /Brepro replaces the PE timestamps with content hashes; /PDBALTPATH keeps
+    # the build directory out of the debug directory entry. Without both, two
+    # builds of one commit differ.
+    flags+=(-C target-feature=+crt-static -C strip=symbols
+            -C link-arg=/Brepro '-C' 'link-arg=/PDBALTPATH:%_PDB%') ;;
   *-apple-darwin)
     flags+=(-C strip=symbols) ;;
 esac

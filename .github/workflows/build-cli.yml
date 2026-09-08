@@ -199,12 +199,21 @@ jobs:
             cargo build --release --locked --target ${{ matrix.target }} --target-dir ../target-again
           # sha256sum on Linux and in Git Bash, shasum on macOS.
           sum() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi; }
+          again=../target-again/${{ matrix.target }}/release/nanourl${{ matrix.exe }}
           one=$(sum "$bin")
-          two=$(sum "../target-again/${{ matrix.target }}/release/nanourl${{ matrix.exe }}")
+          two=$(sum "$again")
           echo "1: $one"
           echo "2: $two"
           [ "${one%% *}" = "${two%% *}" ] || {
-            echo "the same commit produced two different binaries" >&2; exit 1; }
+            echo "the same commit produced two different binaries" >&2
+            # Where they differ decides the fix: a handful of bytes is a
+            # linker stamp (UUID, timestamp); a path string is a leak of the
+            # second target directory.
+            echo "differing bytes: $(cmp -l "$bin" "$again" | wc -l)" >&2
+            cmp -l "$bin" "$again" | head -8 >&2
+            echo "second target dir named in the binary: $(grep -a -c target-again "$again" || true)" >&2
+            grep -a -o -m 3 '[^" ]*target-again[^" ]*' "$again" | head -3 >&2 || true
+            exit 1; }
           rm -rf ../target-again
           # Identical twice on ONE runner would also hold with the remapping
           # broken, so the direct check: no path from this machine is baked in.
@@ -230,8 +239,10 @@ jobs:
           # binary reports; both spellings mean no interpreter, no libc.
           file "$bin" | grep -qE 'statically linked|static-pie linked'
           # ldd exits non-zero on a static binary, so the pipeline's verdict is
-          # grep's: the words have to be there, not merely the failure.
-          ldd "$bin" 2>&1 | grep -q 'not a dynamic executable'
+          # grep's: the words have to be there, not merely the failure. glibc's
+          # ldd says "statically linked" for a static-pie and "not a dynamic
+          # executable" for a non-PIE static binary.
+          ldd "$bin" 2>&1 | grep -qE 'not a dynamic executable|statically linked'
 
       - name: the Windows binary carries its own C runtime
         if: runner.os == 'Windows'
