@@ -1,11 +1,11 @@
 // The four canonical example URLs shown on the compressor page's "try:" row
-// (src/lib/ui/Examples.svelte) — one source of truth so the bench page's
+// (src/lib/ui/Examples.svelte), one source of truth so the bench page's
 // cross-tier bit-identity check (web/src/pages/bench/App.svelte) can reuse
 // exactly the same URLs, including the "nytimes" one used for the timing
 // bench, without the two ever drifting apart.
 // `as const`: this is the one shared source of truth (Examples.svelte's
 // "try:" buttons, the bench page's timing target and its cross-tier
-// bit-identity check) — readonly so no consumer can mutate it out from
+// bit-identity check), readonly so no consumer can mutate it out from
 // under the others.
 export const EXAMPLE_URLS = [
   ['wikipedia', 'https://en.wikipedia.org/wiki/Solar_eclipse_of_August_12,_2026'],
@@ -19,8 +19,8 @@ export const EXAMPLE_URLS = [
  *  the list above cannot silently change which URL is benchmarked. */
 export const BENCH_URL: string = EXAMPLE_URLS.find(([name]) => name === 'nytimes')![1];
 
-/** The placeholder in every URL input on the site — the compressor's textarea
- *  and the observatory's, which had it written out twice. */
+/** The placeholder in every URL input on the site: the compressor's textarea
+ *  and the observatory's. */
 export const PLACEHOLDER_URL = 'https://example.com/some/long/url?with=params';
 
 /**
@@ -30,11 +30,10 @@ export const PLACEHOLDER_URL = 'https://example.com/some/long/url?with=params';
  * on the learn page (the token walk-through, the per-token bit costs, the
  * zip comparison, the coder trace) is measured against this exact URL by
  * `scripts/numbers.ts` and baked into `src/lib/numbers.ts`, so it cannot
- * follow a change to the compressor's "try:" row. Nothing said so before, in
- * either file, which made the two look like a copy that had drifted.
+ * follow a change to the compressor's "try:" row.
  */
 export const WORKED_EXAMPLE_URL = 'https://news.ycombinator.com/item?id=38000000';
 
 /** A trivial, fixed URL the codec encodes once right after `codec_init`, to
- *  confirm an instance that compiled and initialized can actually do work. */
+ *  confirm an instance that compiled and initialized can do work. */
 export const SELF_TEST_URL = 'https://example.com/';

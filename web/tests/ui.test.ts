@@ -4,7 +4,7 @@
 // nothing here needs a query DSL, and adding a dependency to assert
 // `querySelector` results would be a dependency for its own sake.
 //
-// What these pin is the primitive's CONTRACT — the variant/size/tone classes a
+// What these pin is the primitive's CONTRACT: the variant/size/tone classes a
 // caller selects behaviour with, the attributes it forwards, and the element
 // it renders. A page that swaps `variant="ghost"` for `variant="primary"` is a
 // visual decision; a primitive that silently stops emitting `data-testid` or
@@ -135,7 +135,7 @@ describe('Segmented', () => {
       const strip = el.querySelector('.seg');
       expect(strip?.getAttribute('role')).toBe('tablist');
       // the look IS the class: a caller repeating it renders `seg tabs tabs`.
-      // Svelte's own scope hash is filtered out — it is not part of the
+      // Svelte's own scope hash is filtered out: it is not part of the
       // contract and changes with the file's contents.
       expect(strip?.className.trim().split(/\s+/).filter((c) => !c.startsWith('svelte-'))).toEqual(['seg', 'tabs']);
       const tabs = [...el.querySelectorAll('[role=tab]')];

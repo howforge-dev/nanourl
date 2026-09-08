@@ -24,9 +24,9 @@ describe('sizes', () => {
   it('uses one divisor and one unit label', () => {
     expect(MIB).toBe(1048576);
     // The shipped artifact's size must read identically everywhere it is
-    // quoted — the learn page, the status line, the observatory's
-    // architecture table — so the same division is never labelled "MiB" in
-    // one place and "MB" in another.
+    // quoted (the learn page, the status line, the observatory's architecture
+    // table), so the same division is never labelled "MiB" in one place and
+    // "MB" in another.
     expect(plain(fmtBytes(130_862_112))).toBe('124.8 MiB');
     expect(plain(fmtMiB(124.8))).toBe('124.8 MiB');
     expect(plain(fmtMiB(497.4, 0))).toBe('497 MiB');
@@ -59,9 +59,8 @@ describe('fmtPct — one rendering for every distribution on the site', () => {
   });
 
   it('goes scientific below 0.001%, instead of printing 0.000%', () => {
-    // The observatory's readout table printed `.toFixed(3)` and rendered every
-    // one of these as "0.000%" — the whole point of a full-vocabulary table is
-    // that most of it lives down here.
+    // `.toFixed(3)` in the observatory's readout table renders every one of
+    // these as "0.000%", and most of a full-vocabulary table lives down here.
     expect(fmtPct(1.2e-7)).toBe('1.2×10⁻⁵%');
     expect(fmtPct(3.4e-10)).toBe('3.4×10⁻⁸%');
     expect(fmtPct(0)).toBe('0%');

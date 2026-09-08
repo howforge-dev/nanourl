@@ -28,10 +28,10 @@ module.exports = {
       rules: {
         // TypeScript resolves identifiers itself, and eslint's own scope
         // analysis cannot see a Svelte component's `generics=` type
-        // parameters — so `no-undef` reports every use of one (TextField's
+        // parameters, so `no-undef` reports every use of one (TextField's
         // `V`) as an undefined variable. This is typescript-eslint's own
         // standing advice for TS sources; here it is scoped to *.svelte,
-        // where the parser gap actually is.
+        // where the parser gap is.
         'no-undef': 'off',
       },
     },

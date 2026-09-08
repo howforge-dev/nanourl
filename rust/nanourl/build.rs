@@ -9,11 +9,11 @@
 //!
 //! `NANOURL_MODEL_FILE` names the artifact; a relative value, and the default
 //! below, resolve against this crate's directory. On a machine where the usual
-//! path is absent — a build box, where `models/target-base` is a dangling
-//! symlink — the variable is how the real path is given.
+//! path is absent (a build box, where `models/target-base` is a dangling
+//! symlink), the variable is how the real path is given.
 //!
 //! A build script runs once per package, not once per target, so this fires
-//! for every build of THIS crate — the library and its tests included, none of
+//! for every build of THIS crate, the library and its tests included, none of
 //! which embeds anything. That is why `nanourl` is its own package: the
 //! `urlcodec` kernel, its developer binary and the three wasm tiers are in a
 //! different package and build with no artifact anywhere on the machine.
@@ -32,7 +32,7 @@ const MODEL_DEFAULT: &str = "../../models/target-base/ptq.nurl";
 fn main() {
     println!("cargo:rerun-if-changed=model_pin.rs");
     println!("cargo:rerun-if-env-changed={MODEL_ENV}");
-    // This crate has no wasm target -- the browser runs `urlcodec` directly --
+    // This crate has no wasm target (the browser runs `urlcodec` directly),
     // but a wasm build of it would embed nothing, so it demands nothing.
     if std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("wasm32") {
         return;

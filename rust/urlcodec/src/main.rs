@@ -1,20 +1,20 @@
-//! urlcodec — URL compressor: nanourl model + arithmetic coder, Rust port of
-//! codec.py. Encode and decode share the same incremental model path, so the
-//! stream is self-consistent by construction.
+//! urlcodec is the URL compressor: nanourl model + arithmetic coder, Rust
+//! port of codec.py. Encode and decode share the same incremental model path,
+//! so the stream is self-consistent by construction.
 //!
 //!   urlcodec encode    <url>    --model m.nurl --tokenizer tokenizer.json
 //!   urlcodec decode    <string> --model ... --tokenizer ...
 //!   urlcodec roundtrip <url>    --model ... --tokenizer ...
 //!   urlcodec eval   --urls urls.txt [--n 1000] --model ... --tokenizer ...
 //!   urlcodec sample [--n 10] [--temp 1.0] [--top-k 0] [--prefix P] [--seed 1]
-//!     --prefix is canonical text (hosts TLD-first), tokenised as given —
+//!     --prefix is canonical text (hosts TLD-first), tokenised as given and
 //!     never canonicalised, since a partial host has no consistent canonical form
 
 // ported nanourl code: lints allowed crate-wide so the gate stays meaningful
 // for new code. THIS LIST MUST MATCH lib.rs's: main.rs compiles its own copies
 // of canonical/coder/model/sample/tok, so a lint allowed in only one of the
-// two roots fails `task codec:test` through the other target alone -- which is
-// exactly what the chunks_exact_to_as_chunks entry below exists to prevent.
+// two roots fails `task codec:test` through the other target alone, which the
+// chunks_exact_to_as_chunks entry below exists to prevent.
 #![allow(dead_code)]
 #![allow(clippy::needless_range_loop)]
 #![allow(clippy::missing_safety_doc)]
@@ -150,7 +150,7 @@ fn main() {
             .unwrap_or(1);
         let mbytes = std::fs::read(&model_path).unwrap();
         let tbytes = std::fs::read(&tok_path).unwrap();
-        // DIGEST_BIT: the parity columns are the point of this subcommand.
+        // DIGEST_BIT: this subcommand exists to emit the parity columns.
         let rc = unsafe {
             urlcodec::codec_init(
                 mbytes.as_ptr(),
@@ -235,8 +235,8 @@ fn main() {
     }
 
     if cmd == "dist" {
-        // Full-vocab distribution dump through the LIB's C-ABI codec_dist --
-        // the same entry point the wasm builds expose -- so fuzz/dist_compare.py
+        // Full-vocab distribution dump through the LIB's C-ABI codec_dist
+        // (the same entry point the wasm builds expose), so fuzz/dist_compare.py
         // can diff native against each wasm tier value by value. One
         // {"url","k",...codec_dist JSON} per --at pair, newline separated.
         //   urlcodec dist --model M --tokenizer T --urls FILE --n 20 --k 5
@@ -268,7 +268,7 @@ fn main() {
     }
 
     if cmd == "bits" {
-        // urlcodec bits MODEL.nurl TOKENS.txt — same output as the retired nurlcheck
+        // urlcodec bits MODEL.nurl TOKENS.txt
         let model = Model::load(&args[2]).unwrap_or_else(|e| {
             eprintln!("{e}");
             std::process::exit(1)

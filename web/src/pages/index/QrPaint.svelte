@@ -1,5 +1,5 @@
 <script lang="ts">
-  // A paint: one colour, or a gradient — linear at an angle or radial —
+  // A paint: one colour, or a gradient (linear at an angle or radial)
   // through two to five colour stops. The one editor for the data modules,
   // both parts of the corners and the background, so the four cannot drift
   // apart in what they offer.

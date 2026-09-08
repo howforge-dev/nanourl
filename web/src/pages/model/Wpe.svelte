@@ -1,14 +1,14 @@
 <script lang="ts">
   // Position embedding panel: the block position vectors projected to 2D
-  // trace an ordered path — position is a learned ruler, not `block`
+  // trace an ordered path: position is a learned ruler, not `block`
   // arbitrary labels. The dequantisation is web/src/lib/nurl.ts's dequantRows
   // (this is its only caller), over the `wpe` table at `info.wpe_offset`.
   //
   // The bytes are fetched here, one slice at a time, rather than read out of
   // a full JS-side copy of the artifact. `Codec.load({ keepModel: true })`
   // would allocate a second 124.8 MiB `Uint8Array` and pin it for the life of
-  // the page — for this one ~340 KiB table and nothing else, on the page most
-  // likely to be killed on iOS. `fetchModelSlice` reads only the chunk(s)
+  // the page (for this one ~340 KiB table and nothing else, on the page most
+  // likely to be killed on iOS). `fetchModelSlice` reads only the chunk(s)
   // that cover the range, and they are Cache-API hits after the first visit.
   import { tick } from 'svelte';
   import type { Info } from '../../lib/codec/types';
@@ -29,7 +29,7 @@
   } = $props();
 
   // The mean tokens per URL over the eval set (numbers.ts, from the run
-  // manifest) — marked on the curves below because that is where the ruler is
+  // manifest), marked on the curves below because that is where the ruler is
   // finely made and past which it fades. Not "most URLs finish under this":
   // it is a mean, and the distribution has a long tail.
   const AVG_URL_TOKENS = Math.round(numbers.meanTokensPerUrl);
@@ -50,7 +50,7 @@
   let error = $state('');
 
   // `started` latches synchronously, before the first await. The `$effect`
-  // below guards on `!computed`, which is only set once the fetch resolves —
+  // below guards on `!computed`, which is only set once the fetch resolves,
   // so without this latch, closing and reopening the panel during that fetch
   // schedules a second concurrent compute() and a duplicate ~340 KiB read.
   let started = false;
@@ -81,8 +81,8 @@
       for (let c = 0; c < D; c++) d += w[i * D + c] * w[(i + 1) * D + c];
       cosNext[i] = d / (norms[i] * norms[i + 1] || 1);
     }
-    // top-2 principal directions by power iteration over centered rows —
-    // a lightweight, dependency-free 2D projection just for this trajectory
+    // top-2 principal directions by power iteration over centered rows:
+    // a lightweight, dependency-free 2D projection for this trajectory
     // plot (independent of the atlas's server-side PCA(50)+UMAP).
     const mean = new Float32Array(D);
     for (let i = 0; i < BLK; i++) for (let c = 0; c < D; c++) mean[c] += w[i * D + c] / BLK;
@@ -130,7 +130,7 @@
 
   function drawPath(): void {
     if (!data || !pathCanvas) return;
-    const { pts, S } = data; // norms/cosNext aren't drawn here — see onPathMove's tooltip below
+    const { pts, S } = data; // norms/cosNext aren't drawn here; see onPathMove's tooltip below
     const BLK = info.block;
     const cv = pathCanvas;
     cv.width = S * 2;
@@ -266,7 +266,7 @@
       <div class="layout">
         <!-- The canvas is sized once, from the wrapper's width at the moment
              the panel first opens (`data.S`), and does not resize with the
-             viewport — so a desktop-width open followed by a narrow viewport
+             viewport, so a desktop-width open followed by a narrow viewport
              leaves a 440px canvas over a 305px card. It scrolls, like every
              other over-wide figure here; a clip would hide it instead. -->
         <ScrollBox bind:element={pathWrap}>
@@ -312,13 +312,13 @@
 <style>
   /* .note = transient "still working" placeholder (see the e2e smoke test's
      per-panel wait); .hint = a permanent caption that happens to share the
-     same look — kept as a separate class so that wait stays a reliable
+     same look, kept as a separate class so that wait stays a reliable
      "this panel's lazy first-open work has settled" signal. */
   /* This one caption sits above a wide canvas; unbounded it stretches the
      full card width and reads as a paragraph rather than a legend. */
   .caption { max-width: var(--m-legend); }
   .layout { display: flex; gap: var(--s-5); flex-wrap: wrap; align-items: flex-start; margin-top: var(--s-2); }
   /* min-width: 0 so a flex item may shrink below its content's min-content
-     size; without it the ScrollBoxes inside can never actually narrow. */
+     size; without it the ScrollBoxes inside can never narrow. */
   .layout > :global(*) { min-width: 0; max-width: 100%; }
 </style>

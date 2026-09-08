@@ -33,9 +33,9 @@ import {
 } from '../src/lib/qr/options';
 
 // The renderer draws from the matrix alone, so these pin what a scanner
-// relies on — every dark module drawn, the function patterns where the
-// matrix has them and as runs — and what an export relies on: a valid
-// document, the same bytes for the same input.
+// relies on (every dark module drawn, the function patterns where the matrix
+// has them and as runs) and what an export relies on: a valid document, the
+// same bytes for the same input.
 
 /** A real matrix for a real link, from the library the page uses. */
 const real = (text = 'HTTPS://QV.LC/#/TBUDT', level: 'L' | 'M' | 'Q' | 'H' = 'M') => QRCode.create(text, { errorCorrectionLevel: level }).modules;

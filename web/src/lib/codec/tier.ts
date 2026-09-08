@@ -35,9 +35,9 @@ export const hasRelaxedSimd = (): boolean => {
  * One thread per core minus the coordinator, but never more than this. Two
  * reasons the cap is low: past a handful of workers the shared block cursor's
  * contention eats the gain, and `navigator.hardwareConcurrency` is not
- * trustworthy — Brave randomises it, and other browsers clamp or round it —
+ * trustworthy (Brave randomises it, and other browsers clamp or round it),
  * so the core count can only ever lower the number, never raise it beyond a
- * value every real device can carry. Every worker also reserves a 1 MiB stack
+ * value every device can carry. Every worker also reserves a 1 MiB stack
  * + TLS block inside the shared memory `worker.ts` sizes up front, so the cap
  * bounds that reservation too. `worker.ts` sizes memory from this constant;
  * a cap changed anywhere else would leave that sizing describing the old one.
@@ -54,19 +54,19 @@ export function detectTier(): { relaxed: boolean; threads: number } {
   return { relaxed: hasRelaxedSimd(), threads: workerCount(isolated, cores) };
 }
 
-/** What a `codec_info().kernel` label actually contains.
+/** What a `codec_info().kernel` label contains.
  *
  * The three wasm builds nest, and the label alone does not say so: `simd` is
  * simd128, `relaxed` adds the relaxed-SIMD proposal, and the mt build is
  * built with BOTH (`RUSTFLAGS=-C target-feature=+simd128,+relaxed-simd,
  * +atomics,...` in Taskfile.yml's `codec:wasm`) and adds N compute workers on
- * shared memory — so "threads:8" silently implies relaxed SIMD too. Derived
+ * shared memory, so "threads:8" silently implies relaxed SIMD too. Derived
  * from the reported string rather than a hand-typed table so a new tier can
  * never quietly keep describing itself as the old one.
  *
  * `threads:0` is never emitted by `lib::kernel_label()` (zero workers IS the
  * single-threaded tier), but a malformed or zero count is treated as the
- * relaxed build it really is rather than claiming "0 workers".
+ * relaxed build it is rather than claiming "0 workers".
  */
 export interface KernelBuild {
   /** the label as reported, e.g. "threads:8" */
@@ -110,7 +110,7 @@ export function kernelSummary(kernel: string): string {
 
 /** The same thing for a one-line status: "threads:8 — relaxed SIMD, 8
  *  workers". Drops SIMD128 (implied by every other feature, and by every
- *  build the browser can actually reach) and shortens the worker phrase, so
+ *  build the browser can reach) and shortens the worker phrase, so
  *  the ready line stays one line on a phone.
  *
  *  Built from `KernelBuild`'s structured fields, not by string-surgery on the

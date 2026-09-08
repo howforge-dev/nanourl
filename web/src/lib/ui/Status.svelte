@@ -23,10 +23,10 @@
 </script>
 
 <div id="status" class:pinned={loading}>
-  <!-- aria-live: "loading model…" -> "model ready — 246M params…" -> "failed
+  <!-- aria-live: "loading model…" -> "model ready · 246M params…" -> "failed
        to load: …" is the page's whole state machine; with a role only on the
-       bar it is announced to nobody. `polite`
-       because it updates roughly ten times a second during the download;
+       bar it is announced to nobody. `polite` because it updates roughly ten
+       times a second during the download;
        aria-atomic so the whole sentence is re-read, not just the delta. The
        separator spans are aria-hidden so the reading is a sentence, not a
        list of interpuncts. -->
@@ -64,14 +64,14 @@
   #status > * { max-width: calc(var(--col) - 2 * var(--gutter)); margin-left: auto; margin-right: auto; display: block; }
   .line { font-variant-numeric: tabular-nums; }
   /* Figures keep the monospace so the line does not jitter while a download
-     ticks, but the same colour as the words — the status line is not a place
+     ticks, but the same colour as the words: the status line is not a place
      to highlight anything. */
   .n {
     font-family: var(--font-mono);
     font-size: 0.94em;
   }
   /* Svelte trims template whitespace, so the spaces around a '·' written
-     inline vanish — the padding has to be the separator's own. */
+     inline vanish, so the padding has to be the separator's own. */
   .sep { opacity: 0.5; padding: 0 var(--s-2); }
   #bar { height: var(--s-1); background: var(--line); border-radius: var(--r-1); overflow: hidden; margin-top: var(--s-2); }
   #bar > div { height: 100%; background: var(--acc); transition: width 0.2s; }

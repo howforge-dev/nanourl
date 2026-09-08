@@ -34,7 +34,7 @@ const staticFacts: StaticFacts = {
   int4RoundingNoTailPct: 8.3,
   int4TailGapPct: 1.3,
 };
-// stands in for the hashed .nurl scripts/numbers.ts passes in — the length
+// stands in for the hashed .nurl scripts/numbers.ts passes in; the length
 // must agree with validManifest()'s model.artifact_bytes
 const artifact: ArtifactFacts = { sha256: 'a'.repeat(64), bytes: 130862112 };
 
@@ -67,8 +67,8 @@ describe('buildNumbers', () => {
     expect(data.bitsPerChar).toBeCloseTo(1.2629);
     expect(data.bitsPerCharKernel).toBeCloseTo(1.26372);
     // The manifest lists the ten shards the QAT tail re-read; training drew
-    // from forty, so both corpus totals are the manifest's scaled by 4 — and
-    // training covered a FRACTION of that corpus, never a whole pass.
+    // from forty, so both corpus totals are the manifest's scaled by 4.
+    // Training covered a FRACTION of that corpus, never a whole pass.
     expect(data.datasetUrls).toBe(365_779_523 * 4);
     expect(data.datasetTokens).toBe(12_981_925_526 * 4);
     expect(data.trainPasses).toBeCloseTo((76000 * 262144) / (12_981_925_526 * 4), 2);

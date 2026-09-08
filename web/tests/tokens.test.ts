@@ -3,7 +3,7 @@
 // standalone favicon document). A second spelling drifts unless something
 // pins it, and a drifted colour looks deliberate rather than broken.
 //
-// This parses app.css's own `:root` block — the file that decides the value —
+// This parses app.css's own `:root` block (the file that decides the value)
 // and fails if any entry stops matching. Same shape as tests/headers.test.ts,
 // which parses `_headers` and the nginx conf and compares them per path.
 import { describe, expect, it } from 'vitest';

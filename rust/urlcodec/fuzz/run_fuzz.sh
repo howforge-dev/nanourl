@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cross-runtime fuzz gate: N generated URLs through the x86 build and the
 # wasm build; every stream, roundtrip, and error string must match. The
-# JSON-hash column is compared separately (informational — it would surface
+# JSON-hash column is compared separately (informational: it would surface
 # stats-level wobble such as libm log2 ulp differences without failing the
 # stream contract).
 #   ./run_fuzz.sh [n=500] [seed=1] [model] [tokenizer]

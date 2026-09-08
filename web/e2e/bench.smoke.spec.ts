@@ -31,10 +31,9 @@ test('bench page: run all tiers fills a 3-row table and terminates each codec', 
   const button = page.locator(testIdSelector(TESTID.runAllTiers));
   await expect(button).toBeEnabled();
   await button.click();
-  // model/tokenizer chunks are already Cache-API-hit from the load above —
-  // only each tier's own (small) wasm binary is a real fetch — but this
-  // still sequentially loads and benches 3 full codecs, hence the long
-  // timeout.
+  // model/tokenizer chunks are already Cache-API-hit from the load above, and
+  // only each tier's own (small) wasm binary is a real fetch. This still
+  // sequentially loads and benches 3 full codecs, hence the long timeout.
   await expect(page.locator(`[data-testid^="${rowTestId('')}"]`)).toHaveCount(3, { timeout: MODEL_LOAD });
   // The sweep also walks every worker count this device supports, so three
   // rows is a milestone, not the end: wait for the button itself to come back.

@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Schematic — one attention head while predicting the digits of the HN
+  // Schematic: one attention head while predicting the digits of the HN
   // example's story id. Box/arc geometry is illustrative layout, not a
   // measured attention weight (we haven't instrumented per-head weights for
   // our model). The pieces named in
@@ -8,16 +8,16 @@
   import { numbers } from '../../../../lib/numbers';
   import { COLOR, FIGURE } from '../../../../lib/ui/tokens';
 
-  // The host span, spelled the way the tokenizer stores it. The old version
-  // joined the pieces with "·", which produced "com··y·com·bin·ator·." — a
-  // run of separators around pieces that are themselves separators, reading
-  // as corrupted text rather than as a tokenization.
+  // The host span, spelled the way the tokenizer stores it. Joining the
+  // pieces with "·" produces "com··y·com·bin·ator·.", a run of separators
+  // around pieces that are themselves separators, reading as corrupted text
+  // rather than as a tokenization.
   //
   // The three boxes split on the trace's own structure, found in it rather
   // than typed as indices: everything before the first "/" is the host (stored
   // TLD-first, so "com.ycombinator.news"), everything from there to the story
   // id is the path, and the id itself is what the figure is predicting. Fixed
-  // slice() bounds were correct only for today's numbers.hn.
+  // slice() bounds would be correct only for today's numbers.hn.
   const toks = numbers.hn.tokens;
   const firstSlash = toks.findIndex((t, i) => i > 0 && t.piece === '/');
   const digits = toks.findIndex((t) => t.piece === '000000');
@@ -68,7 +68,7 @@
     { label: target, weight: 0, target: true },
   ];
 
-  // Width every label actually needs; the row is then scaled to fit W_MAX, so a
+  // Width every label needs; the row is then scaled to fit W_MAX, so a
   // label can never overflow its box into the next one.
   const wants = raw.map((b) => Math.max(52, b.label.length * CH_BIG + 2 * PAD));
   const sumWants = wants.reduce((a, b) => a + b, 0);

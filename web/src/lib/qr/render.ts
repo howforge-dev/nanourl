@@ -9,7 +9,7 @@
 // document that the raster exports rasterise as it is.
 //
 // Units are modules throughout: the viewBox is `size + 2 * (margin +
-// padding)` wide — the quiet zone, then the frame padding — and the caption
+// padding)` wide (the quiet zone, then the frame padding), and the caption
 // adds rows under it. `scale` only sets `width`/`height` on the document,
 // so an `<img>` of it has an intrinsic size to rasterise at.
 import { LOGO_RECTS, LOGO_VIEWBOX } from '../ui/logo';
@@ -22,7 +22,7 @@ export interface Matrix {
   get(row: number, col: number): number | boolean;
 }
 
-/** A matrix from rows of `#` (dark) and anything else (light) — for tests. */
+/** A matrix from rows of `#` (dark) and anything else (light), for tests. */
 export function matrixFrom(rows: readonly string[]): Matrix {
   const size = rows.length;
   return { size, get: (r, c) => rows[r]?.[c] === '#' };
@@ -203,7 +203,7 @@ export const CORNER_DOT_R = 0.5;
 /**
  * One data module in a style, given which of its neighbours are dark. The
  * run-aware styles round only the corners that face no dark neighbour, so a
- * run of modules reads as one shape — softened at 0.3, a full pill at 0.5.
+ * run of modules reads as one shape: softened at 0.3, a full pill at 0.5.
  * `classy` rounds one corner fully, the top-left on even parity and the
  * bottom-right on odd, so neighbours alternate and a run reads as woven;
  * `classy-rounded` softens the other two like `rounded`.
@@ -237,8 +237,8 @@ export function moduleShape(
   }
 }
 
-/** The data modules — everything outside the function patterns, and
- *  outside `hole` when given — as one path. */
+/** The data modules (everything outside the function patterns, and outside
+ *  `hole` when given) as one path. */
 export function modulesPath(m: Matrix, style: ModuleStyle, margin: number, hole: Box | null = null): string {
   const size = m.size;
   const dark = (r: number, c: number): boolean => r >= 0 && c >= 0 && r < size && c < size && !!m.get(r, c);
@@ -266,8 +266,8 @@ export function modulesPath(m: Matrix, style: ModuleStyle, margin: number, hole:
 }
 
 /**
- * One `w`×`w` block of a finder — the outer boundary, the hole, or the
- * centre — in a corner type. `dots` draws the block's modules as touching
+ * One `w`×`w` block of a finder (the outer boundary, the hole, or the
+ * centre) in a corner type. `dots` draws the block's modules as touching
  * dots (the ring's 24, the centre's 9) and so has no hole of its own; for
  * the ring, `finder` lays them over a thin bar (see `ringBar`), since a
  * scanner reads a finder as runs and a row of separate dots is not one.
@@ -340,8 +340,8 @@ export function finderPaths(size: number, ringType: CornerType, coreType: Corner
   return { ring: ring.join(''), beads: beads.join(''), core: core.join('') };
 }
 
-/** Every alignment pattern, then the timing patterns — the function
- *  patterns that sit among the data, as plain squares in the dots' paint. */
+/** Every alignment pattern, then the timing patterns: the function patterns
+ *  that sit among the data, as plain squares in the dots' paint. */
 export function alignmentPath(size: number, margin: number): string {
   const parts = alignmentCentres(size).map(([ar, ac]) => alignment(ac - 2 + margin, ar - 2 + margin));
   parts.push(timingPath(size, margin));

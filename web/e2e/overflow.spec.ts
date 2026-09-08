@@ -8,7 +8,7 @@ import { expectNoHorizontalOverflow, waitForBenchReady, waitForModelReady, watch
 // Cross-page smoke: every page loads without a page-level horizontal
 // scrollbar and without a console/page error, under both the mobile and
 // desktop projects (playwright.config.ts). Narrower than
-// index/dream/learn.smoke.spec.ts on purpose — this only checks the one
+// index/dream/learn.smoke.spec.ts on purpose: this only checks the one
 // thing that's cheap to get wrong on every page (an element that doesn't
 // wrap, a fixed width past the viewport) and doesn't drive any page's
 // actual features.
@@ -19,7 +19,7 @@ import { expectNoHorizontalOverflow, waitForBenchReady, waitForModelReady, watch
 // to notice. `task web:assets` auto-detects web/atlas/atlas.bin and
 // `pack-assets.ts` refuses to drop an atlas the previous manifest had, so a
 // missing atlas is a loud pack-time warning, not something this spec should
-// paper over. If one is genuinely absent this spec FAILS on model.html's
+// paper over. If one is absent this spec FAILS on model.html's
 // `.err` panel, which is the correct outcome: that panel shows end users a
 // message telling them to run a `task` command.
 function assetsAtlas(): unknown {
@@ -33,10 +33,10 @@ function assetsAtlas(): unknown {
 interface PageSpec {
   path: string;
   /** Wait for whatever this page's own "I have real content now" signal is,
-   * before measuring overflow — the widest content on most of these pages
+   * before measuring overflow: the widest content on most of these pages
    * (a long token/code string, a filled table) only exists once its async
-   * load has actually finished. Omitted for pages with no such load
-   * (learn.html is static). */
+   * load has finished. Omitted for pages with no such load (learn.html is
+   * static). */
   waitForReady?: (page: Page) => Promise<unknown>;
 }
 
@@ -63,13 +63,13 @@ test('the packed manifest carries a token atlas (model.html depends on it)', () 
  * **Clipped.** `overflow-x: hidden` (or `clip`) establishes a clip box that is
  * not user-scrollable and does not contribute to ancestor scrollable overflow.
  * Content too wide for such a box is silently truncated mid-character with no
- * scrollbar — worse than the scrollbar the page-level assertion looks for, and
+ * scrollbar, worse than the scrollbar the page-level assertion looks for, and
  * structurally undetectable by it.
  *
  * **Painted off the left edge.** Leftward overflow never contributes to any
  * `scrollWidth`, so the page cannot be scrolled to it and no width assertion
- * anywhere can see it. A mispositioned full-bleed figure — a negative margin
- * or a `translateX` that nothing balances — puts real content at negative x
+ * anywhere can see it. A mispositioned full-bleed figure (a negative margin
+ * or a `translateX` that nothing balances) puts real content at negative x
  * and every gate stays green. This half of the sweep has no exemption for an
  * element's own `overflow-x`: an element cannot scroll itself into view.
  *

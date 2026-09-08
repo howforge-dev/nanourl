@@ -16,7 +16,7 @@ describe('createLatest', () => {
     const a = latest.begin();
     latest.cancel();
     expect(a.current).toBe(false);
-    // ...and the next claim is still valid — cancel is not a latch.
+    // ...and the next claim is still valid: cancel is not a latch.
     expect(latest.begin().current).toBe(true);
   });
 

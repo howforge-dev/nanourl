@@ -57,8 +57,8 @@
   }
 
   /** Escape cancels. Without it the only way to stop an auto-navigation that
-   * fires in ~2.1 s is to find and click `cancel` — the last element in DOM
-   * order — inside that window, while `Tab` walks the *background* Encode/
+   * fires in ~2.1 s is to find and click `cancel` (the last element in DOM
+   * order) inside that window, while `Tab` walks the *background* Encode/
    * Decode controls still in the tab order beneath an opaque overlay. That is
    * both an accessibility problem and a safety one. */
   function onKeydown(e: KeyboardEvent) {
@@ -93,7 +93,7 @@
       return;
     }
     target = r.url;
-    // decode is byte-exact, so a code can name any scheme — never auto-open
+    // decode is byte-exact, so a code can name any scheme; never auto-open
     // javascript:/data:/anything that isn't plain web
     if (!isHttp(r.url)) {
       note = 'not auto-opening a non-http(s) target; copy it only if you trust it';
@@ -154,7 +154,7 @@
     <!-- aria-live: the countdown ("redirecting in 2…"), the decoded target and
          any error are the only things that change here, and a screen-reader
          user must hear them before the navigation happens. `polite` rather
-         than `assertive` — it updates every 700 ms. -->
+         than `assertive`, because it updates every 700 ms. -->
     <div class="caption" id="redirect-note" data-testid={TESTID.redirectNote} aria-live="polite">{note}</div>
     {#if showBar}
       <div class="statuswrap">
@@ -186,7 +186,7 @@
   .lead { font-size: var(--fs-base); color: var(--dim); }
   .statuswrap { width: min(var(--m-dialog), 90%); }
   .statuswrap :global(#status) { margin-bottom: 0; text-align: center; }
-  /* The destination is what this screen is about — it is going to be opened
+  /* The destination is what this screen is about: it is going to be opened
      in a moment, and reading it is the one thing a visitor can do about
      that. Everything else on the overlay is quieter than it. */
   .target {
@@ -198,8 +198,8 @@
     max-width: var(--m-read);
   }
   .target:empty { display: none; }
-  /* A permanent status line, not a transient placeholder — .caption, not
-     .note (which the observatory's E2E treats as "still working"). Hidden
+  /* A permanent status line rather than a transient placeholder: .caption,
+     not .note (which the observatory's E2E treats as "still working"). Hidden
      while empty so it reserves no space before there is anything to say. */
   .caption:empty { display: none; }
   .code { font-family: var(--font-mono); color: var(--acc); }

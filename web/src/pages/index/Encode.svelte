@@ -92,10 +92,11 @@
     roundtripUrl = '';
     roundtrip = 'wait';
     // decode-back check; byte-identical or a loud failure.
-    // Compare against `u`, the string the user actually typed — not against
-    // `r.url`, the encoder's own echo of it. Comparing the codec's output to
-    // the codec's output cannot detect a codec that echoes something other
-    // than its input, which is exactly what "byte-identical" claims
+    // Compare against `u`, the string the user actually typed, rather than
+    // against `r.url`, the encoder's own echo of it. Comparing the codec's
+    // output to the codec's output cannot detect a codec that echoes
+    // something other than its input, which is exactly what "byte-identical"
+    // claims
 
     const d = await codec.decode(r.coded, myAlpha);
     if (!run.current) return;

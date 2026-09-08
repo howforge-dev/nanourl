@@ -9,9 +9,9 @@ import { CHUNK, chunkName, chunkPlan, hashName } from './pack-lib';
 import { ASSETS_JSON, PUBLIC_DIR } from './paths';
 
 // The commit the pack ran from, recorded in assets.json for provenance only.
-// A tree with no git history still has to pack — an export directory, an
-// unpacked tarball, a shallow copy into a container image — so an informational
-// stamp must never be the thing that fails the build.
+// A tree with no git history still has to pack (an export directory, an
+// unpacked tarball, a shallow copy into a container image), so an
+// informational stamp must never be the thing that fails the build.
 const gitRev = (): string => {
   try {
     return execSync('git rev-parse --short HEAD', { stdio: ['ignore', 'pipe', 'ignore'] })
@@ -44,7 +44,7 @@ function readPriorManifest(): Manifest | null {
 // re-runs `web:assets` with its own defaults, so without this check, an
 // operator who correctly ran `task web:assets ATLAS=atlas/atlas.bin` first
 // would have it overwritten by the very next command the README tells them
-// to run — and the observatory's flagship panel would then show end users a
+// to run, and the observatory's atlas panel would then show end users a
 // developer error message telling them to run a `task` command.
 const prior = readPriorManifest();
 if (!atlas && prior?.atlas) {
@@ -108,11 +108,11 @@ if (!manifest.atlas) {
 
 // The staleness trap this guards against: numbers.ts could describe one run
 // while web/public ships another, with identical
-// artifact_bytes hiding it — artifact size is a pure function of the config,
-// and two runs can share a config. numbers.ts records the artifact's digest,
-// so the two can be compared directly. Warn here — the pack legitimately
-// runs before `pnpm exec tsx scripts/numbers.ts` when a new artifact lands — and fail in
-// tests/assets-sync.test.ts, which is what actually gates a commit.
+// artifact_bytes hiding it (artifact size is a pure function of the config,
+// and two runs can share a config). numbers.ts records the artifact's digest,
+// so the two can be compared directly. Warn here, since the pack legitimately
+// runs before `pnpm exec tsx scripts/numbers.ts` when a new artifact lands, and fail in
+// tests/assets-sync.test.ts, which is what gates a commit.
 const numbersPath = 'src/lib/numbers.ts';
 if (existsSync(numbersPath)) {
   const m = /"artifactSha256":\s*"([0-9a-f]{64})"/.exec(readFileSync(numbersPath, 'utf8'));

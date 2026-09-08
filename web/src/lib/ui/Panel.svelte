@@ -9,10 +9,10 @@
    */
   export const FLASH_MS = 1400;
 
-  // ...and the CSS animation's duration comes from the same number. `.card.flash`
-  // lives in app.css (the observatory's intro card flashes without being a
-  // Panel), so the two could not simply share a declaration — but they can
-  // share a value. Set once, at module evaluation, before any flash can fire.
+  // ...and the CSS animation's duration comes from the same number.
+  // `.card.flash` lives in app.css (the observatory's intro card flashes
+  // without being a Panel), so the two share a value rather than a
+  // declaration. Set once, at module evaluation, before any flash can fire.
   if (typeof document !== 'undefined') {
     document.documentElement.style.setProperty('--flash-ms', `${FLASH_MS}ms`);
   }
@@ -43,9 +43,9 @@
     /** The sub-heading under the title; hidden by CSS while collapsed. */
     sub,
     children,
-    /** Run after the panel has opened and been scrolled to, before the flash —
-     *  the attention panel additionally scrolls its own inner layer strip to
-     *  the selected layer. */
+    /** Run after the panel has opened and been scrolled to, before the flash;
+     *  the attention panel also scrolls its own inner layer strip to the
+     *  selected layer. */
     afterFocus,
   }: {
     title: string;
@@ -64,8 +64,8 @@
    *
    * The `flash = false` / read `offsetWidth` / `flash = true` dance restarts
    * the CSS animation: without the forced reflow between them the class never
-   * actually leaves the element as far as the style engine is concerned, so a
-   * second jump to an already-flashed panel animates nothing. */
+   * leaves the element as far as the style engine is concerned, so a second
+   * jump to an already-flashed panel animates nothing. */
   export async function focus(): Promise<void> {
     open = true;
     await tick();

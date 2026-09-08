@@ -3,9 +3,9 @@
 //!   model         = BPE, rank-ordered merges, no byte fallback, no normalizer
 //! The Split regex, in alternative order:  https?://  |  %[0-9A-Fa-f]{2}  |  one
 //! of  ! # $ % & ' ( ) * + , - . / : ; = ? @ [ \ ] ^ _ ` { | } ~
-//! Pieces are tokenized independently — a merge never crosses a piece boundary —
-//! which is what makes the tokens line up with URL structure. Byte-exact
-//! round-trip is a hard requirement: the codec is lossless or it is nothing.
+//! Pieces are tokenized independently (a merge never crosses a piece
+//! boundary), which is what makes the tokens line up with URL structure.
+//! Byte-exact round-trip is a hard requirement.
 
 use std::collections::HashMap;
 

@@ -7,8 +7,8 @@ import type * as T from './types';
 
 export interface LoadOptions {
   /** Override the feature-detected tier (`detectTier()`'s result) instead of
-   * probing the browser — used by the bench page's `?tier=`/`&w=` query
-   * params to force a specific wasm build + worker count for measurement. */
+   * probing the browser. The bench page's `?tier=`/`&w=` query params use
+   * this to force a specific wasm build + worker count for measurement. */
   tier?: { relaxed: boolean; threads: number };
   /**
    * Called when a mid-session tier-3 fault has been handled: `next` is the
@@ -18,7 +18,7 @@ export interface LoadOptions {
    * The recovery itself is this class's job (it owns the worker and the
    * memory that have to be thrown away, and it is where the failed request is
    * replayed). This hook exists so the page can move its own reference and
-   * re-render the status line — see `codecState.svelte.ts`.
+   * re-render the status line; see `codecState.svelte.ts`.
    */
   onThreadFault?: (next: Codec | null) => void;
 }
@@ -34,9 +34,9 @@ const DEAD: T.Fail = { ok: false, error: 'the codec worker is gone; reload the p
 const POISON_DEAD: T.Fail = { ok: false, error: THREAD_FAULT_UNRECOVERED };
 
 // SELF_TEST_URL (src/lib/examples.ts) is encoded once right after `codec_init`
-// succeeds, before `load()` hands the codec to its caller — it confirms a
-// codec that compiled and initialized fine can actually do real work. Catches
-// the "first-encode error" failure mode (e.g. a subtly broken threads dispatch
+// succeeds, before `load()` hands the codec to its caller. It confirms that a
+// codec which compiled and initialized fine can do work. This catches the
+// "first-encode error" failure mode (e.g. a subtly broken threads dispatch
 // that only shows up once real jobs run, not during setup) so it degrades the
 // tier exactly like every other load-time failure below, instead of surfacing
 // as a mysterious error on the visitor's first real encode.
@@ -46,16 +46,16 @@ const POISON_DEAD: T.Fail = { ok: false, error: THREAD_FAULT_UNRECOVERED };
  *
  * `handshake` makes the first spawned compute worker skip its ready
  * message (worker.ts/compute-worker.ts), so the coordinator's 'finish'
- * handshake wait times out with compute workers already spawned and spinning
- * — the scenario that stays untested without it (the
- * existing threads-tier-failure E2E instead aborts the mt wasm's own download,
- * which fails before any compute worker exists).
+ * handshake wait times out with compute workers already spawned and
+ * spinning. That scenario stays untested without it (the existing
+ * threads-tier-failure E2E instead aborts the mt wasm's own download, which
+ * fails before any compute worker exists).
  *
  * `poison` makes the coordinator answer the first codec call AFTER
  * the load's own self-test with the wasm's poison result verbatim, exercising
  * the mid-session tier-3 fault path: terminate, drop the shared memory, reload
  * without threads, replay. It is a short-circuit in worker.ts rather than a
- * real fault because a real one cannot be provoked from JS at all — it needs a
+ * real fault because a real one cannot be provoked from JS at all: it needs a
  * compute worker to be descheduled past the bounded join, and a page cannot
  * terminate a worker it did not spawn, let alone stall one. The value being
  * tested is the CLIENT's response to the documented reply, and that is what a
@@ -89,16 +89,16 @@ export class Codec {
    * and returns an immediate failure.
    *
    * Without it, `postMessage` to a terminated worker is silently dropped and
-   * the returned promise — which has no rejection path and no timeout — never
+   * the returned promise (which has no rejection path and no timeout) never
    * settles. On mobile, where the browser kills the coordinator under memory
    * pressure after a successful load, the in-flight decode rejected cleanly
    * and the user saw an error; the *next* action (switch to the Encode tab,
    * type) then hung forever with the spinner running and the status line
    * still reading "model ready". */
   private dead = false;
-  /** Name of the wasm asset actually fetched for this load (one of
-   * manifest.wasm / wasmRelaxed / wasmMt) — lets the UI report which file is
-   * really running instead of assuming the portable simd128 build. */
+  /** Name of the wasm asset fetched for this load (one of manifest.wasm /
+   * wasmRelaxed / wasmMt), so the UI can report which file is running instead
+   * of assuming the portable simd128 build. */
   private readonly ownWasmName: string;
   get wasmName(): string {
     return this.successor ? this.successor.wasmName : this.ownWasmName;
@@ -109,10 +109,10 @@ export class Codec {
    * ready handshake timing out, or the post-load self-test encode above).
    * Names the tier that failed (`"threads"` or `"relaxed"`); `null` on a
    * clean first-attempt load. Pages show this so a degraded load is never
-   * silent — see index/App.svelte's and dream/App.svelte's `statusText`.
+   * silent; see index/App.svelte's and dream/App.svelte's `statusText`.
    *
    * Also set to `"threads"` after a mid-session tier-3 fault, with
-   * `degradedAfterFault` distinguishing the two — "failed to load" and
+   * `degradedAfterFault` distinguishing the two: "failed to load" and
    * "faulted while running" are different things to tell a visitor. */
   private readonly ownDegradedFrom: string | null;
   get degradedFrom(): string | null {
@@ -126,10 +126,10 @@ export class Codec {
     return this.successor ? this.successor.degradedAfterFault : this.ownDegradedAfterFault;
   }
 
-  /** How the assets got here — total bytes, wall clock, and whether every one
+  /** How the assets got here: total bytes, wall clock, and whether every one
    * of them was a Cache API hit. The status line says which, because "125 MB
    * in 7 s" and "125 MB from cache in 0.3 s" are the two experiences a
-   * visitor can actually tell apart, and the old line said neither. */
+   * visitor can tell apart. */
   private readonly ownLoadStats: LoadStats;
   get loadStats(): LoadStats {
     return this.successor ? this.successor.loadStats : this.ownLoadStats;
@@ -139,13 +139,13 @@ export class Codec {
    * Set once a tier-3 fault has been recovered from: the instance every call
    * on this object is forwarded to.
    *
-   * A page — and the bench page especially — holds the `Codec` it was handed
+   * A page (the bench page especially) holds the `Codec` it was handed
    * at load time and keeps calling it. Recovery has to build a *new* instance
    * (the poisoned one cannot be rebuilt over: `codec_init` returns 6 for any
    * `threads` value), so the old object stays as a forwarder rather than
    * every caller being asked to notice a swap. `info`, `degradedFrom` and the
    * rest are getters for the same reason: a caller re-reading `info.kernel`
-   * after a fault must see the kernel that is actually running.
+   * after a fault must see the kernel that is running.
    */
   private successor: Codec | null = null;
   /** In-flight recovery, so concurrent poisoned replies share one rebuild
@@ -185,14 +185,14 @@ export class Codec {
 
   /**
    * Load the codec. The threads tier must degrade, never fail the whole app:
-   * any problem loading it — a `WebAssembly.Memory` allocation that throws,
-   * a compute worker that fails to spawn or instantiate, a build missing an
+   * any problem loading it (a `WebAssembly.Memory` allocation that throws, a
+   * compute worker that fails to spawn or instantiate, a build missing an
    * export the coordinator relies on, the ready handshake timing out, or the
-   * post-load self-test encode above failing — retries once with threads
+   * post-load self-test encode above failing) retries once with threads
    * forced off (landing on relaxed if available, else the portable simd128
    * build every manifest has). A relaxed-tier failure degrades once more, to
    * simd. Simd itself has nowhere left to fall back to, so only a simd
-   * failure actually rejects this promise.
+   * failure rejects this promise.
    */
   static async load(onProgress: (p: T.Progress) => void, opts: LoadOptions = {}): Promise<Codec> {
     const requested = opts.tier ?? detectTier();
@@ -219,7 +219,7 @@ export class Codec {
         onProgress({ fraction: 0, text: `relaxed tier failed (${message}), retrying on portable simd128…` });
         return Codec.attemptWithFallback(onProgress, opts, { relaxed: false, threads: 0 }, 'relaxed', afterFault);
       }
-      throw err; // simd itself failed — nothing left to degrade to
+      throw err; // simd itself failed; nothing left to degrade to
     }
   }
 
@@ -253,7 +253,7 @@ export class Codec {
     w.onerror = w.onmessageerror = (e: ErrorEvent | MessageEvent) => {
       const message = 'message' in e && e.message ? e.message : 'crashed';
       // a worker that fired 'error'/'messageerror' has nothing left to give a
-      // reply to any pending RPC — terminate rather than leave it dangling
+      // reply to any pending RPC, so terminate rather than leave it dangling
       died = true;
       onDeath();
       w.terminate();
@@ -261,13 +261,13 @@ export class Codec {
     };
 
     // Handshake with the worker (see worker.ts's header comment): 'setup' (id
-    // 1) hands over the wasm bytes the moment they land — well before the
-    // model chunks are done — so compile+instantiate overlaps the download
+    // 1) hands over the wasm bytes the moment they land, well before the
+    // model chunks are done, so compile+instantiate overlaps the download
     // instead of following it. Chunks that arrive before the worker's reply
     // (it owns wasm memory and must exist before the first byte lands there)
     // are queued by the gate and flushed the instant setup succeeds; if setup
-    // fails instead, the gate is discarded — permanently — and a broken
-    // worker never receives a chunk/tokenizer send.
+    // fails instead, the gate is discarded permanently and a broken worker
+    // never receives a chunk/tokenizer send.
     //
     // Both live outside the `try` so the catch below can shut them down: any
     // failure at all must stop the download and stop queueing for a worker
@@ -293,20 +293,20 @@ export class Codec {
         abort.abort();
       };
 
-      // Race, don't sequence. Awaiting `loadStreaming` to
-      // completion before the 'setup' reply was even looked at — and setup
-      // typically fails within a second of the wasm arriving (the threads
-      // tier's 1 GiB shared-memory reservation is the common case). So a
-      // phone that could not have the threads tier still downloaded all ~125
-      // MiB of a model it was about to discard, then re-downloaded it for the
-      // relaxed attempt if `caches` was unavailable or quota-capped — with the
-      // progress bar restarting at 0%. The recovery path was more likely to
-      // OOM-kill the tab than the original failure.
+      // Race, don't sequence. Setup typically fails within a second of the
+      // wasm arriving (the threads tier's 1 GiB shared-memory reservation is
+      // the common case). Awaiting `loadStreaming` to completion before the
+      // 'setup' reply is looked at would make a phone that cannot have the
+      // threads tier download all ~125 MiB of a model it is about to discard,
+      // then download it again for the relaxed attempt if `caches` is
+      // unavailable or quota-capped, with the progress bar restarting at 0%.
+      // That path is more likely to OOM-kill the tab than the original
+      // failure.
       // Rejects on a failed setup and otherwise stays PENDING FOREVER. It
       // must never resolve: `Promise.race` settles on the first settled
       // promise, resolved or rejected, so a `setupReply.then(...)` that
       // resolves on success would win the race the instant the wasm landed
-      // and let 'finish' — and with it codec_init — run over a model still
+      // and let 'finish' (and with it codec_init) run over a model still
       // being downloaded (rc 2 "bad model", or rc 3 when the tokenizer had
       // not arrived either).
       const setupFailure = new Promise<never>((_, reject) => {
@@ -352,9 +352,9 @@ export class Codec {
         w.postMessage({ id: 2, op: 'finish' });
       });
       if (!info.ok) throw new Error(info.error);
-      // `codec_info` answers on a poisoned instance — that is the whole point
-      // of it being outside `with_codec`'s gate — so a load can "succeed"
-      // against a codec that will refuse the very first encode. Treat it as
+      // `codec_info` answers on a poisoned instance, because it sits outside
+      // `with_codec`'s gate, so a load can "succeed" against a codec that
+      // will refuse the very first encode. Treat it as
       // this attempt failing, which puts it through the same degrade chain as
       // every other threads-tier failure below.
       if (infoThreadFault(info)) {
@@ -362,8 +362,8 @@ export class Codec {
       }
 
       // Self-test: see SELF_TEST_URL's comment. Uses id 3 directly (this
-      // runs before the Codec object — and its rpc()-driven id counter —
-      // exists), so the constructed Codec must start its own counter above 3.
+      // runs before the Codec object and its rpc()-driven id counter exist),
+      // so the constructed Codec must start its own counter above 3.
       const selfTest: T.EncodeResult | T.Fail = await new Promise((res) => {
         pending.set(3, res);
         w.postMessage({ id: 3, op: 'enc', str: SELF_TEST_URL, alpha: 1 });
@@ -382,7 +382,7 @@ export class Codec {
     } catch (err) {
       // A failure downloading, in 'setup', 'finish', or the self-test above
       // leaves a coordinator worker (and, in the mt build, the compute
-      // workers it spawned off its memory — terminating the parent takes
+      // workers it spawned off its memory; terminating the parent takes
       // them with it) with nothing left to do; don't leak it, and don't
       // leave any pending RPC unresolved. The caller (attemptWithFallback)
       // decides whether this failure degrades to a lower tier or is final.
@@ -397,7 +397,7 @@ export class Codec {
   /** Post one message to this instance's own worker and await its reply. */
   private send<R>(msg: object): Promise<R> {
     // A postMessage to a terminated worker is silently dropped, and the
-    // promise below has no rejection path and no timeout — so without this
+    // promise below has no rejection path and no timeout, so without this
     // guard every call after a worker death hangs forever. See `dead`.
     if (this.dead) return Promise.resolve(DEAD as R);
     return new Promise((res) => {
@@ -414,7 +414,7 @@ export class Codec {
    * everything and can never be rebuilt (see poison.ts). So on the first such
    * reply this instance is thrown away, a fresh one is loaded off the
    * shared-memory path, and the request that hit the fault is replayed once on
-   * it — the visitor sees a slower answer, not an error. Every later call on
+   * it: the visitor sees a slower answer, not an error. Every later call on
    * this object is forwarded to the replacement.
    */
   private async rpc<R>(msg: object): Promise<R> {
@@ -437,7 +437,7 @@ export class Codec {
         return r;
       case 'recover': {
         const next = await this.recoverFromThreadFault();
-        // Replay ONCE, and through `send`, not `rpc` — so a replacement that
+        // Replay ONCE, and through `send`, not `rpc`, so a replacement that
         // somehow poisoned too could never recover again, which on a
         // non-threaded build could only loop.
         return next ? next.send<R>(msg) : r;
@@ -450,8 +450,8 @@ export class Codec {
   }
 
   /** `this.recovery`, read through a call so the narrowing from `rpc`'s early
-   *  guard does not survive the `await` in between — a sibling can set it
-   *  while this call is in flight, which is the whole point. */
+   *  guard does not survive the `await` in between: a sibling can set it while
+   *  this call is in flight. */
   private inFlightRecovery(): Promise<Codec | null> | null {
     return this.recovery;
   }
@@ -461,9 +461,9 @@ export class Codec {
    *
    * Terminating the coordinator takes its compute workers with it (the HTML
    * spec's "terminate a worker" algorithm cascades), and dropping the last
-   * reference to the worker drops the `WebAssembly.Memory` they shared — which
-   * is the whole requirement: a straggler may still be writing into that
-   * memory, and `codec_init` refuses to rebuild over it at ANY width.
+   * reference to the worker drops the `WebAssembly.Memory` they shared, which
+   * is the requirement: a straggler may still be writing into that memory,
+   * and `codec_init` refuses to rebuild over it at ANY width.
    *
    * Memoized, so several calls that all come back poisoned share one rebuild.
    */
@@ -517,18 +517,18 @@ export class Codec {
   /** Tear down the coordinator worker (and, per the HTML spec's "terminate a
    * worker" algorithm, any compute workers it spawned off shared memory in
    * the mt build). Used by the bench page when switching tiers, so an old
-   * tier's workers don't keep running — and keep holding onto a ~1 GiB
-   * shared memory — after a new one has loaded. Fails every RPC still
-   * awaiting a reply instead of leaving it dangling, same as the onerror
-   * path above — a caller that terminates mid-RPC (the bench page's "run
-   * all tiers" is one `await` away from this) still gets a settled promise. */
+   * tier's workers don't keep running, and keep holding onto a ~1 GiB shared
+   * memory, after a new one has loaded. Fails every RPC still awaiting a
+   * reply instead of leaving it dangling, same as the onerror path above: a
+   * caller that terminates mid-RPC (the bench page's "run all tiers" is one
+   * `await` away from this) still gets a settled promise. */
   terminate(): void {
     this.successor?.terminate();
     this.terminateOwn();
   }
 
-  /** Tear down only this instance's own worker, leaving any successor alone —
-   *  what recovery needs, since the successor is what replaces it. */
+  /** Tear down only this instance's own worker, leaving any successor alone,
+   *  which is what recovery needs, since the successor is what replaces it. */
   private terminateOwn(): void {
     this.dead = true;
     for (const res of this.pending.values()) res({ ok: false, error: 'terminated' });

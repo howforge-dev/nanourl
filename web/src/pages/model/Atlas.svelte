@@ -1,5 +1,5 @@
 <script module lang="ts">
-  // Classification taxonomy for atlas colouring — regex on the piece's
+  // Classification taxonomy for atlas colouring: regex on the piece's
   // display text, first match wins. A fixed list, not derived from the
   // current example: a piece's class never changes as you type a different
   // URL, only which points get a blue "in this URL" ring.
@@ -27,7 +27,7 @@
   // GPT-2's byte<->unicode table (HF's ByteLevel pretokenizer alphabet):
   // printable bytes map to themselves, the rest to codepoints 256, 257, ...
   // in ascending byte order. Needed to turn tokenizer.json's stored piece
-  // strings back into display text — independent of the wasm codec, since
+  // strings back into display text, independent of the wasm codec, since
   // the atlas needs every vocab id's piece, not just the current URL's.
   function byteDecoder(): (tok: string) => string {
     const printable = new Set<number>();
@@ -66,7 +66,7 @@
 
   // assets.json's shape is inferred from whatever the file currently
   // contains (it's regenerated per-environment by `task web:assets` and
-  // gitignored) — assert the stable contract instead of trusting that
+  // gitignored), so assert the stable contract instead of trusting that
   // literal inference, matching loader.ts's own cast of the same import.
   const manifest = rawManifest as Manifest;
   import type { TooltipApi } from './Tooltip.svelte';
@@ -156,7 +156,7 @@
         }
       }
       classes = cls;
-      // <u16 x, u16 y> per token, in id order — anything else is a stale or
+      // <u16 x, u16 y> per token, in id order; anything else is a stale or
       // mismatched atlas.bin (wrong vocab, truncated download) and must not
       // be silently truncated/reinterpreted into a wrong-looking scatter.
       const expectedBytes = info.vocab * 4;

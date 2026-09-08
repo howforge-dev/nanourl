@@ -49,10 +49,10 @@
   let wpeRef: Focusable | undefined = $state();
   let attnRef: Focusable | undefined = $state();
   // Residual has no incoming cross-link (architecture has no "residual
-  // stream" pipeline row to click — the residual stream is reached by
-  // scrolling, not a goto), so it has no
-  // `Focusable` ref here; it still exports `focus()` for interface
-  // consistency with the other panels, just uncalled.
+  // stream" pipeline row to click; the residual stream is reached by
+  // scrolling rather than a goto), so it has no `Focusable` ref here; it
+  // still exports `focus()` for interface consistency with the other panels,
+  // uncalled.
   let readoutRef: Focusable | undefined = $state();
   let coderRef: Focusable | undefined = $state();
   let bitsRef: Focusable | undefined = $state();
@@ -88,7 +88,7 @@
     // bits->characters panel's six-bit story is base64url-specific.
     const e = await codec.encode(u, DEFAULT_ALPHABET);
     if (!run.current) {
-      busy = false; // a newer run superseded this one — don't leave the spinner stuck
+      busy = false; // a newer run superseded this one; don't leave the spinner stuck
       return;
     }
     busy = false;
@@ -130,7 +130,7 @@
 
   /** The intro card is not a Panel (it holds the URL input, not a
    *  `<details>`), but it flashes the same way when the architecture table
-   *  jumps to it — same animation, same duration. */
+   *  jumps to it: same animation, same duration. */
   let introFlashTimer: ReturnType<typeof setTimeout> | undefined;
   function flashIntro(): void {
     introFlash = false;

@@ -7,18 +7,17 @@
       hand-types `#30363d`, `8px` or `13px` is a defect: the value is then
       spelled in two places and only one of them is a decision.
    2. Rules whose MARKUP comes from a caller rather than from the component
-      that styles them — `.card`, `.facts`/`dt`/`dd`, `.note`, `.stat`, the
+      that styles them: `.card`, `.facts`/`dt`/`dd`, `.note`, `.stat`, the
       colour utilities, `.mono`. Svelte scopes a component's CSS to the
       elements in that component's own template, so a rule whose subject is
       written by a caller (or built as an `{@html}` string) cannot be scoped
       and has to be global.
 
-   Everything else — a button's chrome, an input's border, a chip, a scroller,
-   a callout — lives in its primitive in lib/ui/ with the markup it describes.
-   Eleven scoped copies of `.note`/`.hint` had drifted into five different
-   sizes for one idea, and two scoped copies of `.err` dropped its
-   `word-break`, which is the exact protection e2e/overflow.spec.ts exists to
-   enforce. */
+   Everything else (a button's chrome, an input's border, a chip, a scroller,
+   a callout) lives in its primitive in lib/ui/ with the markup it describes.
+   A scoped copy of `.note`/`.hint` drifts into its own size for one idea, and
+   a scoped copy of `.err` can drop its `word-break`, which is the exact
+   protection e2e/overflow.spec.ts exists to enforce. */
 :root {
   /* --- colour -----------------------------------------------------------
      Surfaces darkest-to-lightest: --bg (the page) < --card (a panel on it)
@@ -70,9 +69,9 @@
      4 px steps, doubling from --s-4. Off-scale spacing is what made two
      bordered panels 3 px apart read as misalignment rather than as two
      deliberate groups. */
-  /* The one sub-step. A 4px grid is too coarse for an optical nudge — the
-     2px a heading sits off its baseline, the inset that keeps a disclosure's
-     text off its own border — and rounding those to 0 or 4 is visible. */
+  /* The one sub-step. A 4px grid is too coarse for an optical nudge (the 2px
+     a heading sits off its baseline, the inset that keeps a disclosure's text
+     off its own border), and rounding those to 0 or 4 is visible. */
   --s-half: 2px;
   --s-1: 4px;
   --s-2: 8px;
@@ -111,7 +110,7 @@
 
   /* --- layout ------------------------------------------------------------
      Two column widths, and the page gutter beside them. `--col-text` is a
-     reading measure — prose, a form, a result. `--col-wide` is for a page
+     reading measure: prose, a form, a result. `--col-wide` is for a page
      whose content is canvases and tables rather than sentences.
      `--col` is whichever this page uses; `body.wide` below switches it, from
      the page record's `width` (lib/pages.ts) via the generated entry HTML, so
@@ -120,7 +119,7 @@
      it however the page is scrolled. */
   /* Worst-case width of a classic scrollbar. `100vw` INCLUDES it, so any rule
      that sizes against the viewport has to subtract it or overflow a tall page
-     by that much — invisibly under headless Chromium's overlay scrollbars,
+     by that much, invisibly under headless Chromium's overlay scrollbars,
      which is where the e2e suite runs. Wrong only in the safe direction. */
   --sb: 16px;
   --col-text: 880px;
@@ -172,7 +171,7 @@ h1 span { color: var(--acc); }
 h1 svg { width: var(--logo); height: var(--logo); flex: none; margin-right: var(--s-2); }
 
 /* ---------------------------------------------------------------------------
-   The bordered surface, declared once. `.surface` is the decoration alone —
+   The bordered surface, declared once. `.surface` is the decoration alone,
    for the things that are a surface without being a card: the learn page's
    figures and its math boxes, which are a <div> that scrolls and a <details>,
    neither of which can be a Card. `.card` adds the padding and rhythm and is
@@ -180,12 +179,12 @@ h1 svg { width: var(--logo); height: var(--logo); flex: none; margin-right: var(
 
    No `overflow: hidden` on `.card`, deliberately. It establishes a clip box
    that is not user-scrollable and does not contribute to ancestor scrollable
-   overflow — and every interactive surface on /, /dream.html, /model.html and
+   overflow, and every interactive surface on /, /dream.html, /model.html and
    /bench.html lives inside a .card. With it, every
    `documentElement.scrollWidth` assertion in e2e/ is structurally unable to
    fail: content too wide for a card is silently TRUNCATED mid-character with
    no scrollbar, which is worse than the scrollbar the tests look for.
-   e2e/overflow.spec.ts additionally sweeps every element for
+   e2e/overflow.spec.ts also sweeps every element for
    `scrollWidth > clientWidth`, so a clip is caught wherever it is
    introduced.
    ------------------------------------------------------------------------ */
@@ -203,7 +202,7 @@ h1 svg { width: var(--logo); height: var(--logo); flex: none; margin-right: var(
    Controls.
 
    `.well` is the sunken surface: a box cut INTO the page rather than raised
-   off it — an input, a chip, a result box, one row of a list. The fill and the
+   off it: an input, a chip, a result box, one row of a list. The fill and the
    hairline are shared; the radius and padding are the caller's, because a chip
    is not an input.
 
@@ -242,14 +241,14 @@ h1 svg { width: var(--logo); height: var(--logo); flex: none; margin-right: var(
    still emitted, so every button's class list names its variant and a caller
    can address one without knowing which of them happens to be the default. */
 .btn-primary { background: var(--acc); border-color: var(--acc); color: var(--ink); font-weight: 600; }
-/* A ghost carries its border only under the pointer: reachable and obviously
-   focusable without competing with the real action beside it. */
+/* A ghost carries its border only under the pointer: reachable and visibly
+   focusable without competing with the primary action beside it. */
 .btn-ghost { border-color: transparent; }
 .btn-ghost:hover:not(:disabled) { color: var(--txt); border-color: var(--line); }
 /* A row of a diagram: the page-coloured well (add `.well`) with readable text
    rather than a button's quiet label. */
 .btn-well { color: var(--txt); }
-/* No chrome at all — a coloured segment, a tape slice: it carries its own
+/* No chrome at all (a coloured segment, a tape slice): it carries its own
    paint and needs only the cursor and the shared focus ring. */
 .btn-bare { background: none; border: 0; border-radius: 0; padding: 0; }
 /* A link that must sit beside buttons: still a link, so it answers to hover. */
@@ -276,11 +275,11 @@ summary:focus-visible {
   outline-offset: var(--ring-offset);
 }
 
-/* One horizontal scroller, named. Eight one-off `overflow-x: auto` wrappers
-   each had their own id or class, so e2e/overflow.spec.ts had to walk the
-   ancestor chain generically to find out whether over-wide content was
-   reachable. lib/ui/ScrollBox.svelte emits this; the learn page's figures
-   compose it onto their own surface. */
+/* One horizontal scroller, named. A one-off `overflow-x: auto` wrapper carries
+   its own id or class, which leaves e2e/overflow.spec.ts walking the ancestor
+   chain generically to find out whether over-wide content is reachable.
+   lib/ui/ScrollBox.svelte emits this; the learn page's figures compose it onto
+   their own surface. */
 .scroller { overflow-x: auto; max-width: 100%; }
 
 /* A figure that must not be held to the reading measure: it grows toward the
@@ -299,23 +298,23 @@ summary:focus-visible {
    phone it is exactly full-bleed rather than inset); and never past the
    viewport less the gutters and `--sb`.
 
-   `--sb` is why this is not simply `100vw`: `vw` INCLUDES the classic
+   `--sb` is why this is not `100vw`: `vw` INCLUDES the classic
    scrollbar, so on a tall page a `100vw`-wide element overflows the viewport
    by the scrollbar's width. Headless Chromium draws overlay scrollbars, where
-   the two agree — so e2e/overflow.spec.ts would pass and every desktop
+   the two agree, so e2e/overflow.spec.ts would pass and every desktop
    visitor would get a horizontally scrolling page. A worst-case allowance
    costs at most a few pixels of figure and cannot be wrong in that
    direction. */
-/* `.breakout.breakout`, not `.breakout`: the offset below is the whole point
-   of the rule, and a single-class rule in any later stylesheet — a figure's
-   own `margin` shorthand, a utility — resets it silently. Doubling the class
+/* `.breakout.breakout`, not `.breakout`: the offset below is what the rule
+   exists for, and a single-class rule in any later stylesheet (a figure's
+   own `margin` shorthand, a utility) resets it silently. Doubling the class
    raises specificity to (0,2,0) without naming an ancestor or an element, so
    the offset survives whatever else the page's own CSS says. */
 .breakout.breakout {
   /* `--breakout-max` is the cap a figure may lower: a breakout is only ever as
      wide as its content needs, and content that stops short of `--col-wide`
      reads as a sparse strip in an over-wide card. Lowering the cap keeps the
-     three bounds below — and the centring — intact; setting `width` would not. */
+     three bounds below and the centring intact; setting `width` would not. */
   --breakout-w: min(
     var(--breakout-max, calc(var(--col-wide) - 2 * var(--gutter))),
     max(calc(100% + 2 * var(--gutter)), calc(100vw - 2 * var(--gutter) - var(--sb)))
@@ -325,8 +324,8 @@ summary:focus-visible {
   /* Centred with a half-margin and a half-width translate, not
      `calc(50% - var(--breakout-w) / 2)`: dividing a substituted custom
      property whose value is a `min()`/`max()` of mixed units makes the whole
-     declaration invalid at computed-value time, and it drops to 0 — the
-     figure then hangs off the right edge with no warning. `translateX(-50%)`
+     declaration invalid at computed-value time, and it drops to 0; the figure
+     then hangs off the right edge with no warning. `translateX(-50%)`
      is a percentage of the element's own width, so nothing is divided, and
      the scrollable overflow region is measured from the transformed box. */
   margin-left: 50%;
@@ -350,13 +349,13 @@ summary:focus-visible {
 @keyframes blink { 50% { opacity: .2; } }
 
 /* ---------------------------------------------------------------------------
-   Disclosure. ONE marker for every <details> on the site — the compressor's
+   Disclosure. ONE marker for every <details> on the site: the compressor's
    advanced section, the observatory's eight panels, the learn page's math
    boxes. A chevron drawn from two borders (no glyph, so it can't shift with
    the font), 0.62em square inside a 1em box, rotating 90deg on open. The
    browser's own marker is suppressed in both engines so it can never double
-   up; suppressing it without drawing a replacement is what made the
-   compressor's "advanced" line read as a caption rather than a control.
+   up; suppressing it without drawing a replacement leaves the compressor's
+   "advanced" line reading as a caption rather than a control.
    ------------------------------------------------------------------------ */
 details { margin-top: var(--s-3); }
 summary {
@@ -391,7 +390,7 @@ summary:hover { color: var(--acc); }
 
 /* white-space:nowrap + flex-shrink:0 on every child: a row is naturally
    ~500px wide (rank + 24ch piece + bar + prob/bits text) and must never wrap
-   or squeeze at a narrow viewport — it scrolls horizontally inside its own
+   or squeeze at a narrow viewport; it scrolls horizontally inside its own
    virtualized list instead (see VirtualList.svelte's `overflow: auto`). */
 .drow { display: flex; align-items: center; gap: var(--s-2); font: var(--fs-xs) var(--font-mono); padding: var(--s-half) 0; white-space: nowrap; }
 .drow > * { flex-shrink: 0; }
@@ -408,14 +407,14 @@ a { color: var(--acc); }
 /* ---------------------------------------------------------------------------
    Two kinds of small dim text, and they are not the same kind.
 
-   `.note` is a TRANSIENT placeholder — "select a token above…", "computing…",
-   "loading atlas…" — shown while a panel's first-open work is in flight and
+   `.note` is a TRANSIENT placeholder ("select a token above…", "computing…",
+   "loading atlas…") shown while a panel's first-open work is in flight and
    replaced by real content (or an `.err`) when it settles. That makes it
    behaviour, not decoration: e2e/model.smoke.spec.ts waits for
    `.note` to reach count 0 as each panel's "settled" signal, so a permanent
    caption must never wear this class.
 
-   `.caption` is that permanent caption — an explainer under a control, a
+   `.caption` is that permanent caption: an explainer under a control, a
    legend over a canvas. It has one name and one size: spelled `.hint` in one
    component and `.note` in the next, the two ideas merge and the wait above
    starts timing out on a caption.
@@ -423,20 +422,19 @@ a { color: var(--acc); }
 .note { color: var(--dim); font-size: var(--fs-sm); margin-top: var(--s-2); }
 .caption { color: var(--dim); font-size: var(--fs-xs); line-height: 1.5; margin-top: var(--s-2); }
 
-/* Colour-only utilities: paint this run of text with a token. Ten scoped
-   re-declarations before, one of which quietly added a font-size. Global (not
+/* Colour-only utilities: paint this run of text with a token. Global (not
    scoped) because several are applied to markup built as `{@html}` strings,
    which a component's scoped rules cannot reach.
 
    `warn-text`, not `warn`, because that one word is ALSO the natural name for
-   a warning VARIANT of a component, and making it global collided with exactly
+   a warning VARIANT of a component, and making it global collides with exactly
    that: the learn page's `<Callout tone="warn">` recolours the box's left bar,
-   and a global `.warn` repainted the whole callout body amber
-   The rest are safe only because every element that
-   wears one as a modifier is covered by a compound rule that outranks it
-   — `.ival .slice.dim` (CoderStepper), `.cell.dim` and `.cell .ch.acc`
-   (BitsChars) — or has no direct text of its own. Adding a `.card.ok` would
-   be the same bug again; give the modifier its own name. */
+   and a global `.warn` would repaint the whole callout body amber. The rest
+   are safe only because every element that wears one as a modifier is covered
+   by a compound rule that outranks it (`.ival .slice.dim` in CoderStepper,
+   `.cell.dim` and `.cell .ch.acc` in BitsChars) or has no direct text of its
+   own. Adding a `.card.ok` would be the same bug again; give the modifier its
+   own name. */
 .ok { color: var(--ok); }
 .warn-text { color: var(--warn); }
 .bad { color: var(--bad); }
@@ -445,20 +443,19 @@ a { color: var(--acc); }
 .txt { color: var(--txt); }
 
 /* Same reason `.ok` and friends are global: CoderStepper reaches this through
-   `{@html}`. `overflow-wrap: anywhere` is part of the recipe, not an extra —
-   a monospace run is exactly the content that does not wrap on its own, and
+   `{@html}`. `overflow-wrap: anywhere` is part of the recipe: a monospace run
+   is exactly the content that does not wrap on its own, and
    `.mono` is what the observatory puts a full URL context in. */
 .mono { font-family: var(--font-mono); overflow-wrap: anywhere; }
 
-/* The inner bordered panel — a table or a canvas inside a .card. Byte-
-   identical in Dist.svelte and Readout.svelte before; the VirtualList inside
-   each carries its own height and scrolling, this is only the decoration
-   around it. */
+/* The inner bordered panel: a table or a canvas inside a .card. Dist.svelte
+   and Readout.svelte share it; the VirtualList inside each carries its own
+   height and scrolling, this is only the decoration around it. */
 .box { margin-top: var(--s-2); border: var(--border); border-radius: var(--r-4); overflow: hidden; }
 
 /* A heatmap canvas: never smoothed (each cell is one datum), never inline
    (an inline canvas sits on the text baseline and leaves a descender gap
-   under it). Four byte-identical copies across the observatory's panels. */
+   under it). Shared by four of the observatory's panels. */
 canvas.attn { border-radius: var(--r-2); image-rendering: pixelated; display: block; }
 
 /* Axis and tick labels inside the observatory's inline SVGs. learn.css sets
@@ -473,8 +470,8 @@ svg text { font: var(--fs-micro) var(--font-mono); fill: var(--dim); }
   body { padding-top: var(--s-4); }
 }
 
-/* The observatory's panel chrome — the summary grid, the collapsed padding,
-   the jump-to flash — lives in lib/ui/Panel.svelte, which is the markup it
+/* The observatory's panel chrome (the summary grid, the collapsed padding,
+   the jump-to flash) lives in lib/ui/Panel.svelte, which is the markup it
    describes: a rule for a shell that exists on one page does not belong in
    the site-wide stylesheet.
 
@@ -483,7 +480,7 @@ svg text { font: var(--fs-micro) var(--font-mono); fill: var(--dim); }
 .h2sub { color: var(--dim); font-size: var(--fs-sm); margin-bottom: var(--s-3); }
 
 /* A collapsed Panel is one heading tall; 16px of card padding around a single
-   24px line left it looking like an empty box. Here rather than in Panel.svelte
+   24px line leaves it looking like an empty box. Here rather than in Panel.svelte
    for the same reason `.card.flash` is: the element is Card.svelte's, so a rule
    scoped to Panel cannot reach it. */
 .card.collapsed { padding: var(--s-2) var(--s-4); }
@@ -527,15 +524,15 @@ svg text { font: var(--fs-micro) var(--font-mono); fill: var(--dim); }
   border-bottom: var(--border);
 }
 /* One label column across every group in a panel. `max-content` resolves per
-   grid, so three sibling <dl>s each sized their own column to their own
-   longest label — COST, ROUND TRIP and BUILD started their values at three
+   grid, so three sibling <dl>s each size their own column to their own
+   longest label: COST, ROUND TRIP and BUILD then start their values at three
    different x positions, two of them 3px apart, which reads as misalignment
    rather than as three deliberate groups. A fixed width makes them one
-   column. It is a literal, not a custom property: an overridable width had
-   no overrider, and one grid opting out of the shared width is the exact
-   misalignment this rule exists to remove. 8.5rem fits every label the site
+   column. It is a literal rather than a custom property, because one grid
+   opting out of the shared width is the exact misalignment this rule exists
+   to remove. 8.5rem fits every label the site
    has ("round trip", "tokenizer", "artifact"); `dt` is `nowrap`, so a longer
-   one would run into the value column — keep them short. */
+   one would run into the value column; keep them short. */
 .facts {
   display: grid;
   grid-template-columns: 8.5rem minmax(0, 1fr);
@@ -550,7 +547,7 @@ svg text { font: var(--fs-micro) var(--font-mono); fill: var(--dim); }
 .facts:only-child { grid-template-columns: max-content minmax(0, 1fr); }
 .facts dd { margin: 0; color: var(--txt); overflow-wrap: anywhere; }
 /* `.ok`/`.bad` are set ON a <dd> (the round-trip verdict), and `.facts dd` is
-   more specific than the bare utility — so these two overrides earn their
+   more specific than the bare utility, so these two overrides earn their
    place where the rest of the colour utilities do not. */
 .facts dd.ok { color: var(--ok); }
 .facts dd.bad { color: var(--bad); }

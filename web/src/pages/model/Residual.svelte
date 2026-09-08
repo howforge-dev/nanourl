@@ -32,7 +32,7 @@
   let fpCanvas: HTMLCanvasElement | undefined = $state();
   let detailCanvas: HTMLCanvasElement | undefined = $state();
 
-  // Placeholder until onMount sets the real full range from `info` — a
+  // Placeholder until onMount sets the full range from `info`. A
   // lifecycle callback, rather than this declaration, is where Svelte wants
   // a one-time prop read seeding mutable state to happen.
   let fpView = $state<{ c0: number; c1: number }>({ c0: 0, c1: 1 });
@@ -330,14 +330,14 @@
 <style>
   /* .note = transient "still working" placeholder (see the e2e smoke test's
      per-panel wait); .hint = a permanent caption that happens to share the
-     same look — kept separate so that wait stays a reliable "this panel's
+     same look, kept separate so that wait stays a reliable "this panel's
      lazy first-open work has settled" signal. */
   .layout { display: flex; gap: var(--s-5); flex-wrap: wrap; align-items: flex-start; margin-top: var(--s-2); }
   /* The heatmap sits at its own width when the column has room for it and
      scrolls inside itself (ScrollBox) when it does not: `flex: 0 1 auto`
      takes the canvas's 640 px as the basis, and `min-width: 0` is what lets a
      flex child shrink below its content instead of wrapping onto a new row.
-     `:global`, because the scroller is ScrollBox.svelte's element — the
+     `:global`, because the scroller is ScrollBox.svelte's element; the
      `.layout` prefix keeps the rule this panel's. */
   .layout :global(.fpwrap) { flex: 0 1 auto; min-width: 0; }
   .normsbox { flex: none; max-width: var(--m-side); }

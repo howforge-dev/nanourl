@@ -4,8 +4,8 @@
 //
 // `pnpm test` (tests/assets-sync.test.ts) and a warning in `pack-assets.ts`
 // check this too, but neither blocks the actual deploy path: pack a new
-// artifact, skip `pnpm exec tsx scripts/numbers.ts`, run `pnpm build` — the command
-// Cloudflare Pages' own Vite detection suggests — and dist/ ships one run's
+// artifact, skip `pnpm exec tsx scripts/numbers.ts`, run `pnpm build` (the command
+// Cloudflare Pages' own Vite detection suggests) and dist/ ships one run's
 // numbers beside another run's weights, with a green build and only an
 // easily-missed warning line from the pack step.
 //
@@ -15,7 +15,7 @@
 import { readFileSync } from 'node:fs';
 
 /** The artifact a file claims to describe: its digest and its byte length.
- *  Both matter — the length is what the manifest carries natively, the digest
+ *  Both matter: the length is what the manifest carries natively, the digest
  *  is the only field that can tell two runs of one config apart (their
  *  artifacts are byte-for-byte the same *size*). */
 export interface ArtifactIdentity {
@@ -57,6 +57,6 @@ export function readPackedArtifact(manifestPath: string): ArtifactIdentity | nul
     if (typeof sha256 !== 'string' || typeof bytes !== 'number') return null;
     return { sha256, bytes };
   } catch {
-    return null; // no assets.json yet — `task web:assets` has not run
+    return null; // no assets.json yet; `task web:assets` has not run
   }
 }

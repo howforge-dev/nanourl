@@ -3,14 +3,14 @@
 
 The tier gate (fuzz/run_tiers.sh) proves the *coded stream* and two per-step
 digests agree.  This is the human-readable version of the same claim: for N
-URLs it dumps `codec_dist(url, k, n=0)` -- the model's probability for EVERY
-one of the 8192 vocabulary entries at step k, through the codec's own quantized
-tables -- from the native binary and from each wasm build, and prints the
-maximum absolute probability difference.
+URLs it dumps `codec_dist(url, k, n=0)` (the model's probability for EVERY
+one of the 8192 vocabulary entries at step k, through the codec's own
+quantized tables) from the native binary and from each wasm build, and prints
+the maximum absolute probability difference.
 
 Because both sides run integer kernels over identical weights, the expected
-answer is exactly **0.0**, not "small".  Anything else is a real divergence,
-not float noise.
+answer is exactly **0.0**, not "small".  Anything else is a divergence, not
+float noise.
 
 Not covered: PyTorch.  Comparing the Rust forward pass against the training
 checkpoint needs the .pt (only the exported .nurl is on this box) and a GPU

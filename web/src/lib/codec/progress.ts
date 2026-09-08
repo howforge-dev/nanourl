@@ -3,15 +3,14 @@
 // of only observable by staring at a ~125 MiB download.
 //
 // Sizes and durations come from lib/format.ts, so this line and the learn
-// page quote the artifact in the same unit. They did not: this file used the
-// 1048576 divisor with an "MB" label while the rest of the site called the
-// same figure MiB, so 124.8 appeared twice on one site meaning two things.
+// page quote the artifact in the same unit, and 124.8 cannot appear twice on
+// one site meaning two things.
 import { fmtBytes, fmtRate, fmtSeconds, NBSP } from '../format';
 import type { StatusPart } from './types';
 
 export type { StatusPart };
 
-/** ETA is rounded to whole seconds — a moving average is not precise enough
+/** ETA is rounded to whole seconds: a moving average is not precise enough
  *  to justify a decimal, and a jittering "~3.7 s left" reads worse than
  *  "~4 s left". */
 export function formatEta(ms: number): string {
@@ -24,11 +23,11 @@ export function formatEta(ms: number): string {
 /**
  * Throughput over a trailing time window, and the ETA that follows from it.
  *
- * A whole-download average (bytes ÷ elapsed, which is what the previous line
- * showed) is wrong in the two moments the number matters: it understates the
- * rate for the first second, while connection setup is still in the average,
- * and it keeps quoting a stale rate long after the real one has changed. A
- * trailing window tracks the current rate instead.
+ * A whole-download average (bytes ÷ elapsed) is wrong in the two moments the
+ * number matters: it understates the rate for the first second, while
+ * connection setup is still in the average, and it keeps quoting a stale rate
+ * long after that rate has changed. A trailing window tracks the current rate
+ * instead.
  *
  * `rate()` and `eta()` deliberately return null until the window holds at
  * least `minSpanMs` of data: a rate computed from two samples 30 ms apart is
@@ -80,7 +79,7 @@ export interface DownloadState {
   rate: number | null;
   /** ms remaining, or null while the window is still filling */
   etaMs: number | null;
-  /** every byte so far came out of the Cache API — no network at all */
+  /** every byte so far came out of the Cache API: no network at all */
   fromCache: boolean;
 }
 
@@ -88,11 +87,11 @@ export interface DownloadState {
  *  and (once there is enough data for it to mean anything) the ETA. */
 export function downloadParts(s: DownloadState): StatusPart[] {
   if (s.fromCache) {
-    // Quote what has actually come back, not the artifact's total. Every byte
-    // so far being a cache hit does not mean every byte IS one: the ~1 MB wasm
-    // is fetched first, so a bucket holding it but missing a model chunk
-    // spends its first ticks in this branch, and quoting `total` there read as
-    // "restoring 124.8 MB from cache…" for 1 MB of actual hit.
+    // Quote what has come back, not the artifact's total. Every byte so far
+    // being a cache hit does not mean every byte IS one: the ~1 MB wasm is
+    // fetched first, so a bucket holding it but missing a model chunk spends
+    // its first ticks in this branch, where quoting `total` would read as
+    // "restoring 124.8 MB from cache…" for 1 MB of hits.
     return [{ text: 'restoring' }, { text: `${fmtBytes(s.got)} of ${fmtBytes(s.total)}`, num: true }, { text: 'from cache…' }];
   }
   const parts: StatusPart[] = [
@@ -105,11 +104,11 @@ export function downloadParts(s: DownloadState): StatusPart[] {
   return parts;
 }
 
-/** The one-line summary of how the model actually got here, shown next to
+/** The one-line summary of how the model got here, shown next to
  *  "model ready". Bytes that came out of the Cache API are named as such and
- *  never get a throughput — 125 MiB "at 496 MiB/s" is the disk, not the
+ *  never get a throughput: 125 MiB "at 496 MiB/s" is the disk, not the
  *  network, and says nothing a visitor can act on. A rate is shown only over
- *  the bytes that were actually downloaded (typically a fresh wasm build or
+ *  the bytes that were downloaded (typically a fresh wasm build or
  *  tokenizer after a deploy while the model chunks stayed cached). */
 export function loadedSummary(bytes: number, elapsedMs: number, cachedBytes: number): string {
   const downloaded = Math.max(0, bytes - cachedBytes);
@@ -120,7 +119,7 @@ export function loadedSummary(bytes: number, elapsedMs: number, cachedBytes: num
   return `${fmtBytes(cachedBytes)} from cache + ${net}`;
 }
 
-/** Joined form of a part list — what `#status` reads as textContent. */
+/** Joined form of a part list: what `#status` reads as textContent. */
 export const partsText = (parts: StatusPart[]): string => parts.map((p) => p.text).join(' · ');
 
 /**
@@ -129,9 +128,9 @@ export const partsText = (parts: StatusPart[]): string => parts.map((p) => p.tex
  * `loadStreaming` re-renders the status text at most every 100 ms but reports
  * a tick on every chunk read, so most ticks carry a fraction and nothing
  * else. A consumer that renders `p.text ?? 'loading model…'` therefore flashes
- * the placeholder back several times a second. The rule — carry the last text
- * and parts forward across a fraction-only tick — is here, once, rather than
- * copied into each page (where it was fixed four separate times).
+ * the placeholder back several times a second. The rule, carry the last text
+ * and parts forward across a fraction-only tick, is here once rather than
+ * copied into each page.
  */
 export function mergeProgress<P extends { fraction: number; text?: string; parts?: StatusPart[] }>(prev: P, next: P): P {
   return { ...next, text: next.text ?? prev.text, parts: next.parts ?? prev.parts };

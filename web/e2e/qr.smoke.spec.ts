@@ -8,20 +8,20 @@ import { atMobile, encodeFirstExample, expectNoHorizontalOverflow, TESTID, testI
 import { CODEC_CALL } from './timeouts';
 
 // The compressor's QR section against the real build: it opens, draws the
-// link, follows the alphabet strip and every control, exports, persists —
-// and, the part that matters, every style of it still scans. The scan is a
-// JS decoder (jsqr) injected into the page for the test only: it reads the
-// rendered SVG back off a canvas, so the check is on the pixels a phone
-// would see, on screen and as exported, with inversion OFF: a symbol that
-// only reads inverted is a failure. After "invert colours" the check is the
-// other way round: the raw pixels must NOT read, and the pixels inverted
-// must — the inversion done here on the canvas, since jsqr 1.4's own
-// `onlyInvert` scans a bitmap it never builds.
+// link, follows the alphabet strip and every control, exports, persists, and
+// every style of it still scans. The scan is a JS decoder (jsqr) injected
+// into the page for the test only: it reads the rendered SVG back off a
+// canvas, so the check is on the pixels a phone would see, on screen and as
+// exported, with inversion OFF: a symbol that only reads inverted is a
+// failure. After "invert colours" the check is the other way round: the raw
+// pixels must NOT read, and the pixels inverted must; the inversion is done
+// here on the canvas, since jsqr 1.4's own `onlyInvert` scans a bitmap it
+// never builds.
 
 type Inversion = 'dontInvert' | 'onlyInvert';
 
-/** The text the symbol decodes to — the one on screen, or the SVG the
- *  export link carries — or null when it does not scan. */
+/** The text the symbol decodes to (the one on screen, or the SVG the export
+ *  link carries), or null when it does not scan. */
 async function scan(page: Page, source: 'screen' | 'export' = 'screen', inversion: Inversion = 'dontInvert'): Promise<string | null> {
   return page.evaluate(
     async ([sel, dl, src, inv]) => {

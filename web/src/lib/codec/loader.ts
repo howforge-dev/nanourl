@@ -20,7 +20,7 @@ const manifest = rawManifest as Manifest;
  * The name MUST carry the model digest. `pruneCache()` deletes everything not
  * in *this* bundle's manifest and runs on every load, so a shared bucket
  * across a deploy means tab A (still on yesterday's bundle) reloads and
- * deletes all 7 new chunks, tab B reloads and deletes the 7 old ones — 125 MiB
+ * deletes all 7 new chunks, tab B reloads and deletes the 7 old ones: 125 MiB
  * per swing, ping-ponging until every stale tab closes. Per-model names mean
  * the two bundles do not share a cache at all, and the sweep below reclaims
  * the loser's space rather than orphaning it: `pruneCache` only enumerates
@@ -30,16 +30,16 @@ const manifest = rawManifest as Manifest;
 export const MODEL_CACHE_NAME = `${MODEL_CACHE_PREFIX}${manifest.model.sha256.slice(0, 8)}`;
 const CACHE = MODEL_CACHE_NAME;
 
-/** Is `key` a *model* cache from a previous deploy of this app — i.e. safe to
+/** Is `key` a *model* cache from a previous deploy of this app, i.e. safe to
  * reclaim? Pure and exported so `tests/loader.test.ts` can pin the exclusions
  * (a sibling's `nanourl-shell-v1` must survive) without a Cache API.
  *
  * `isModelCache` (cacheNames.ts) matches exactly the shape `MODEL_CACHE_NAME`
- * mints — `nanourl-` plus the model digest's first 8 lowercase hex characters
- * — and NOT a bare `nanourl-` prefix. The sweep below runs on every load and
- * deletes what it matches, so matching the prefix would eat any other bucket
- * a sibling of this code owns — concretely `nanourl-shell-*`, the service
- * worker's offline shell. */
+ * mints (`nanourl-` plus the model digest's first 8 lowercase hex
+ * characters) and NOT a bare `nanourl-` prefix. The sweep below runs on every
+ * load and deletes what it matches, so matching the prefix would eat any
+ * other bucket a sibling of this code owns, concretely `nanourl-shell-*`, the
+ * service worker's offline shell. */
 export function isStaleModelCache(key: string, current: string = MODEL_CACHE_NAME): boolean {
   return isModelCache(key) && key !== current;
 }
@@ -54,9 +54,9 @@ export interface WasmPick {
  * result: threads > 0 wins outright (needs the mt build to exist), else
  * relaxed-SIMD if the manifest has that build, else the portable simd128
  * fallback every manifest always has. `threads` is clamped to 0 whenever the
- * mt build isn't actually selected, so callers can pass it straight to
- * codec_init without re-deriving "did we actually get the mt wasm"; `kind`
- * names which branch actually fired, so a caller (`client.ts`'s tier
+ * mt build isn't selected, so callers can pass it straight to codec_init
+ * without re-deriving "did we get the mt wasm"; `kind` names which branch
+ * fired, so a caller (`client.ts`'s tier
  * fallback) can tell "asked for threads, got simd because mt was missing"
  * apart from "asked for threads, got threads, then threads failed at
  * runtime" without re-deriving that either.
@@ -64,7 +64,7 @@ export interface WasmPick {
  * `m` defaults to the real packed manifest but takes an explicit one so
  * `pickWasm` can be unit tested against synthetic fixtures covering all
  * three configurations (mt+relaxed+simd, relaxed+simd only, simd only)
- * instead of whatever `task web:assets` happened to pack on this checkout —
+ * instead of whatever `task web:assets` happened to pack on this checkout;
  * see `tests/loader.test.ts`. */
 export function pickWasm(tier: { relaxed: boolean; threads: number }, m: Manifest = manifest): WasmPick {
   if (tier.threads > 0 && m.wasmMt) return { entry: m.wasmMt, threads: tier.threads, kind: 'threads' };
@@ -96,16 +96,16 @@ const INSECURE_CONTEXT =
  * letting `crypto.subtle.digest` fail with a bare `TypeError: Cannot read
  * properties of undefined`. Called once before any download starts, so a
  * plain-HTTP deploy fails in a second with an explanation rather than after
- * ~125 MiB. `SharedArrayBuffer` and `caches` are
- * unavailable there too — see web/README.md's "HTTPS is required". */
+ * ~125 MiB. `SharedArrayBuffer` and `caches` are unavailable there too; see
+ * web/README.md's "HTTPS is required". */
 export function assertSecureContext(): void {
   if (typeof crypto === 'undefined' || !crypto.subtle) throw new Error(INSECURE_CONTEXT);
 }
 
 async function sha256Hex(b: Uint8Array): Promise<string> {
   assertSecureContext();
-  // Every Uint8Array here is backed by a plain (never Shared) ArrayBuffer —
-  // assembled locally or read from fetch/Cache — but TS's generic typed-array
+  // Every Uint8Array here is backed by a plain (never Shared) ArrayBuffer,
+  // assembled locally or read from fetch/Cache, but TS's generic typed-array
   // param widens to ArrayBufferLike, which BufferSource/BodyInit reject.
   const d = await crypto.subtle.digest('SHA-256', b as Uint8Array<ArrayBuffer>);
   return Array.from(new Uint8Array(d))
@@ -137,13 +137,14 @@ async function evict(name: string): Promise<void> {
     const c = await caches.open(CACHE);
     await c.delete('/' + name);
   } catch {
-    /* no Cache API — nothing was cached to begin with */
+    /* no Cache API; nothing was cached to begin with */
   }
 }
 
-/** Delete every *model* cache bucket that isn't this bundle's — the other half
- * of the versioned-cache fix. Without it, bumping CACHE orphans the previous
- * model's ~125 MiB in the user's quota with nothing that can ever reclaim it.
+/** Delete every *model* cache bucket that isn't this bundle's, the other half
+ * of the per-model cache naming. Without it, bumping CACHE orphans the
+ * previous model's ~125 MiB in the user's quota with nothing that can ever
+ * reclaim it.
  * See `isStaleModelCache` for why this is not a prefix match. */
 async function pruneOldCaches(): Promise<void> {
   try {
@@ -180,12 +181,12 @@ export async function pruneCache(): Promise<void> {
 }
 
 /** `fromCache` says the bytes came out of the Cache API rather than the
- * network — the status line reports a restore and a cold download very
+ * network. The status line reports a restore and a cold download very
  * differently (no speed or ETA is meaningful for a restore), and the caller
  * cannot tell them apart from the byte counts alone. */
 export type OnBytes = (got: number, fromCache?: boolean) => void;
 
-/** True for the DOMException a fetch aborted via AbortController throws — an
+/** True for the DOMException a fetch aborted via AbortController throws. An
  * abort is a deliberate cancellation, never something to retry or report. */
 const isAbort = (e: unknown) => e instanceof Error && e.name === 'AbortError';
 
@@ -194,9 +195,9 @@ const isAbort = (e: unknown) => e instanceof Error && e.name === 'AbortError';
  *
  * The digest check is **inside** the retry loop, not in `fetchAsset` around
  * it. A CDN edge closing a chunked response early is a *clean* close: `done`
- * fires, `assemble` returns a short buffer, and no transport error is raised —
- * so a check outside the loop fails the whole load with "checksum mismatch"
- * in exactly the case a retry fixes.
+ * fires, `assemble` returns a short buffer, and no transport error is
+ * raised, so a check outside the loop fails the whole load with "checksum
+ * mismatch" in exactly the case a retry fixes.
  */
 async function download(a: AssetEntry, onBytes: OnBytes, signal?: AbortSignal): Promise<Uint8Array> {
   for (let attempt = 0; ; attempt++) {
@@ -243,14 +244,13 @@ function queueProgress(onBytes: OnBytes, got: number, fromCache = false): void {
  * each length- and digest-verified) -> cache.
  *
  * The digest is verified **once**, on download, before the bytes are ever
- * written to the cache — so everything in the cache was correct when it went
+ * written to the cache, so everything in the cache was correct when it went
  * in. A cache hit is checked against the manifest's byte length, and a
  * mismatch evicts the entry and falls through to the network (where the full
  * hash check applies). Re-hashing 125 MiB on every single load to defend
  * against a Cache API that silently corrupts at rest is not a trade worth
- * making; the length check is what catches the realistic failure — a
- * truncated or wrongly-sized entry, which is also the shape I4's chunk-size
- * aliasing produced before chunk names carried the chunk size.
+ * making; the length check is what catches the realistic failure: a
+ * truncated or wrongly-sized entry.
  *
  * The read path must verify, not only the write path. A bad cache entry goes
  * straight into wasm memory and `codec_init` runs over it, and it is
@@ -265,14 +265,14 @@ export async function fetchAsset(a: AssetEntry, onBytes: OnBytes, signal?: Abort
       queueProgress(onBytes, a.bytes, true);
       return hit;
     }
-    await evict(a.name); // wrong size at rest — never replay it, refetch once
+    await evict(a.name); // wrong size at rest: never replay it, refetch once
   }
   const bytes = await download(a, onBytes, signal);
   await store(a.name, bytes);
   return bytes;
 }
 
-/** Total model bytes across all chunks — known statically from the manifest,
+/** Total model bytes across all chunks, known statically from the manifest,
  * so a caller can size (or ualloc) a model-sized region before any chunk has
  * landed, instead of waiting for the download to size it. */
 export const MODEL_BYTES = manifest.model.bytes;
@@ -287,7 +287,7 @@ function chunkOffsets(chunks: AssetEntry[]): number[] {
   return offsets;
 }
 
-/** How the assets actually arrived — reported once, when they all have. */
+/** How the assets arrived, reported once, when they all have. */
 export interface LoadStats {
   bytes: number;
   elapsedMs: number;
@@ -302,7 +302,7 @@ export interface LoadStats {
  * artifact, by fetching only the chunk(s) that cover it (Cache-API-hit after
  * the first visit, so usually no network at all).
  *
- * The alternative — `Codec.load({ keepModel: true })` — allocates a second
+ * The alternative, `Codec.load({ keepModel: true })`, allocates a second
  * full 124.8 MiB JS copy of the artifact and pins it for the life of the page,
  * to read one ~340 KiB `wpe` slice and nothing else: ~276 MiB steady state on
  * the page most likely to be killed on iOS, against ~151 MiB plus this slice.
@@ -333,12 +333,12 @@ export async function fetchModelSlice(offset: number, length: number): Promise<U
 }
 
 export interface LoadCallbacks {
-  /** The (small) wasm binary, verified — fires first, well before the model
+  /** The (small) wasm binary, verified. Fires first, well before the model
    * chunks are done, so the caller can start compiling/instantiating while
    * the rest of the download is still in flight. */
   onWasm: (bytes: Uint8Array) => void;
   /** One model chunk, verified, with its absolute byte offset into the
-   * assembled model — fires per chunk, in whatever order the 3-way fetch
+   * assembled model. Fires per chunk, in whatever order the 3-way fetch
    * pool finishes them (not necessarily offset order). */
   onChunk: (offset: number, bytes: Uint8Array) => void;
   onTokenizer: (bytes: Uint8Array) => void;
@@ -348,14 +348,14 @@ export interface LoadCallbacks {
 /**
  * Stream every asset to its callback the moment it's downloaded+verified (or
  * served from cache), with one bytes-weighted progress signal across all of
- * them, 3 fetches at a time. `signal` aborts every in-flight and queued fetch
- * — `client.ts` uses it to stop downloading a model a failed tier is going to
- * throw away. Unlike a fetch-then-assemble pass, no assembled
- * ~125 MiB model buffer is ever held here — callers that need the model
+ * them, 3 fetches at a time. `signal` aborts every in-flight and queued
+ * fetch; `client.ts` uses it to stop downloading a model a failed tier is
+ * going to throw away. Unlike a fetch-then-assemble pass, no assembled
+ * ~125 MiB model buffer is ever held here: callers that need the model
  * chunks contiguous (in wasm memory, or as a kept copy) assemble it
  * themselves as chunks arrive. The wasm entry is placed first in the fetch
- * queue so it's requested — and, being small, usually finishes — well ahead
- * of any model chunk.
+ * queue so it's requested (and, being small, usually finishes) well ahead of
+ * any model chunk.
  */
 export async function loadStreaming(wasmEntry: AssetEntry, cb: LoadCallbacks, signal?: AbortSignal): Promise<LoadStats> {
   // Fail in a second, before ~125 MiB moves, if this page cannot verify a
@@ -381,7 +381,7 @@ export async function loadStreaming(wasmEntry: AssetEntry, cb: LoadCallbacks, si
       // "every byte so far is a cache hit" is the honest test while the load
       // is still running: one uncached asset flips the line to the download
       // form the moment its first byte lands. `downloadParts`'s restore line
-      // quotes `got` alongside `total` in that state — while only the ~1 MB
+      // quotes `got` alongside `total` in that state: while only the ~1 MB
       // wasm has come back it must not claim to be restoring 125.6 MB.
       const cachedBytes = got.reduce((acc, b, i) => acc + (fromCache[i] ? b : 0), 0);
       const parts = downloadParts({

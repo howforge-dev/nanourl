@@ -4,16 +4,17 @@ import { DEFAULT_PREVIEW_PORT } from './e2e/ports';
 import { DESKTOP, MOBILE } from './e2e/viewports';
 
 // The model is ~125 MiB, so every test that waits for "model ready" needs a
-// generous timeout — this is a local static server, not a slow network, but
-// wasm instantiation + first decode still takes real wall-clock time.
+// generous timeout. This is a local static server rather than a slow
+// network, but wasm instantiation + first decode still takes wall-clock time.
 //
 // Port: 4173 is `vite preview`'s default, so a sibling worktree's own
 // `pnpm preview` (or a stale process from a prior run of this suite) can
-// already be squatting on it — a long-running server on the wrong worktree's
-// build is a silent, expensive mistake. reuseExistingServer therefore stays
-// false unconditionally (never adopt a server this run didn't just start);
-// PW_PORT picks a different port when 4173 is unavailable, e.g. from this
-// worktree: `PW_PORT=4177 pnpm exec playwright test`.
+// already be squatting on it, and a long-running server on the wrong
+// worktree's build is a silent, expensive mistake. reuseExistingServer
+// therefore stays false unconditionally (never adopt a server this run
+// didn't just start); PW_PORT picks a different port when 4173 is
+// unavailable, e.g. from this worktree: `PW_PORT=4177 pnpm exec playwright
+// test`.
 const PORT = Number(process.env.PW_PORT ?? DEFAULT_PREVIEW_PORT);
 
 export default defineConfig({
@@ -50,12 +51,12 @@ export default defineConfig({
     // at all would still pass every spec with the threads tier active, while
     // the real Cloudflare/Netlify/nginx deploy has no cross-origin isolation
     // and runs ~2.4x slower with nothing surfaced anywhere. serve.ts reads
-    // `dist/_headers` — the file the build actually copied — and applies it
+    // `dist/_headers` (the file the build actually copied) and applies it
     // with the same parser tests/headers.test.ts uses, so the E2E exercises
     // the deploy policy and fails loudly if the build stops shipping it.
     //
     // It binds the port itself and exits nonzero on EADDRINUSE, the same
-    // fast, loud failure `--strictPort` buys from vite preview — a silent
+    // fast, loud failure `--strictPort` buys from vite preview. A silent
     // port bump would no longer match `url` below, surfacing only as
     // "Timed out waiting ... from config.webServer" with no indication why.
     // PW_SKIP_BUILD=1 serves an existing dist/ (CI builds once in its own

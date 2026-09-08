@@ -1,11 +1,10 @@
 // The one place a page's "am I loading / ready / broken" state lives.
 //
-// index, dream, model and bench would otherwise each carry a copy of this —
-// the same `codec`/`progress`/`loadError` fields, the same `statusText`
-// derivation, the same `Codec.load(...).then/.catch`. Four copies meant a
-// one-line fix to the status line had to be made four times (and was: the
-// fraction-only tick rule below), and the copies had already drifted (index
-// and dream spelled the ready line one way, model another).
+// index, dream, model and bench take the `codec`/`progress`/`loadError`
+// fields, the `statusText` derivation and the `Codec.load(...).then/.catch`
+// from here, so a change to the status line (the fraction-only tick rule
+// below is one) is made once, and the four pages cannot spell the ready line
+// differently.
 import { paramsM } from '../format';
 import { Codec } from './client';
 import { loadedSummary, mergeProgress, type StatusPart } from './progress';
@@ -17,7 +16,7 @@ export interface CodecLoaderOptions {
   /** Force a tier instead of feature-detecting one (the bench page's
    *  `?tier=simd|relaxed|threads&w=N`). */
   tier?: { relaxed: boolean; threads: number };
-  /** Words after "model ready — <load summary> · " on this page. The
+  /** Words after "model ready · <load summary> · " on this page. The
    *  observatory says something different from the compressor. */
   readyDetail?: (c: Codec) => StatusPart[];
 }
@@ -26,19 +25,19 @@ export interface CodecLoader {
   readonly codec: Codec | null;
   /** The raw failure message, for a caller's own error panel. */
   readonly error: string | null;
-  /** The same failure as a sentence to show a visitor — "failed to load: …"
+  /** The same failure as a sentence to show a visitor: "failed to load: …"
    *  for a load that never succeeded, and the fault's own wording for a
    *  tier-3 fault that could not be recovered from. Empty when there is no
    *  error, so a caller can render it behind its own `{#if error}`. */
   readonly errorText: string;
   readonly progress: Progress;
-  /** Flat text for `#status` — what E2E asserts against. */
+  /** Flat text for `#status`, what E2E asserts against. */
   readonly statusText: string;
   /** Same line, segmented, so numeric runs can be set in tabular monospace. */
   readonly statusParts: StatusPart[];
   readonly statusFraction: number;
   /** Start the load. Resolves with the codec, or with null once `error` has
-   *  been set — the caller does not need its own catch. Returning it lets a
+   *  been set, so the caller does not need its own catch. Returning it lets a
    *  page that owns the codec's lifetime (the bench page runs it, then
    *  terminates it) chain off the same load the status line is showing. */
   load(): Promise<Codec | null>;
@@ -54,8 +53,8 @@ export const modelSizeDetail = (c: Codec): StatusPart[] => [
 ];
 
 /** Segments of the ready line every page shares: how the model got here, and
- *  which kernel is running it (spelled out — "threads:8" alone does not say
- *  it is also relaxed SIMD). */
+ *  which kernel is running it (spelled out, since "threads:8" alone does not
+ *  say it is also relaxed SIMD). */
 export function readyParts(c: Codec): StatusPart[] {
   const parts: StatusPart[] = [
     { text: 'model ready' },
@@ -65,8 +64,8 @@ export function readyParts(c: Codec): StatusPart[] {
     { text: kernelShort(c.info.kernel) },
   ];
   // Codec.load degrades tiers on a load-time failure rather than ever failing
-  // the whole app (see client.ts) — say so, rather than let the kernel that
-  // was actually achieved imply nothing went wrong. A tier that ran and then
+  // the whole app (see client.ts), so say so, rather than let the kernel that
+  // was achieved imply nothing went wrong. A tier that ran and then
   // faulted is a different sentence: it did load.
   if (c.degradedAfterFault) parts.push({ text: THREAD_FAULT_NOTE });
   else if (c.degradedFrom) parts.push({ text: `${c.degradedFrom} tier failed to load` });
@@ -74,9 +73,8 @@ export function readyParts(c: Codec): StatusPart[] {
 }
 
 /** The state `statusPartsFor` renders. Broken out so the three-way choice can
- *  be unit-tested without a worker, a wasm module or 125 MiB of model — the
- *  unrecovered-fault arm in particular had no reachable test, and was in fact
- *  unreachable in the app. */
+ *  be unit-tested without a worker, a wasm module or 125 MiB of model, the
+ *  unrecovered-fault arm included. */
 export interface StatusState {
   codec: Codec | null;
   error: string | null;
@@ -98,9 +96,9 @@ export function errorTextFor(s: Pick<StatusState, 'error' | 'faulted'>): string 
  *
  * `error` is tested BEFORE `codec`. A codec that is present is normally the
  * whole story, but not on the unrecovered-fault path: there the codec is the
- * poisoned forwarder — non-null, `isDead`, every call answering with the
- * poison error — and testing it first left the page reading
- * "model ready — … threads:8" with a full progress bar while nothing worked.
+ * poisoned forwarder (non-null, `isDead`, every call answering with the
+ * poison error), and testing it first makes the page read
+ * "model ready · … threads:8" with a full progress bar while nothing works.
  * `onThreadFault` also drops the codec, so the two halves agree rather than
  * one masking the other.
  */
@@ -128,19 +126,19 @@ export function createCodecLoader(opts: CodecLoaderOptions = {}): CodecLoader {
 
   // `error` is tested BEFORE `codec`. A codec that is present is normally the
   // whole story, but not on the unrecovered-fault path: there the codec is the
-  // poisoned forwarder — non-null, `isDead`, every call answering with the
-  // poison error — and testing it first left the page reading
-  // "model ready — … threads:8" with a full progress bar while nothing worked,
-  // so THREAD_FAULT_UNRECOVERED could never reach the screen
-  // `onThreadFault` also drops the codec, so the two
-  // halves agree rather than one masking the other.
+  // poisoned forwarder (non-null, `isDead`, every call answering with the
+  // poison error), and testing it first makes the page read
+  // "model ready · … threads:8" with a full progress bar while nothing works,
+  // so THREAD_FAULT_UNRECOVERED could never reach the screen. `onThreadFault`
+  // also drops the codec, so the two halves agree rather than one masking the
+  // other.
   const statusParts = $derived.by(() => statusPartsFor(state()));
 
   /** A mid-session tier-3 fault: `client.ts` has already terminated the
    *  poisoned instance, loaded a replacement without threads and replayed the
    *  failed call on it. All that is left here is to point at the replacement
-   *  so the ready line re-derives — it now names the fallback kernel and says
-   *  the threads tier faulted.
+   *  so the ready line re-derives: it names the fallback kernel and says the
+   *  threads tier faulted.
    *
    *  `next === null` means even the fallback failed: drop the codec as well as
    *  setting the error, because the one that is left cannot answer anything. */

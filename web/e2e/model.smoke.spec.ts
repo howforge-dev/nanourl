@@ -15,7 +15,7 @@ test('model observatory: architecture, every panel opens, attention canvases, co
   await page.goto('/model.html');
   await waitForModelReady(page);
   // model readiness and the initial encode+trace of the prefilled example
-  // are two separate async steps — wait for the chips too, so every panel
+  // are two separate async steps; wait for the chips too, so every panel
   // below has real data by the time it's opened.
   await expect(page.locator('.toks .tok').first()).toBeVisible({ timeout: 30_000 });
 
@@ -27,7 +27,7 @@ test('model observatory: architecture, every panel opens, attention canvases, co
   // --- open every panel; nothing should throw or log an error ---
   const allDetails = page.locator('.card details');
   const n = await allDetails.count();
-  // `n` comes from this same locator, and toHaveCount(n) below reuses it —
+  // `n` comes from this same locator, and toHaveCount(n) below reuses it;
   // if the selector ever stops matching, n would be 0 and that assertion
   // would pass vacuously. Pin the real panel count here instead:
   // architecture, atlas, wpe, attention, residual, readout, coder, bits.
@@ -39,12 +39,12 @@ test('model observatory: architecture, every panel opens, attention canvases, co
     // Every lazy panel's "still working" placeholder (loading/computing/
     // running the readout/select a token above) uses the shared `.note`
     // class; once its first-open work (fetch/compute/rpc) settles, real
-    // content (or an `.err` message) replaces it — wait for that instead of
+    // content (or an `.err` message) replaces it. Wait for that instead of
     // guessing a fixed delay. Architecture has no `.note` at all, so this
     // resolves immediately for it.
     await expect(d.locator('.note')).toHaveCount(0, { timeout: PANEL });
     // ...and the `.err` message that also replaces `.note` is a FAILURE, not
-    // a pass — without this check, a panel that renders a developer error
+    // a pass: without this check, a panel that renders a developer error
     // message to end users would still score green, letting a bad asset
     // (e.g. `atlas: null`) leave the observatory's flagship panel dead while
     // the suite reports success.
@@ -63,7 +63,7 @@ test('model observatory: architecture, every panel opens, attention canvases, co
   await page.waitForTimeout(200);
   await expect(page.locator('.attnwrap canvas.attn')).toHaveCount(12);
 
-  // --- coder stepper: never silently wrong — no "diverged" error banner ---
+  // --- coder stepper: never silently wrong, no "diverged" error banner ---
   await expect(page.getByText('stepper unavailable')).toHaveCount(0);
   await expect(page.locator('.bitstream')).toBeVisible();
   await expect(page.locator('.tape .seg').first()).toBeVisible();

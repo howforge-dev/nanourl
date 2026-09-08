@@ -2,23 +2,23 @@
 # Kernel tier parity gate. Every kernel tier must produce the same STREAM and
 # the same PER-STEP MODEL STATE on every fuzz case. Tiers:
 #
-#   native   the CLI, best ISA the host has (scalar / avx2 / vnni) -- reference
+#   native   the CLI, best ISA the host has (scalar / avx2 / vnni); reference
 #   simd     urlcodec.wasm          (simd128)
 #   relaxed  urlcodec-relaxed.wasm  (simd128 + relaxed-simd)
 #   mt1/mt4  urlcodec-mt.wasm       (simd128 + relaxed-simd + atomics, shared
 #            memory) with W = 1 and W = 4 compute workers
 #
 # TWO worker counts, not three. Rows are owned whole by one participant, so
-# each W is simply a different partition of the same arithmetic; two
-# different partitions already demonstrate that the partition does not enter
-# it, and a third costs ~40 minutes on a shared 8-core box for no new
-# information. `mt7` is still a recognised tier for a box with cores to
-# spare: TIERS="native simd relaxed mt1 mt4 mt7".
+# each W is a different partition of the same arithmetic; two different
+# partitions already demonstrate that the partition does not enter it, and a
+# third costs ~40 minutes on a shared 8-core box for no new information.
+# `mt7` is still a recognised tier for a box with cores to spare:
+# TIERS="native simd relaxed mt1 mt4 mt7".
 #
 # A module containing relaxed-simd opcodes fails validation on an engine
 # without the feature even if never executed, so the tiers are separate files
-# rather than one runtime-toggled module -- the web loader picks the file;
-# here we just point plain `node` at each.
+# rather than one runtime-toggled module: the web loader picks the file;
+# here we point plain `node` at each.
 #
 # COMPARED COLUMNS: 1-5 (idx, alphabet, status, coded-or-error, roundtrip
 # flag), 7 (dist_hash) and 8 (logit_hash).
@@ -32,14 +32,14 @@
 #               (f32::to_bits, u32 LE). One layer earlier than dist_hash: it
 #               fails on a single-ulp kernel difference that softmax + 24-bit
 #               quantization would have rounded away. This is the column that
-#               actually proves the int4 gemv is bit-identical -- fixed-order
-#               f32 accumulation, no FMA contraction anywhere in the kernel.
+#               proves the int4 gemv is bit-identical: fixed-order f32
+#               accumulation, no FMA contraction anywhere in the kernel.
 #
 # Column 6 (fnv64 of the raw encode+decode JSON) is INFORMATIONAL only, same
 # as fuzz/run_fuzz.sh: it also hashes the "bits"/"bits_cost" fields, which go
 # through f64::log2(), and that differs in the last ulp between native's libm
 # and wasm's libm even when every stream byte is identical. A blind `cmp` of
-# whole files fails on that column alone with zero real divergence, so this
+# whole files fails on that column alone with zero divergence, so this
 # script parses out the compared columns instead.
 #
 # SCHEDULING. The three single-thread tiers run CONCURRENTLY, each itself
@@ -53,11 +53,11 @@
 # every expensive case on one shard.
 #
 # RESUMABLE. Shard TSVs live in $TIERS_DIR (default /tmp; point it somewhere
-# durable -- outside any tree a mirroring sync deletes -- to survive a
-# killed/timed-out run). A shard already at its expected line
-# count is skipped rather than rerun. That reuse is gated on a freshness key
-# that covers, EXACTLY AND ONLY, these things -- if any of them moved, all old
-# output is DISCARDED rather than resumed into:
+# durable, outside any tree a mirroring sync deletes, to survive a
+# killed/timed-out run). A shard already at its expected line count is skipped
+# rather than rerun. That reuse is gated on a freshness key that covers,
+# EXACTLY AND ONLY, these things (if any of them moved, all old output is
+# DISCARDED rather than resumed into):
 #
 #   N, SEED, TIERS and the per-tier shard/worker spec
 #   sha256 of $MODEL and $TOK
@@ -65,7 +65,7 @@
 #                         mapping and which JSON field becomes which column)
 #   sha256 of fuzz/*.py  (compare_tiers.py decides what counts as passing)
 #   sha256 of THIS SCRIPT (it owns the tier -> .wasm mapping and each driver's
-#                         positional argv order -- swap which file the
+#                         positional argv order; swap which file the
 #                         `relaxed` tier loads and the rows change with no
 #                         other file touched)
 #   the bytes of every freshly built binary it is about to run
@@ -76,7 +76,7 @@
 # exists to catch.
 #
 # PREFLIGHT. When the tier list includes an mt tier, the tier-3 glue is
-# clippy'd on the pinned nightly BEFORE the four builds -- it is the only code
+# clippy'd on the pinned nightly BEFORE the four builds: it is the only code
 # path no other check compiles, and finding it broken after three builds is
 # ~20 wasted minutes. A missing toolchain is a hard failure there, not a skip:
 # an mt tier was asked for.
@@ -88,7 +88,7 @@
 # ACROSS MACHINES. The mt tiers own W+1 cores each and run one at a time, so a
 # whole-gate run is mostly serial; splitting it by TIER over several machines
 # turns it into the length of its slowest leg. Same n, seed and model
-# everywhere -- the case list is a function of (n, seed), and the comparison is
+# everywhere. The case list is a function of (n, seed), and the comparison is
 # against `native`, which is why every leg includes it:
 #
 #   TIERS="native simd relaxed" fuzz/run_tiers.sh 100 1 "$MODEL"
@@ -96,9 +96,9 @@
 #   TIERS="native mt4"          fuzz/run_tiers.sh 100 1 "$MODEL"
 #
 # Each leg prints TIER PARITY OK for the tiers it ran; all of them must. The
-# `native` rows are recomputed per machine rather than shared, which is the
-# point: independent CPUs agreeing on the reference is a stronger statement
-# than one. A leg with no mt tier needs no nightly (see the preflight below).
+# `native` rows are recomputed per machine rather than shared: independent
+# CPUs agreeing on the reference is a stronger statement than one. A leg with
+# no mt tier needs no nightly (see the preflight below).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 N="${1:-100}"; SEED="${2:-1}"
@@ -115,10 +115,9 @@ DIR="${TIERS_DIR:-/tmp}"
 # A gate that reports success for its own absence is worse than no gate. The
 # model is a 125 MiB artifact outside git (models/target-base is a symlink),
 # so a fresh clone, CI, or a machine the artifacts have not been fetched onto
-# has neither it nor -- if the tokenizer is absent too -- anything to compare.
-# This fails
-# loudly rather than skipping silently; ALLOW_SKIP=1 is the deliberate
-# opt-out for a caller that knows it has no artifacts.
+# has neither it nor (if the tokenizer is absent too) anything to compare.
+# This fails loudly rather than skipping silently; ALLOW_SKIP=1 is the
+# deliberate opt-out for a caller that knows it has no artifacts.
 missing=""
 [ -f "$MODEL" ] || missing="$missing\n  model:     $MODEL"
 [ -f "$TOK" ]   || missing="$missing\n  tokenizer: $TOK"
@@ -149,8 +148,8 @@ for t in $TIERS; do is_mt "$t" && want_mt=1; done
 
 # TIER-3 GLUE FIRST, before any of the four builds below.
 #
-# Everything behind cfg(target_feature = "atomics") -- threads.rs's wasm glue,
-# gemv_wasm's parallel branch, thread_setup/worker_main/threads_ready -- is
+# Everything behind cfg(target_feature = "atomics") (threads.rs's wasm glue,
+# gemv_wasm's parallel branch, thread_setup/worker_main/threads_ready) is
 # compiled by NOTHING else: not cargo fmt, not clippy --all-targets, not cargo
 # test, not either single-thread wasm clippy run. A symbol dropped from that
 # region can pass all five and only be caught 18 s into a gate run, AFTER a
@@ -179,8 +178,8 @@ cargo build --release -q
 
 # The wasm tiers come from build-wasm.sh, the same script `task codec:wasm`
 # and both CI workflows run: the bytes this gate proves have to be the bytes
-# the site packs, and two build recipes for one artifact is how they stopped
-# being the same.
+# the site packs, and two build recipes for one artifact would stop them being
+# the same.
 #
 # --no-verify: this gate is what MAKES bytes pinnable, so it cannot require
 # them to be pinned already. It prints their digests at the end instead; `task
@@ -204,8 +203,8 @@ for t in $TIERS; do SHARD_SPEC="$SHARD_SPEC $t:$(tier_shards "$t"):$(tier_worker
 BUILD_HASH=$( { printf 'n=%s seed=%s tiers=%s shards=%s\n' "$N" "$SEED" "$TIERS" "$SHARD_SPEC"
                 sha256sum "$MODEL" "$TOK"
                 # the harness itself: it decides what a row contains.
-                # run_tiers.sh is IN here -- it owns the tier -> .wasm mapping
-                # and each driver's argv order, so leaving it out let a
+                # run_tiers.sh is IN here: it owns the tier -> .wasm mapping
+                # and each driver's argv order, so leaving it out would let a
                 # remapped tier resume shards produced by the old mapping and
                 # report TIER PARITY OK. `cd` above guarantees this path.
                 sha256sum fuzz/*.js fuzz/*.py fuzz/run_tiers.sh
@@ -278,9 +277,8 @@ for t in $TIERS; do
 done
 
 # Merge only the shard files this run's shard counts call for, and delete any
-# left over from a previous run with a larger count -- an orphan
-# native.4.tsv merged into a 3-shard run would duplicate cases and compare
-# against nothing.
+# left over from a previous run with a larger count: an orphan native.4.tsv
+# merged into a 3-shard run would duplicate cases and compare against nothing.
 for t in $TIERS; do
   shards=$(tier_shards "$t")
   for f in "$DIR/$t".*.tsv; do
@@ -300,7 +298,7 @@ python3 fuzz/compare_tiers.py --expect "$N" "${merged[@]}"
 echo "TIER PARITY OK ($N cases; tiers: $TIERS)"
 
 # The digests of exactly what was gated. `task codec:pin` writes these into
-# rust/urlcodec/wasm.sha256, and CI then refuses to pack anything else -- so
+# rust/urlcodec/wasm.sha256, and CI then refuses to pack anything else, so
 # the bytes the browser runs are the bytes this run proved, rather than
 # whatever a CI runner's toolchain happened to produce.
 echo

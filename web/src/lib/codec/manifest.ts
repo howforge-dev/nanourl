@@ -1,16 +1,13 @@
-// The shape of `src/lib/assets.json` — the packed asset manifest `task
+// The shape of `src/lib/assets.json`: the packed asset manifest `task
 // web:assets` writes and the browser loads from.
 //
-// Declared once. Five declarations — the real one in loader.ts, three narrower
-// private copies in tests and the packer, and an inline `{ atlas: unknown }`
-// in an E2E. Worse, the WRITER (`scripts/pack-assets.ts`) had no annotation at
-// all — its object literal was structurally typed by inference, so dropping a
-// field the loader reads is a runtime break in the browser, not a compile
-// error at the point that caused it.
-//
-// One declaration, imported by the writer as its return type and by every
-// reader. Deliberately in `lib/codec/` rather than `scripts/`: it describes an
-// artifact the app consumes, and the app must not depend on the build tree.
+// One declaration, imported by the writer (`scripts/pack-assets.ts`) as its
+// return type and by every reader. Without an annotation on the writer its
+// object literal is structurally typed by inference, so dropping a field the
+// loader reads is a runtime break in the browser rather than a compile error
+// at the point that caused it. Deliberately in `lib/codec/` rather than
+// `scripts/`: it describes an artifact the app consumes, and the app must not
+// depend on the build tree.
 
 /** One packed file: content-hashed name, exact byte length, sha256. The
  *  length is what `loader.ts` checks a Cache API hit against, and the digest

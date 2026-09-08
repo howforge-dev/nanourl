@@ -19,7 +19,7 @@ const SHIPPED: ArtifactIdentity = {
 };
 // Another run of the same config: byte-for-byte the same
 // SIZE and a completely different digest. That identical length is exactly
-// what hid C1 — a length-only check would pass here.
+// what hid C1: a length-only check would pass here.
 const OTHER_RUN: ArtifactIdentity = {
   sha256: '76d483b39ee024d7df27cf24dfbd41226373312ccf52debab8319ee5bf2e45eb',
   bytes: 130862112,

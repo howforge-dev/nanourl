@@ -18,7 +18,7 @@ describe('loader', () => {
 // pickWasm takes the manifest as an explicit (defaulted) parameter
 // specifically so its fallback branches can be tested against synthetic
 // fixtures for all three packing configurations, independent of whatever
-// `task web:assets` happens to have packed on this checkout — a checkout
+// `task web:assets` happens to have packed on this checkout. A checkout
 // with only the plain simd128 build (no mt/relaxed targets built yet) is a
 // documented, supported configuration (see web/README.md), and its tests
 // must be able to pass without ever running `task codec:wasm --mt`.
@@ -38,7 +38,7 @@ function fakeManifest(opts: { mt?: boolean; relaxed?: boolean }): Manifest {
 }
 
 // The versioned model cache reclaims previous deploys' ~125 MiB, and runs on
-// every load — so what it matches has to be exactly what it mints, not a
+// every load, so what it matches has to be exactly what it mints, not a
 // `nanourl-` prefix. A prefix match would delete `nanourl-shell-*`, the
 // offline shell a sibling branch's service worker owns: the app would still
 // work, so the only symptom would be offline support quietly never
@@ -56,7 +56,7 @@ describe('isStaleModelCache', () => {
 
   it('KEEPS a sibling\'s nanourl-shell-* cache, with both names present', () => {
     // the realistic post-merge state: our bucket, a stale one of ours, and
-    // the service worker's shell — only the stale one may go
+    // the service worker's shell: only the stale one may go
     const keys = ['nanourl-shell-v1', current, 'nanourl-76d483b3', 'nanourl-shell-2026-09-07'];
     expect(keys.filter((k) => isStaleModelCache(k, current))).toEqual(['nanourl-76d483b3']);
   });
@@ -125,8 +125,8 @@ describe('pickWasm', () => {
 
   it('defaults to the real packed manifest when none is given', () => {
     // Smoke check only: whatever this checkout has packed, pickWasm must not
-    // throw and must always resolve to *some* entry — the branch-by-branch
-    // behavior above is what's actually being tested against fixtures.
+    // throw and must always resolve to *some* entry; the branch-by-branch
+    // behavior above is what's tested against fixtures.
     const r = pickWasm({ relaxed: false, threads: 0 });
     expect(r.entry.name).toBeTruthy();
     expect(r.kind).toBe('simd');

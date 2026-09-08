@@ -2,7 +2,7 @@
 // ready" waits, and the small locator recipes more than one spec needs.
 //
 // Nine byte-identical copies of `watchForErrors` and six of the "model ready"
-// wait is not just noise — every copy is a place the contract can drift
+// wait is more than noise: every copy is a place the contract can drift
 // silently. `#status`/`'model ready'` in particular is a *contract* between
 // `Status.svelte` and six specs, and a spec asserting a string the page no
 // longer renders fails as a timeout pointing at the spec.
@@ -18,12 +18,12 @@ export { TESTID, testIdSelector };
 
 /** Chromium's own network-stack console line for a request that failed. It is
  *  a browser notice, not an application `console.error`, so a spec that
- *  deliberately breaks a request (offline mode, an aborted route) allows it —
+ *  deliberately breaks a request (offline mode, an aborted route) allows it
  *  by name, rather than by dropping the whole assertion. */
 export const NETWORK_FAILURE = /Failed to load resource/;
 
 export interface ErrorWatch {
-  /** Everything captured so far, in order — for a bespoke assertion. */
+  /** Everything captured so far, in order, for a bespoke assertion. */
   readonly errors: string[];
   /** Capture from another page into the same sink (a `context.newPage()`). */
   also(page: Page): void;
@@ -60,18 +60,18 @@ export function watchErrors(page: Page): ErrorWatch {
 /** The compressor / dream / observatory ready signal: `Status.svelte`'s
  *  `#status` line reaching "model ready". `timeout` is `MODEL_RELOAD` for a
  *  load that is expected to be a warm Cache API restore rather than a cold
- *  download — same steps, none of the bytes. */
+ *  download: same steps, none of the bytes. */
 export const waitForModelReady = (page: Page, timeout: number = T.MODEL_LOAD): Promise<void> =>
   expect(page.locator('#status')).toContainText('model ready', { timeout });
 
 /**
  * The bench page's ready signal.
  *
- * bench.html never shows "model ready" — its Status line reads
+ * bench.html never shows "model ready"; its Status line reads
  * "loaded: <kernel>" instead (see bench/App.svelte's `statusText`). Wait for
  * `example-codes`, not `kernel`: `onMount` sets `kernelLabel` (which un-hides
  * the kernel testid) via `benchOnce()`, *before* `codes` (which un-hides
- * `example-codes`, holding the four encoded strings — often the page's widest
+ * `example-codes`, holding the four encoded strings, often the page's widest
  * content) is set by the subsequent `codesFor()` call. `example-codes` is
  * still hidden at the moment `kernel` becomes visible, so measuring overflow
  * right after `kernel` would miss real overflow introduced later in the DOM.
@@ -140,7 +140,7 @@ export async function atMobile(page: Page, fn: () => Promise<void>): Promise<voi
   }
 }
 
-/** No page-level horizontal scrollbar — the cheap check every page owes. */
+/** No page-level horizontal scrollbar: the cheap check every page owes. */
 export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }

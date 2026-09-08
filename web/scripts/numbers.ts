@@ -1,4 +1,4 @@
-// Generates src/lib/numbers.ts — the learn page's only source of numeric
+// Generates src/lib/numbers.ts, the learn page's only source of numeric
 // facts about the model, training run, and eval. Run after every production
 // eval lands, via `pnpm exec tsx scripts/numbers.ts` (which passes the same NURL default as
 // `task web:assets`, so the two can never describe different artifacts):
@@ -10,7 +10,7 @@
 //     --nurl ../models/target-base/ptq.nurl
 //
 // Fails loudly (throws, nonzero exit) if manifest.json or eval-final.txt is
-// missing a required field — see numbers-lib.ts's `required`/`num` — rather
+// missing a required field (see numbers-lib.ts's `required`/`num`) rather
 // than silently writing a stale or placeholder number.
 //
 // `--nurl` closes the gap where `numbers.ts` could describe a different
@@ -41,7 +41,7 @@ const evalPath = resolve(process.cwd(), arg('--eval', fixture('eval-final.txt'))
 const hnTracePath = resolve(process.cwd(), arg('--hn-trace', fixture('hn-trace.json')));
 // bzip2/xz sizes for the "why not just zip it" table (node has no stdlib
 // implementation of either) plus the recorded deflate/gzip figures this box
-// must reproduce — see the file's own _comment.
+// must reproduce; see the file's own _comment.
 const zipSizesPath = fixture('zip-sizes.json');
 // The packed artifact itself: hashed here so numbers.ts records WHICH weights
 // it describes. Defaults to the same path Taskfile.yml's web:assets uses.
@@ -51,7 +51,7 @@ const outPath = resolve(process.cwd(), arg('--out', NUMBERS_TS));
 // The HN example URL: news.ycombinator.com's canonical "start of Sept 2023"
 // story id, used throughout the learn page's worked examples (tokens, bits,
 // whynotzip, coder). One constant, in src/lib/examples.ts beside the
-// compressor's own list — see WORKED_EXAMPLE_URL for why the two HN URLs are
+// compressor's own list; see WORKED_EXAMPLE_URL for why the two HN URLs are
 // deliberately different.
 const HN_URL = WORKED_EXAMPLE_URL;
 
@@ -59,22 +59,23 @@ function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
 
-// Measure classical compressors on the raw (uncanonicalised) URL — the "why
-// not just zip it" section's whole point is that these arrive knowing nothing
-// about URL structure.
+// Measure classical compressors on the raw (uncanonicalised) URL: the "why
+// not just zip it" section shows that these arrive knowing nothing about URL
+// structure.
 //
-// deflate and gzip come from node's OWN bundled zlib, not a `python3 -c`
-// subprocess. That mattered: python3's zlib is whatever the interpreter is
+// deflate and gzip come from node's OWN bundled zlib rather than a
+// `python3 -c` subprocess. python3's zlib is whatever the interpreter is
 // linked against, and two nominally-1.3.1 builds disagree on this exact input
-// at the same level and window bits (42 bytes vs 43) — so `numbers.zip` was a
-// property of the generating box, and a python linked against zlib-ng (common
-// in distro and conda builds) silently regenerated a different WhyNotZip
-// table. node ships one zlib per release, so this reproduces.
+// at the same level and window bits (42 bytes vs 43), so a python-measured
+// `numbers.zip` would be a property of the generating box, and a python
+// linked against zlib-ng (common in distro and conda builds) would silently
+// regenerate a different WhyNotZip table. node ships one zlib per release, so
+// this reproduces.
 //
 // bzip2 and xz have no node stdlib implementation, so they are vendored in
 // scripts/fixtures/zip-sizes.json with their provenance. deflate/gzip are
 // recorded there too and cross-checked here, so a node whose zlib disagrees
-// fails the run loudly instead of rewriting the table behind your back.
+// fails the run loudly instead of rewriting the table silently.
 interface ZipFixture extends ZipSizes {
   url: string;
   node_zlib: string;
@@ -85,7 +86,7 @@ function measureZip(url: string, fixture: ZipFixture): ZipSizes {
     throw new Error(`scripts/fixtures/zip-sizes.json is for a different URL (${fixture.url}), expected ${url}`);
   }
   const u = Buffer.from(url, 'utf8');
-  // level 9, raw deflate (no zlib header) — the same shape zip's engine emits
+  // level 9, raw deflate (no zlib header), the same shape zip's engine emits
   const measured = { raw: u.length, deflate: deflateRawSync(u, { level: 9 }).length, gzip: gzipSync(u, { level: 9 }).length };
   for (const k of ['raw', 'deflate', 'gzip'] as const) {
     if (measured[k] !== fixture[k]) {
@@ -117,7 +118,7 @@ const hnTraceRaw = readJson(hnTracePath) as {
 if (hnTraceRaw.url !== HN_URL) {
   throw new Error(`scripts/fixtures/hn-trace.json is for a different URL (${hnTraceRaw.url}), expected ${HN_URL}`);
 }
-// pick only the declared HnTrace fields — the fixture also carries "ok",
+// pick only the declared HnTrace fields: the fixture also carries "ok",
 // "version", "bitstr" and a "source" provenance note that aren't page facts
 const hn: HnTrace = {
   url: hnTraceRaw.url,
@@ -137,7 +138,7 @@ const zip = measureZip(HN_URL, readJson(zipSizesPath) as ZipFixture);
 const nurlBytes = readFileSync(nurlPath);
 const artifact = { sha256: createHash('sha256').update(nurlBytes).digest('hex'), bytes: nurlBytes.length };
 
-// Static design facts — true by construction (rust/urlcodec, docs/tokenization.md),
+// Static design facts, true by construction (rust/urlcodec, docs/tokenization.md),
 // plus one figure not yet backed by a committed experiment file (see the
 // StaticFacts doc comment in numbers-lib.ts): the int4-without-QAT-tail
 // regression. No timing figure belongs here: speed is a property of the
@@ -147,7 +148,7 @@ const staticFacts: StaticFacts = {
   groupSize: 64,
   probGridBits: 24,
   streamVersion: 0,
-  chainCarry: 256, // rust/urlcodec/src/model.rs CHAIN_CARRY — the over-length fallback's carry window
+  chainCarry: 256, // rust/urlcodec/src/model.rs CHAIN_CARRY, the over-length fallback's carry window
   maxTokenLength: 24, // settled tokenizer cap
   chunkMiB: CHUNK / MIB, // the model's download chunk size, from the packer itself
   quantBits: 4,
@@ -155,7 +156,7 @@ const staticFacts: StaticFacts = {
   quantHalfRange: 7, // steps run -7..+7
   gpuCount: 8, // training node: 8x RTX 5090
   // Derived from lib/alphabet.ts's ALPHABETS (which mirrors
-  // rust/urlcodec/src/coder.rs) rather than hand-written a second time — the
+  // rust/urlcodec/src/coder.rs) rather than hand-written a second time. The
   // learn page's bits/char figures are log2 of these sizes.
   alphabets: ALPHABETS.map((a) => a.key),
   alphabetSizes: Object.fromEntries(ALPHABETS.map((a) => [a.key, a.size])),
@@ -167,7 +168,7 @@ const data = buildNumbers(manifest, evalText, zip, hn, staticFacts, artifact);
 
 // relative to web/, so the emitted header is identical on every machine
 const rel = (p: string) => relative(process.cwd(), p);
-const header = `// GENERATED by web/scripts/numbers.ts — do not hand-edit. Regenerate: \`pnpm exec tsx scripts/numbers.ts\`
+const header = `// GENERATED by web/scripts/numbers.ts. Do not hand-edit. Regenerate: \`pnpm exec tsx scripts/numbers.ts\`
 // Source manifest:     ${rel(manifestPath)}
 // Source eval:         ${rel(evalPath)}
 // Source hn trace:     ${rel(hnTracePath)}
@@ -208,7 +209,7 @@ export interface Numbers {
   evalUrlsSkipped: number;
   artifactBytes: number;
   artifactMiB: number;
-  /** sha256 of the .nurl artifact these numbers describe — the anchor
+  /** sha256 of the .nurl artifact these numbers describe: the anchor
    *  tests/assets-sync.test.ts checks web/src/lib/assets.json against. */
   artifactSha256: string;
   f32MiB: number;

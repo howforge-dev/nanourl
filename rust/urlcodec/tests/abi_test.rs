@@ -15,7 +15,7 @@ const TOKENIZER_DEFAULT: &str = "../../models/url-bpe-8k-cap24-s0/tokenizer.json
 
 /// Where the artifacts are. `models/target-base` is a symlink to a path
 /// outside the repo, so on a build box the mirror's copy of it dangles even
-/// though the box HAS the model — which is precisely where
+/// though the box HAS the model, which is precisely where
 /// `URLCODEC_REQUIRE_ARTIFACTS=1` is meant to be used. `URLCODEC_MODEL` /
 /// `URLCODEC_TOKENIZER` point these tests at the real paths there.
 fn artifact(var: &str, default: &str) -> String {
@@ -27,14 +27,14 @@ fn artifact(var: &str, default: &str) -> String {
 /// These tests are the only thing that runs the shipped C ABI against the
 /// shipped model, and the model is a 125 MiB artifact outside git (behind the
 /// `models/target-base` symlink). Without a loud skip, their absence would
-/// return `true`-less and pass in silence — a test reporting success for its
+/// return `true`-less and pass in silence: a test reporting success for its
 /// own absence.
 ///
-/// The default is now a **loud skip**: a bare `cargo test` on a fresh clone
+/// The default is a **loud skip**: a bare `cargo test` on a fresh clone
 /// still passes, but prints an unmissable SKIPPED line naming the path it
 /// wanted. Anything that is acting as a gate sets
-/// `URLCODEC_REQUIRE_ARTIFACTS=1` — `task codec:test` and `fuzz/run_tiers.sh`
-/// both do — and then the absence is a hard failure. (`fuzz/run_tiers.sh`
+/// `URLCODEC_REQUIRE_ARTIFACTS=1` (`task codec:test` and `fuzz/run_tiers.sh`
+/// both do), and then the absence is a hard failure. (`fuzz/run_tiers.sh`
 /// itself fails without artifacts unconditionally; it has nothing to compare,
 /// which is not the same as a developer running unit tests.)
 fn init() -> bool {
@@ -86,7 +86,7 @@ fn vocab_mismatch_is_an_error_code_not_a_trap() {
         return;
     }
     let mb = std::fs::read(artifact("URLCODEC_MODEL", MODEL_DEFAULT)).unwrap();
-    // A real, well-formed tokenizer.json — just not this model's: one token
+    // A real, well-formed tokenizer.json, but not this model's: one token
     // in the vocabulary instead of 8192.
     let tiny = r#"{"model":{"type":"BPE","vocab":{"<eos>":0},"merges":[]}}"#;
     assert_eq!(
@@ -137,7 +137,7 @@ fn sample_prefix_is_canonical_text() {
     if !init() {
         return;
     }
-    // The prefix is canonical text (hosts TLD-first) — codec_sample must
+    // The prefix is canonical text (hosts TLD-first): codec_sample must
     // tokenise it as given, not canonicalise it first. A partial host like
     // "www." cannot be canonicalised consistently mid-way, so the caller
     // (the dream page) is defined to pass canonical text, and only the

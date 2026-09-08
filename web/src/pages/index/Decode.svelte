@@ -144,7 +144,7 @@
   /* Copy and open are the same kind of control at the same size, stacked
      beside the decoded URL so the URL keeps the row's width. `:global` and an
      explicit width because both are components' own elements, and an
-     inline-flex button sizes to its label — so without it the two would be
+     inline-flex button sizes to its label, so without it the two would be
      different widths in a column that stretches everything else. */
   .actions { display: flex; flex-direction: column; gap: var(--s-2); flex: none; }
   .actions :global(.btn) { width: 100%; }

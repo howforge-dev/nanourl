@@ -18,8 +18,8 @@ name = "nanourl"
 path = "src/main.rs"
 
 [dependencies]
-# The kernel, by path. `nanourl` runs its C ABI -- codec_init/codec_encode/
-# codec_decode, the exact functions the three wasm builds export -- so a code
+# The kernel, by path. `nanourl` runs its C ABI (codec_init/codec_encode/
+# codec_decode, the exact functions the three wasm builds export), so a code
 # minted at a terminal and a code minted in the browser are the same string by
 # construction rather than by two implementations agreeing.
 urlcodec = { path = "../urlcodec" }

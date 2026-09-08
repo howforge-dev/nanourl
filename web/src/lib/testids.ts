@@ -4,7 +4,7 @@
 // A testid is a contract between two trees that never compile together: a
 // component renames its testid, the spec keeps querying the old one, and
 // Playwright's "expected 1, received 0" points at the spec rather than at the
-// rename. Worse are the assertions that stay *green* — `toHaveCount(0)` and
+// rename. Worse are the assertions that stay *green*: `toHaveCount(0)` and
 // `not.toBeVisible()` both pass against a selector that matches nothing.
 //
 // Both sides import from here instead, so a rename is a TypeScript error in
@@ -15,8 +15,8 @@ export const TESTID = {
   paneDecode: 'pane-decode',
   roundtrip: 'roundtrip',
   redirectLink: 'redirect-link',
-  /** The Advanced disclosure of either pane — the QR disclosure sits above
-   *  it in the Encode pane, so a bare `summary` locator is two elements. */
+  /** The Advanced disclosure of either pane. The QR disclosure sits above it
+   *  in the Encode pane, so a bare `summary` locator is two elements. */
   advanced: 'advanced',
   decodedUrl: 'decoded-url',
   redirectOverlay: 'redirect-overlay',

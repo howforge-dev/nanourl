@@ -1,7 +1,7 @@
 // Wasm side of the cross-runtime fuzz harness, single-threaded tiers (1 and
 // 2). Emits lines in the exact format of `urlcodec fuzz` (native): idx,
 // alphabet, status, coded-or-error, roundtrip flag, fnv64(encodeJSON|decodeJSON),
-// dist_hash, logit_hash — flushed one at a time as each case finishes.
+// dist_hash, logit_hash. Flushed one at a time as each case finishes.
 // run_fuzz.sh/run_tiers.sh diff the two sides. The loop itself lives in
 // driver_common.js, shared with threads_driver.js (tier 3).
 // Optional shard/shards (same convention as the native `fuzz` subcommand):

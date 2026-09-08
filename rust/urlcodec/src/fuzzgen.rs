@@ -1,6 +1,6 @@
 //! Deterministic URL generator for the cross-runtime fuzz harness.
 //!
-//! The SAME compiled code produces case (seed, idx) natively and in wasm —
+//! The SAME compiled code produces case (seed, idx) natively and in wasm;
 //! there is no second implementation to drift. Cases cycle through modes:
 //! realistic URLs, unicode-heavy paths, percent-encoding soup, base79
 //! special characters, oversize inputs (the token-limit error path), tiny
@@ -14,7 +14,7 @@ impl Rng {
     }
 
     fn next(&mut self) -> u64 {
-        // splitmix64 — identical on every platform
+        // splitmix64: identical on every platform
         self.0 = self.0.wrapping_add(0x9E37_79B9_7F4A_7C15);
         let mut z = self.0;
         z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);

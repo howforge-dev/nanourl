@@ -8,7 +8,7 @@
 
   const urlsPerWindow = numbers.block / numbers.meanTokensPerUrl;
   // real data: numbers.hn always has an "item" piece (the worked HN example's
-  // path segment) — fail loudly at build time if that ever stops being true,
+  // path segment); fail loudly at build time if that ever stops being true,
   // rather than showing a placeholder in the rendered page
   const itemTok = numbers.hn.tokens.find((t) => t.piece === 'item');
   if (!itemTok) throw new Error('lib/numbers.ts: expected an "item" token in numbers.hn.tokens');

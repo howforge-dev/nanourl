@@ -1,6 +1,6 @@
 <script lang="ts">
   // Dream page: owns the codec and hosts the dream loop's controls/results.
-  // The model run backwards — instead of encoding a URL you give it, it
+  // The model run backwards: instead of encoding a URL you give it, it
   // samples one token at a time until <eos>, inventing URLs from what it was
   // trained on. The index page's App.svelte holds the codec-load pattern this
   // mirrors; Dream.svelte holds the loop itself.

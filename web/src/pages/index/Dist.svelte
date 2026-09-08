@@ -27,7 +27,7 @@
   let flash = $state(false);
   let listComp: { scrollTo: (i: number) => void } | undefined = $state();
 
-  // lowercased once per distribution — the filter re-scans on every keystroke
+  // lowercased once per distribution; the filter re-scans on every keystroke
   let lc = $derived(rows.map((r) => r.piece.toLowerCase()));
   // null view means "every row"; a filtered view maps display position -> rank-1 index
   let view = $derived.by(() => {
@@ -74,17 +74,17 @@
   }
 
   // Narrow the table to tokens containing the query. Ranks stay the rank in
-  // the FULL distribution — a filtered row still says where the model
-  // actually put it, and because rows stay probability-ordered the first
-  // match IS the best match.
+  // the FULL distribution: a filtered row still says where the model put it,
+  // and because rows stay probability-ordered the first match IS the best
+  // match.
   async function jumpChosen() {
     let pos = view ? view.indexOf(actualRank - 1) : actualRank - 1;
     if (pos < 0) {
       // The filter hides the chosen token; drop it rather than scroll
       // nowhere. Clearing filterText updates `view`/`visibleCount` (and thus
       // the `rows` count we pass to VirtualList) immediately as reactive
-      // values, but VirtualList's own rendered .vspacer height — which is
-      // what actually bounds how far el.scrollTop can go — only catches up
+      // values, but VirtualList's own rendered .vspacer height (which is
+      // what actually bounds how far el.scrollTop can go) only catches up
       // once Svelte flushes that prop change to the DOM. Calling scrollTo
       // before that flush scrolls against the STALE (filtered, much
       // shorter) scrollable height and silently clamps back near 0. Wait
@@ -93,8 +93,8 @@
       pos = actualRank - 1;
       await tick();
     }
-    // instant, not smooth — smooth-scrolling a virtual table hundreds of
-    // thousands of pixels tall crawls
+    // instant rather than smooth: smooth-scrolling a virtual table hundreds
+    // of thousands of pixels tall crawls
     listComp?.scrollTo(Math.max(0, pos - 5));
     flash = true;
     setTimeout(() => {
@@ -153,7 +153,7 @@
      unbreakable ~40-character word that overflows a 321px card content box at
      375px. */
   .ctx { font-family: var(--font-mono); color: var(--txt); overflow-wrap: anywhere; }
-  /* The chosen token is a Chip; all this adds is that it is the CHOSEN one —
+  /* The chosen token is a Chip; all this adds is that it is the CHOSEN one:
      the same green the distribution table marks the chosen row with. `:global`
      because the element is Chip.svelte's, not this component's. */
   .disthead :global(.next) {

@@ -11,20 +11,20 @@
    * The two jobs a segmented control does here, and why one component serves
    * both while still looking different in each.
    *
-   * `tabs` SWITCHES WHAT IS SHOWN (Encode / Decode) — the ARIA tabs pattern:
+   * `tabs` SWITCHES WHAT IS SHOWN (Encode / Decode), the ARIA tabs pattern:
    * `role=tablist`/`role=tab`, `aria-selected`, `aria-controls` pointing at a
    * `role=tabpanel`, roving tabindex and arrow-key navigation.
    *
    * `switch` CHANGES A SETTING that the panel below re-renders under (the
-   * output alphabet) — a group of toggles: `role=group` with an accessible
+   * output alphabet), a group of toggles: `role=group` with an accessible
    * name and `aria-pressed` per option. It is not a tablist: nothing it does
    * swaps a panel, and announcing it as one would be a lie.
    *
    * The two sit side by side in the compressor's control row, so they must
-   * also be told apart at a glance — hence one joined strip for the setting
+   * also be told apart at a glance: one joined strip for the setting
    * and separate rounded buttons for the panes. What they share is the button
    * chrome (`.btn*`, the same classes Button emits), the focus ring, and the
-   * rule that the selected option is marked by three signals — colour, weight
+   * rule that the selected option is marked by three signals: colour, weight
    * and a third that survives a colour-blind or high-contrast rendering.
    */
   export type SegmentedLook = 'tabs' | 'switch';
@@ -94,7 +94,7 @@
 
 <style>
   /* The options are buttons and wear `.btn*` from app.css. What is this
-     component's is the strip's layout and how the selected option is marked —
+     component's is the strip's layout and how the selected option is marked:
      three signals, never colour alone. */
   .seg { display: flex; flex-wrap: wrap; }
   /* Raised off the page, unlike a well: a control strip sits on the surface it

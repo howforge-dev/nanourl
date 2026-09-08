@@ -6,7 +6,7 @@
 // the single-thread wasm exports its own memory and `worker.ts` never spawns
 // these.
 //
-// Posts `{ type: 'ready', id }` right after `thread_setup` — the coordinator
+// Posts `{ type: 'ready', id }` right after `thread_setup`. The coordinator
 // (worker.ts) waits for this from every spawned compute worker before it
 // calls codec_init, so the first job is never handed to a worker whose
 // stack/TLS aren't set up yet. This is the last message this worker can ever
@@ -18,8 +18,8 @@
 /** Writes the JS-computed stack top into the module's exported
  * `__stack_pointer` global, then calls `thread_setup`.
  *
- * `thread_setup`'s own `stack_top` parameter is not what actually moves the
- * stack — this build's `thread_setup` ignores it and runs on whatever
+ * `thread_setup`'s own `stack_top` parameter is not what moves the stack:
+ * this build's `thread_setup` ignores it and runs on whatever
  * `__stack_pointer` already holds, which after a fresh `instantiate()` is
  * this module's default (the main thread's stack), not this worker's own
  * region. So the JS side must set the global itself, before calling
@@ -30,12 +30,12 @@
  * and -O: always two `global.set`s, the second restoring the old value),
  * which is why this JS-side write cannot be replaced by a wasm-side one.
  *
- * `thread_setup` independently confirms the write actually took — it returns
- * non-zero unless a local variable's own address falls inside the stack
- * region it was handed — and that return value is treated here as a thrown
+ * `thread_setup` independently confirms the write took (it returns non-zero
+ * unless a local variable's own address falls inside the stack region it was
+ * handed), and that return value is treated here as a thrown
  * error: a missing or ignored `__stack_pointer` export must fail this
  * worker's handshake loudly, not let `worker_main` run real jobs on a stack
- * it never actually got (every compute worker silently sharing the
+ * it never got (every compute worker silently sharing the
  * coordinator's stack, corrupting each other's frames in a way that's
  * timing-dependent enough to pass a small fuzz run and still produce wrong
  * codes under load). Exported so `tests/compute-worker.test.ts` can exercise
@@ -62,7 +62,7 @@ self.onmessage = async (e: MessageEvent) => {
     tlsBase: number;
     /** Dev/bench-only test hook (see client.ts's
      * `mtFailHandshakeRequested`): when set, this worker sets up its stack
-     * correctly and would work fine, but never posts 'ready' — simulating a
+     * correctly and would work fine, but never posts 'ready', simulating a
      * compute worker whose readiness message is lost or that dies right
      * after registering, the scenario worker.ts's bounded 'finish' wait
      * exists to catch. */

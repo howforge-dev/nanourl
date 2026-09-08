@@ -1,19 +1,19 @@
 // One parser for both header configs, so `web/_headers` (Cloudflare Pages /
 // Netlify) and `tools/web/nginx-nanourl.conf` can be compared per path by a
-// unit test instead of by eye — the two files must stay mirrors of each
+// unit test instead of by eye; the two files must stay mirrors of each
 // other. Also used by `e2e/serve.ts`, so the Playwright suite serves the
 // real `_headers` policy rather than `vite preview`'s own injected
 // COOP/COEP, which would leave the headers surface untestable.
 //
 // Deliberately dependency-free and text-only: it never runs nginx and never
-// talks to Cloudflare, it just reads what the two files say.
+// talks to Cloudflare, it reads what the two files say.
 
 export interface HeaderRule {
   /** The path pattern as written, e.g. `/*`, `/*.bin`, `/assets/*`. */
   pattern: string;
   /** `Name: value` lines, in file order. */
   set: [string, string][];
-  /** `! Name` lines — Cloudflare's documented way to clear a header a broader
+  /** `! Name` lines: Cloudflare's documented way to clear a header a broader
    *  rule already set, instead of comma-joining onto it. */
   unset: string[];
 }
@@ -68,7 +68,7 @@ export function patternMatches(pattern: string, path: string): boolean {
 
 /**
  * Apply every matching rule in file order, the way Cloudflare Pages does:
- * **all** matching rules apply, and a header set twice is comma-joined — so
+ * **all** matching rules apply, and a header set twice is comma-joined, so
  * without `! Name`, `/*`'s `Cache-Control: no-cache` would end up prepended
  * to `/*.bin`'s `immutable` (RFC 9111 §5.2.2.4: `no-cache` is not cancelled
  * by `max-age` or `immutable`, so an "immutable cache for hashed chunks"
@@ -92,7 +92,7 @@ export function headersFor(rules: HeaderRule[], path: string): Record<string, st
 // --- nginx ------------------------------------------------------------------
 
 export interface NginxPolicy {
-  /** `add_header Name value always;` — applied to every response. */
+  /** `add_header Name value always;`: applied to every response. */
   addHeaders: [string, string][];
   /** The `map $uri $cache_control { ... }` table, in file order: `default` is
    *  the fallback, `~`-prefixed keys are regexes (`~*` = case-insensitive). */

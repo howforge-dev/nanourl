@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { buildId, shellFiles } from '../scripts/sw-manifest-lib';
 
-// A fixture dist/ file listing (flat, dist-relative — what scripts/sw-
+// A fixture dist/ file listing (flat, dist-relative: what scripts/sw-
 // manifest.ts's walk() would hand shellFiles after a real `vite build` +
 // build-sw.ts), covering every case that matters: pages, hashed JS/CSS, a
 // favicon, model/tokenizer/wasm .bin chunks (must be excluded), sw.js itself
-// (must be excluded), and a nested assets path (must be excluded — Vite
+// (must be excluded), and a nested assets path (must be excluded: Vite
 // never nests, but the predicate shouldn't assume that blindly).
 const FIXTURE_DIST = [
   'index.html',

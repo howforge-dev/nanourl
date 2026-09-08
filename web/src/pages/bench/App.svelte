@@ -1,15 +1,15 @@
 <script lang="ts">
-  // Kernel bench page: loads the codec with a chosen tier — feature-detected
-  // as normal, or forced by the controls (and by `?tier=…&w=N`) — and
-  // times encoding the nytimes example (see src/lib/examples.ts) 10 times to
+  // Kernel bench page: loads the codec with a chosen tier (feature-detected
+  // as normal, or forced by the controls and by `?tier=…&w=N`) and times
+  // encoding the nytimes example (see src/lib/examples.ts) 10 times to
   // report median ms/token and ms/URL, plus the live kernel string and a few
   // browser facts relevant to tier selection. "run all tiers" repeats this
   // for all three tiers in turn (terminating each Codec before loading the
-  // next) and fills a table — a manual, in-browser companion to the node-side
+  // next) and fills a table, a manual in-browser companion to the node-side
   // bench harness. Also encodes the four example URLs once per load, exposed via
   // `data-testid="code-<name>"`, so an E2E spec can assert bit-identity
   // across tiers by diffing the codes from two page loads. Deliberately not
-  // linked from any other page's subtitle row — this is a dev/bench tool,
+  // linked from any other page's subtitle row: this is a dev/bench tool,
   // reached directly at /bench.html.
   import { onMount } from 'svelte';
   import { Codec } from '../../lib/codec/client';
@@ -45,7 +45,7 @@
   /** Decimals for a bench figure. Three, unlike everywhere else on the site:
    *  this page exists to resolve differences between kernels that are a few
    *  hundred microseconds per token apart. The unit is the column header, so
-   *  these are bare numbers rather than `fmtMs` strings — e2e/helpers.ts's
+   *  these are bare numbers rather than `fmtMs` strings; e2e/helpers.ts's
    *  `readNumber` reads them back. */
   const BENCH_DP = 3;
 
@@ -65,11 +65,11 @@
   // `_headers` in prod) already sends.
   const defaultThreads = workerCount(true, cores);
 
-  /** `w` clamped to [1, 16] — wide enough to
-   * deliberately explore oversubscription past production's own 8-worker
-   * cap (an 11-worker sweep row needed exactly that), narrow enough that a
-   * mistyped or hostile query string (`w=400`) can't spawn hundreds of
-   * workers and wedge the tab. A non-finite input (`w=abc`, missing `w`)
+  /** `w` clamped to [1, 16]: wide enough to deliberately explore
+   * oversubscription past production's own 8-worker cap (an 11-worker sweep row
+   * needed exactly that), narrow enough that a mistyped or hostile query
+   * string (`w=400`) can't spawn hundreds of workers and wedge the tab.
+   * A non-finite input (`w=abc`, missing `w`)
    * falls back to `defaultThreads` rather than silently landing on simd. */
   function clampWorkers(raw: string | null): number {
     const n = raw === null ? NaN : Number(raw);
@@ -107,16 +107,17 @@
     return { relaxed: false, threads: workers };
   }
 
-  /** The tier the result on screen was actually produced with — not the
-   *  current control position, which the visitor may have moved since. */
+  /** The tier that produced the result on screen, rather than the current
+   *  control position, which the visitor may have moved since. */
   let ranTier: string = $state(isTierChoice(queryTier) ? queryTier : 'auto');
   let ranWorkers = $state(clampWorkers(query.get('w')));
 
   /** The controls ARE the query string: changing one rewrites the address so
    *  a measurement can be shared as a link, and `?tier=…&w=N` keeps working as
-   *  a deep link. `replaceState`, not `pushState` — moving a control is not a
-   *  place in history to go Back to. Other parameters are preserved, which is
-   *  what keeps `?mtfail=…` (e2e/threads.smoke.spec.ts) working beside it. */
+   *  a deep link. `replaceState` rather than `pushState`: moving a control is
+   *  not a place in history to go Back to. Other parameters are preserved,
+   *  which is what keeps `?mtfail=…` (e2e/threads.smoke.spec.ts) working
+   *  beside it. */
   function syncQuery(): void {
     const p = new URLSearchParams(location.search);
     if (tierChoice === 'auto') {
@@ -143,22 +144,22 @@
   ];
 
   // The load itself is the shared loader's job (state, the fraction-only
-  // tick rule, the "failed to load: …" wording) — this page only adds what is
-  // genuinely its own: a forced tier, and a lifecycle that terminates the
-  // codec the moment the measurement is over.
+  // tick rule, the "failed to load: …" wording); this page only adds what is
+  // its own: a forced tier, and a lifecycle that terminates the codec the
+  // moment the measurement is over.
   let loader = $state(createCodecLoader({ tier: tierOverride() }));
-  /** Set by benchOnce/codesFor throwing — a *measurement* failure, distinct
+  /** Set by benchOnce/codesFor throwing: a *measurement* failure, distinct
    * from `loader.error`, which is a load failure. */
   let benchError: string | null = $state(null);
   let kernelLabel: string | null = $state(null);
   // Set when Codec.load() degraded past the tier it first attempted (see
-  // client.ts's `degradedFrom` doc comment) — names the tier that failed
+  // client.ts's `degradedFrom` doc comment); names the tier that failed
   // ("threads" or "relaxed"), so a degrade is visible on this diagnostic page
-  // too, not just on index/dream/model. Exercised by
+  // as well as on index/dream/model. Exercised by
   // e2e/threads.smoke.spec.ts's `?mtfail=handshake` test.
   let degradedFrom: string | null = $state(null);
   /** True when `degradedFrom` names a tier that loaded and ran and then
-   *  faulted, rather than one that failed to load — the two need different
+   *  faulted, rather than one that failed to load: the two need different
    *  wording. Exercised by e2e/threads.smoke.spec.ts's `?mtfail=poison` test. */
   let degradedAfterFault = $state(false);
   let bench: BenchResult | null = $state(null);
@@ -173,21 +174,21 @@
   let allError: string | null = $state(null);
   let allRows: TierRow[] = $state([]);
   /** Set only in `onMount`'s `finally`, i.e. after the auto-loaded codec has
-   * actually been terminated. Gating "run all tiers" on `!bench` instead is
-   * not enough: `bench` is assigned *before* `codesFor()`'s four sequential
-   * wasm encodes and well before the `finally` that terminates — each `await`
+   * been terminated. Gating "run all tiers" on `!bench` instead is not
+   * enough: `bench` is assigned *before* `codesFor()`'s four sequential
+   * wasm encodes and well before the `finally` that terminates; each `await`
    * yields, Svelte flushes, and the button is clickable for 1-4 s while a
    * threads-tier codec (up to 8 compute workers, 151 MiB committed / 1 GiB
    * reserved) is still alive. Clicking it then starts a second codec beside
-   * the first: ~400 MiB committed and 11 workers at worst, and — worse than
-   * the memory — the second shared `WebAssembly.Memory` can fail to allocate
+   * the first: ~400 MiB committed and 11 workers at worst, and, worse than
+   * the memory, the second shared `WebAssembly.Memory` can fail to allocate
    * and silently degrade the threads row to simd, writing a wrong number into
    * the very table this page exists to produce. */
   let autoLoadDone = $state(false);
 
   // This page's ready line is its own: it terminates the codec as soon as the
   // measurement is done, so `loader.codec` is null again by then and the
-  // shared "model ready — …" line would be wrong.
+  // shared "model ready · …" line would be wrong.
   let statusText = $derived.by(() =>
     kernelLabel && !loader.error ? `loaded: ${kernelShort(kernelLabel)}` : loader.statusText,
   );
@@ -255,7 +256,7 @@
     }
     // finally, not a trailing statement: benchOnce/codesFor throwing must
     // not leak this codec's coordinator + up to 16 spinning compute workers
-    // + shared memory — the catch below only reports the error.
+    // + shared memory; the catch below only reports the error.
     try {
       bench = await benchOnce(c);
       // A mid-session tier-3 fault swaps the instance underneath us
@@ -427,7 +428,7 @@
   .pick { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s-3); }
   .field { display: flex; flex-direction: column; gap: var(--s-1); }
   .lbl { font-size: var(--fs-xs); color: var(--dim); }
-  /* Wide enough for two digits and the browser's own spinner, and no wider —
+  /* Wide enough for two digits and the browser's own spinner, and no wider:
      in a flex row a text field otherwise takes the whole remaining line. */
   .workers { width: 7rem; }
   .benchtable { width: 100%; border-collapse: collapse; margin-top: var(--s-3); font-size: var(--fs-sm); }

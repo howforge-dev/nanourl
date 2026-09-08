@@ -4,7 +4,7 @@ import { NBSP } from '../src/lib/format';
 import { THREAD_FAULT_NOTE, THREAD_FAULT_UNRECOVERED } from '../src/lib/codec/poison';
 import type { Codec } from '../src/lib/codec/client';
 
-// `readyParts` composes the "model ready — …" line every page shares. Pure
+// `readyParts` composes the "model ready …" line every page shares. Pure
 // (it only reads the codec's own facts), so the three states it distinguishes
 // can be checked without loading 125 MiB of model: a clean load, a tier that
 // failed to load, and a tier that loaded, ran, and then faulted. The last two
@@ -71,7 +71,7 @@ describe('statusPartsFor', () => {
   // A non-null `codec` is not sufficient for "ready": on a dead codec the
   // forwarder is POISONED (non-null, isDead, every call answering with the
   // poison error), so an `isDead` check must run before treating a non-null
-  // codec as ready — otherwise the page would read "model ready — …
+  // codec as ready; otherwise the page would read "model ready …
   // threads:8" with a full bar while nothing works, and
   // THREAD_FAULT_UNRECOVERED would never reach the screen.
   it('renders an unrecovered thread fault even if a (dead) codec is still held', () => {

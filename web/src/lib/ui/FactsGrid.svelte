@@ -5,7 +5,7 @@
   // others.
   //
   // The `dt`/`dd` pairs come from the caller and stay there: they are the
-  // content, and Svelte scopes a component's CSS to its own template — so the
+  // content, and Svelte scopes a component's CSS to its own template, so the
   // `.facts` rules have to live in app.css, where the caller's markup can
   // reach them, and this component owns only the scaffold around them.
   import type { Snippet } from 'svelte';

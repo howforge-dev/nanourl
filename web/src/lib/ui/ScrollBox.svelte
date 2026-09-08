@@ -13,7 +13,7 @@
      *  (the attention panel scrolls to the selected layer). */
     element = $bindable(),
     /** A caller's own layout hook, reached with `:global()` under a scoped
-     *  ancestor — never its chrome. */
+     *  ancestor, never its chrome. */
     class: klass = '',
     /** The scroller's own place in the flow (a top margin). Inline rather
      *  than a global rule, so one panel's spacing cannot reach another's. */

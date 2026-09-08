@@ -18,9 +18,9 @@ import {
 } from '../src/lib/alphabet';
 import type { Alphabet } from '../src/lib/codec/types';
 
-// The digit tables, frozen in rust/urlcodec/src/coder.rs — copied here (not
-// imported; they live in Rust) so the properties below really do cover every
-// digit, including each table's digit 0, which is its marker.
+// The digit tables, frozen in rust/urlcodec/src/coder.rs, copied here (not
+// imported; they live in Rust) so the properties below cover every digit,
+// including each table's digit 0, which is its marker.
 const B79 = "~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._!$&'()*+,;=:@";
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const QR = '/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$*+-.:';
@@ -39,7 +39,7 @@ function rng(seed: number): () => number {
 }
 
 /** `n` random codes over `digits`, 1 to 16 characters long, never starting
- *  with digit 0 — the codec writes no leading zero. */
+ *  with digit 0: the codec writes no leading zero. */
 function sample(digits: string, n: number, seed: number): string[] {
   const r = rng(seed);
   const out: string[] = [];
@@ -134,7 +134,7 @@ describe('alphabet', () => {
 });
 
 // A marker is digit 0 of its table, which the codec never writes first, so
-// writing one in front of a code is a leading zero the decoder ignores —
+// writing one in front of a code is a leading zero the decoder ignores;
 // nothing is stripped anywhere, and a marked code reads the same bare and in
 // a fragment. The properties below hold that over every digit, a large
 // random sample per alphabet, and the hand-built worst cases: all-uppercase

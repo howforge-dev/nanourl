@@ -28,13 +28,13 @@ describe('coderReplay', () => {
       expect(r.steps[i].emitted).toBe(t.emit);
       expect(r.steps[i].pend).toBe(t.pend);
     });
-    // coder.rs's finish(): pending += 1; emit(low < QUARTER ? 0 : 1) — always
-    // writes exactly 2 + (last token's pend) bits (the settle bit plus
+    // coder.rs's finish(): pending += 1; emit(low < QUARTER ? 0 : 1), which
+    // always writes exactly 2 + (last token's pend) bits (the settle bit plus
     // pend+1 flipped deferred bits)
     const lastPend = g.tokens[g.tokens.length - 1].pend ?? 0;
     expect(r.finish.flush).toBe(lastPend + 1);
     expect(r.bitstr.length - (r.steps[r.steps.length - 1].emitted)).toBe(2 + lastPend);
-    // the full stream, bit for bit — not just a prefix
+    // the full stream, bit for bit, not a prefix
     expect(r.bitstr).toBe(g.bitstr);
   });
 

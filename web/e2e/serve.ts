@@ -2,13 +2,13 @@
 // The static server the Playwright suite runs against.
 //
 // It replaces `vite preview`, which injects its own COOP/COEP from
-// vite.config.ts's `preview.headers` — so the entire response-header surface
+// vite.config.ts's `preview.headers`, so the entire response-header surface
 // (cross-origin isolation, the immutable-vs-no-cache split) would be
 // structurally untestable, and a dist/ shipped with no `_headers` at all
 // would still pass every spec with the threads tier happily active.
 //
-// This serves `dist/_headers` — the file the build actually copied — through
-// the same parser `web/tests/headers.test.ts` uses, so the suite exercises the
+// This serves `dist/_headers` (the file the build copied) through the same
+// parser `web/tests/headers.test.ts` uses, so the suite exercises the
 // real deploy policy and fails loudly if the build stopped shipping it.
 //
 // Deliberately tiny and dependency-free (node http + fs). It is not a
@@ -76,7 +76,7 @@ function resolveFile(urlPath: string): string | null {
 const handler = (req: IncomingMessage, res: ServerResponse): void => {
   const urlPath = new URL(req.url ?? '/', `http://localhost:${port}`).pathname;
   const file = resolveFile(urlPath);
-  // Header rules key off the request path, not the resolved file — that is
+  // Header rules key off the request path, not the resolved file: that is
   // what a CDN does, and it is what makes `/` (an HTML page) land on the
   // no-cache rule rather than on whatever index.html's extension suggests.
   const headers: Record<string, string> = { ...headersFor(rules, urlPath) };
@@ -98,9 +98,9 @@ const handler = (req: IncomingMessage, res: ServerResponse): void => {
 const server = createServer(handler);
 
 /** Start the same server programmatically. `scripts/shots.ts` uses this so the
- *  screenshot harness renders against the real `_headers` policy — the same
+ *  screenshot harness renders against the real `_headers` policy (the same
  *  cross-origin isolation the suite asserts, and therefore the same kernel
- *  tier — instead of a second, weaker static server of its own. */
+ *  tier) instead of a second, weaker static server of its own. */
 export function startServer(listenPort: number): Promise<Server> {
   return new Promise((ok) => {
     const s = createServer(handler);

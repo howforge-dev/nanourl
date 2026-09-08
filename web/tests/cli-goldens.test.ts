@@ -48,7 +48,7 @@ describe('the CLI goldens describe the current alphabet and link modules', () =>
       const marked = !B79_ONLY.test(c.code) || QR_SHAPE.test(c.code);
       expect(c.bare).toBe(marked ? B79_MARK + c.code : c.code);
     }
-    // qr-alpha codes of both kinds — the base64url lookalikes, which take the
+    // qr-alpha codes of both kinds: the base64url lookalikes, which take the
     // marker, and the self-identifying ones (a `$*+.:` digit or a '/'), which
     // do not
     const qr = codes.filter((c) => c.alpha === QR_ALPHA);

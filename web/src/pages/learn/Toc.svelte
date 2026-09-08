@@ -15,7 +15,7 @@
 <style>
   /* The card shell is Card.svelte's; all the table of contents adds is its
      own link type. `:global` because the anchors are inside a component's
-     children — Svelte scopes them to this file, but their `.toc` ancestor
+     children: Svelte scopes them to this file, but their `.toc` ancestor
      belongs to Card. */
   :global(.toc) a {
     color: var(--acc);

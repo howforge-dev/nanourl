@@ -8,7 +8,7 @@
 #   build-wasm.sh --no-verify build only, skip the pin check (repro.sh, kernel work)
 #   build-wasm.sh --pin      build all three and REWRITE the pin
 #
-# Exit 1 is a real mismatch. Exit 3 is "this host is not the architecture the
+# Exit 1 is a mismatch. Exit 3 is "this host is not the architecture the
 # pin describes", which is a different statement and callers distinguish it.
 #
 # ONE PLACE. `task codec:wasm`, `task codec:pin`, `fuzz/run_tiers.sh` and both
@@ -27,7 +27,7 @@
 # different hashes and the linker then orders functions differently: measured,
 # the function, elem and code sections all differ while producers and
 # target_features are identical. The pin below is therefore an
-# x86_64-unknown-linux-gnu fact -- the architecture of both the parity-gate box
+# x86_64-unknown-linux-gnu fact, the architecture of both the parity-gate box
 # and the CI runners that build what the site serves, which is the whole
 # shipping path. On any other host, build for development and pass UNPINNED=1
 # to `task web:assets`.

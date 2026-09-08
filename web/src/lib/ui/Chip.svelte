@@ -10,14 +10,14 @@
   import type { Snippet } from 'svelte';
 
   let {
-    /** monospace label — a token piece, a code, a character */
+    /** monospace label: a token piece, a code, a character */
     mono = false,
     /** keep runs of spaces: a tokenizer piece can BE a space */
     pre = false,
     /** stack the content instead of laying it out in a row (the per-token
      *  cost cell is a piece over its bits over its bar) */
     block = false,
-    /** this one is chosen — an accent border, not colour alone */
+    /** this one is chosen: an accent border, not colour alone */
     selected = false,
     /** switched off but still shown (the atlas legend's hidden classes, a
      *  character the coder has not written yet) */

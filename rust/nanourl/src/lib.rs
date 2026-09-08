@@ -1,4 +1,4 @@
-//! `nanourl` — the end-user command line: encode a URL to a code, decode a
+//! `nanourl`, the end-user command line: encode a URL to a code, decode a
 //! link or a code back to its URL, and report on the model weights.
 //!
 //! It runs `urlcodec`'s C ABI (`codec_init`/`codec_encode`/`codec_decode`),
@@ -6,8 +6,8 @@
 //! code minted here and a code minted on the site are the same string by
 //! construction rather than by a second implementation agreeing.
 //!
-//! Both artifacts are in the binary — the tokenizer below, and the weights,
-//! which `src/main.rs` embeds and hands to [`run`] — so the tool needs no
+//! Both artifacts are in the binary (the tokenizer below, and the weights,
+//! which `src/main.rs` embeds and hands to [`run`]), so the tool needs no
 //! network, no cache and no companion files.
 //!
 //! A separate crate from `urlcodec`, not a module inside it: this one has a
@@ -48,7 +48,7 @@ pub const EXIT_OK: i32 = 0;
 pub const EXIT_BAD_INPUT: i32 = 1;
 /// The weights could not be used: an override that is missing or is not a
 /// model, or embedded bytes that no longer match their digest. The default
-/// model cannot reach this state — it is in the binary.
+/// model cannot reach this state; it is in the binary.
 pub const EXIT_NO_MODEL: i32 = 2;
 
 #[derive(Parser)]
@@ -164,7 +164,7 @@ impl From<AlphabetArg> for Alphabet {
     }
 }
 
-/// Human lines on stdout, or one JSON object — chosen once, so no command can
+/// Human lines on stdout, or one JSON object, chosen once, so no command can
 /// print half of each.
 struct Out {
     json: bool,
@@ -275,7 +275,7 @@ fn cmd_encode(
     let code = v["coded"].as_str().unwrap_or_default().to_string();
     // `code` is what the codec emitted; `bare` is how it is written down,
     // behind its alphabet's marker digit when it could pass as another
-    // alphabet — the spelling `decode` (and the site's Decode pane) reads.
+    // alphabet, the spelling `decode` (and the site's Decode pane) reads.
     let bare_code = bare_for(&code, alpha);
     let fragment = fragment_for(&code, alpha);
     let link = link_with(base, &fragment);
@@ -311,7 +311,7 @@ fn cmd_decode(
         return out.err(EXIT_BAD_INPUT, "no code in that input");
     }
     // An explicit --alphabet wins, then whatever the code identifies itself
-    // as, then base64url — the same order of authority the site's Decode pane
+    // as, then base64url, the same order of authority the site's Decode pane
     // uses for the same three sources.
     let alpha = forced.or(parsed.alpha).unwrap_or(DEFAULT_ALPHABET);
     if let Err(e) = init_codec(&weights::locate(embedded, model)) {
@@ -445,7 +445,7 @@ fn cmd_model(
 /// harness in the crate, and none of them needs a 124.8 MiB constant.
 pub fn run(embedded: &'static [u8]) -> i32 {
     // try_parse, not parse: clap exits 2 on a usage error, and 2 is this
-    // CLI's "model unavailable" code — a script checking for it would read a
+    // CLI's "model unavailable" code; a script checking for it would read a
     // typo as a missing download.
     let cli = match Cli::try_parse() {
         Ok(c) => c,
@@ -495,8 +495,8 @@ mod tests {
         assert_eq!(link_with("https://qv.lc/#old", "abc"), "https://qv.lc/#abc");
     }
 
-    /// The CLI's argument surface is a contract; clap checks it at build time
-    /// only if something asks it to.
+    /// clap checks the argument surface at build time only if something asks
+    /// it to.
     #[test]
     fn the_command_tree_is_well_formed() {
         use clap::CommandFactory;

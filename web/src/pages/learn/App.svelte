@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Static content page — no codec, no model load (this page
+  // Static content page: no codec, no model load (this page
   // needs no codec). Every figure it quotes comes from lib/numbers.ts.
   import Toc from './Toc.svelte';
   import PageHeader from '../../lib/ui/PageHeader.svelte';

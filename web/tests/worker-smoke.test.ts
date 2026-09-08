@@ -1,5 +1,5 @@
 // End-to-end smoke test of the wasm codec path, run directly under node (no
-// Worker, no browser) — the real coordinator (src/lib/codec/worker.ts) is
+// Worker, no browser). The real coordinator (src/lib/codec/worker.ts) is
 // exercised via Playwright's e2e suite instead. This test reuses the exact
 // put/read byte-marshalling helpers worker.ts uses (src/lib/codec/abi.ts),
 // so it verifies the same code the browser path relies on.
@@ -74,18 +74,18 @@ describe.skipIf(!hasAssets)('worker smoke: real wasm + model + tokenizer (needs 
       expect(typeof encoded.coded).toBe('string');
 
       // Close the round trip: without this, a codec emitting a stable but
-      // *wrong* bitstream would still pass the suite — and losslessness is
-      // the product's whole premise.
+      // *wrong* bitstream would still pass the suite, and the codec has to be
+      // lossless.
       const [dp, dl] = put(ex, memory, encoded.coded);
       const decoded = read(memory, ex.codec_decode(dp, dl, DEFAULT_ALPHABET)) as { ok: boolean; url: string };
       ex.ufree(dp, dl);
       expect(decoded.ok).toBe(true);
       expect(decoded.url).toBe(url);
 
-      // The learn page's worked example, run against the artifact actually
-      // packed into web/public — catches numbers.ts generated from one
-      // run's manifest while web/public is packed from another run's
-      // export, a mismatch that identical artifact_bytes alone would hide.
+      // The learn page's worked example, run against the artifact packed
+      // into web/public. Catches numbers.ts generated from one run's
+      // manifest while web/public is packed from another run's export, a
+      // mismatch that identical artifact_bytes alone would hide.
       const [hp, hl] = put(ex, memory, numbers.hn.url);
       const hn = read(memory, ex.codec_encode(hp, hl, DEFAULT_ALPHABET)) as {
         ok: boolean;
@@ -111,7 +111,7 @@ describe.skipIf(!hasAssets)('worker smoke: real wasm + model + tokenizer (needs 
 
       // codec_sample(seed: u32, temp: f32, top_k: u32, max_tokens: u32, p, l) -> u64;
       // an empty prefix (l = 0) samples unconditionally. Pins SampleResult's
-      // real shape: { ok, url, canonical, pieces, terminated } — not
+      // real shape: { ok, url, canonical, pieces, terminated }, not
       // { ok, url, canonical, tokens }, which reads just as plausible.
       const [sp, sl] = put(ex, memory, '');
       const sampled = read(memory, ex.codec_sample(1, 1.0, 0, 16, sp, sl)) as {

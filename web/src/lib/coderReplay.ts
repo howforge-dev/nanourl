@@ -1,12 +1,12 @@
 // Bit-exact JS replica of the wasm arithmetic coder (rust/urlcodec/src/coder.rs
 // `Encoder`), rebuilt from the `clo`/`chi`/`emit`/`pend` fields codec_encode()
 // already reports per token. This exists purely to DISPLAY the coder's
-// step-by-step behaviour for the observatory's coder stepper — the caller
+// step-by-step behaviour for the observatory's coder stepper; the caller
 // (CoderStepper.svelte) compares `.bitstr` against the wasm's own bitstr and
 // disables the stepper on any mismatch (never lies about what the coder did).
 //
 // PROB_BITS/TOTAL are the coder's stream-format constants (coder.rs), not
-// model architecture — they never vary with n_layer/d_model/vocab, so they
+// model architecture: they never vary with n_layer/d_model/vocab, so they
 // are not read from `codec.info`.
 import type { Tok } from './codec/types';
 
@@ -41,15 +41,15 @@ export interface ReplayStep {
 export interface ReplayResult {
   steps: ReplayStep[];
   /** The FULL stream, including the bits coder.rs's `finish()` writes after
-   * the last token (see `finish` below) — bit-exact equal to the wasm's own
+   * the last token (see `finish` below), bit-exact equal to the wasm's own
    * `bitstr`, not just a prefix of it. */
   bitstr: string;
-  /** coder.rs's `finish()`: `pending += 1; emit(low < QUARTER ? 0 : 1)` — one
+  /** coder.rs's `finish()`: `pending += 1; emit(low < QUARTER ? 0 : 1)`: one
    * settle bit plus `flush` copies of its complement, appended once after
    * every token (including the in-band `<eos>`) has been coded. Not tied to
    * any single token's renormalization loop, so it isn't one of `steps`'
-   * `acts` — callers that want to present it as a final step do so
-   * themselves (see CoderStepper.svelte). */
+   * `acts`; callers that want to present it as a final step do so themselves
+   * (see CoderStepper.svelte). */
   finish: { bit: '0' | '1'; flush: number };
 }
 
@@ -85,7 +85,7 @@ export function headerBits(version: number): string {
  * the wasm codec (their clo/chi are the token's true slice of the
  * probability line, as fractions of TOTAL; emit/pend are the wasm's own
  * post-token bit-stream state, used by the caller to verify this replica
- * didn't drift). Only stream version 0's algorithm is implemented — the
+ * didn't drift). Only stream version 0's algorithm is implemented: the
  * arithmetic here IS the stream format, so a future version that changes it
  * needs its own replay path rather than silently reusing this one. */
 export function replay(tokens: Tok[], version: number): ReplayResult {
@@ -143,7 +143,7 @@ export function replay(tokens: Tok[], version: number): ReplayResult {
   // coder.rs's Encoder::finish(): consumed by DROPPING self (a one-shot
   // method), so it always runs exactly once, after every token (including
   // the terminating <eos>) has already been through encode(). It is NOT
-  // part of the renormalization loop above — no interval halving, just one
+  // part of the renormalization loop above: no interval halving, one
   // settle bit chosen from whichever quarter `low` currently sits in, plus
   // flushing whatever E3 bits were still deferred.
   pending += 1;

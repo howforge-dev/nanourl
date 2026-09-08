@@ -8,19 +8,19 @@
 //! **Bit-identity for any W.** Each output row is computed end to end by a
 //! single participant, in the same group order as the single-thread kernel
 //! (`QuantMat::gemv_rows` is the one and only kernel body). Nothing is summed
-//! across participants, so `out[r]` depends only on `r` — not on which
+//! across participants, so `out[r]` depends only on `r`, not on which
 //! participant took it, nor on how many there were. W = 0, 1 and 4 produce
 //! the same bits; so does the same W twice with a different block split.
 //! `fuzz/run_tiers.sh` asserts it.
 //!
-//! **Why a shared cursor rather than fixed equal shares.** Fixed shares were
-//! tried first and are strictly worse: with every participant spinning, the
+//! **Why a shared cursor rather than fixed equal shares.** Fixed shares are
+//! strictly worse: with every participant spinning, the
 //! OS load balancer sees no idle time, so an unlucky placement that puts two
 //! wasm threads on one vCPU stays put for the whole run and every job waits
 //! for that pair to run serially. Measured on an 8-vCPU box, fixed shares were
-//! stable and good up to W = 3 and then *bimodal* — W = 7 came out at 5.1
+//! stable and good up to W = 3 and then *bimodal*: W = 7 came out at 5.1
 //! ms/token on one run and 13.0 on the next, W = 5 at 17.6 and 27.4. Handing
-//! out 64-row blocks on demand makes a slow participant simply take fewer
+//! out 64-row blocks on demand makes a slow participant take fewer
 //! blocks, which is the same reason work-stealing beats static partitioning
 //! everywhere else.
 //!
@@ -29,16 +29,16 @@
 //! `done == W` wait is exact even when more workers are parked than the codec
 //! was told about. Without that, `codec_init(.., 4)` against 7 parked workers
 //! would let the coordinator leave its wait after 4 of the 7 had reported
-//! while the other 3 were still writing `out` — a torn logit vector and a
+//! while the other 3 were still writing `out`: a torn logit vector and a
 //! stream that does not decode elsewhere, with nothing to observe it.
 //!
 //! **A dead worker cannot hang the codec.** `codec_init` refuses a W larger
 //! than the workers that registered, so the *boot-time* mismatch never
 //! reaches a job. The case that survives that check is a worker dying
-//! mid-session — OOM-killed, an uncaught exception in the worker script, a
+//! mid-session: OOM-killed, an uncaught exception in the worker script, a
 //! backgrounded tab throttled to death. `registered` never decreases and
 //! `workers` is unchanged, so nothing upstream notices; the coordinator would
-//! simply wait on a `done` that can never arrive, on a thread that by design
+//! wait on a `done` that can never arrive, on a thread that by design
 //! never parks. So [`join`] is bounded: on expiry it stops the cursor, drops
 //! to single-threaded for the rest of the session, and reports
 //! [`JOIN_TIMEOUT`] through `codec_info().threads_error` and a failed call.
@@ -48,20 +48,20 @@
 //! merely descheduled rather than dead is still *inside* `compute(r0, r1)`
 //! and will finish that block whenever the OS runs it again, long after the
 //! coordinator has moved on. Nothing in wasm can revoke that write, and
-//! nothing in JS can wait for it either — `Worker.terminate()` returns
+//! nothing in JS can wait for it either: `Worker.terminate()` returns
 //! immediately and gives no completion signal, so a page cannot know when the
 //! last write into the shared memory has landed.
 //!
-//! So the contract is not "keep working after a fault", it is **discard the
-//! instance**: on any fault the codec is POISONED. [`poisoned`] becomes true
-//! and never goes back, every entry point answers with the poison result
-//! instead of running the model, `codec_init` refuses to rebuild over the
-//! same memory, and the client is expected to drop the module, the workers
-//! and the `WebAssembly.Memory` together and start again. The failed call
+//! So the contract is **discard the instance**: on any fault the codec is
+//! POISONED. [`poisoned`] becomes true and never goes back, every entry point
+//! answers with the poison result instead of running the model, `codec_init`
+//! refuses to rebuild over the same memory, and the client is expected to drop
+//! the module, the workers and the `WebAssembly.Memory` together and start
+//! again. The failed call
 //! itself abandons its forward pass at the faulting matrix (`Model::step`
 //! checks `poisoned()` after every gemv), so nothing ever reads an output a
 //! straggler may still be writing, and the coordinator never recomputes into
-//! those rows — two writers on one row was the other half of the hazard.
+//! those rows: two writers on one row was the other half of the hazard.
 //!
 //! Within that, two things still hold the line:
 //!
@@ -69,19 +69,19 @@
 //!   re-check the epoch between claiming a block and writing it, so a
 //!   straggler stops at its next block boundary. The exposure is one
 //!   already-in-flight block, not the rest of the job.
-//! - **A straggler only ever writes inside the buffer the faulted job named**
-//!   — a `Model::step` local of the call that failed. Nothing reads it again:
+//! - **A straggler only ever writes inside the buffer the faulted job named**,
+//!   a `Model::step` local of the call that failed. Nothing reads it again:
 //!   the pass is abandoned, and no later call runs.
 //!
 //! What is NOT bounded is *when*. The straggler is by definition descheduled,
-//! so it resumes whenever the OS says — and the coordinator returns within
+//! so it resumes whenever the OS says. The coordinator returns within
 //! microseconds of giving up, so the late write almost always lands **after**
 //! that `Model::step` frame is gone, not before. Two consequences, both
 //! accepted because the instance is discarded and neither can produce a wrong
 //! stream:
 //!
 //! - `JOB.out` is a heap buffer, so the write is <= [`BLOCK`] rows (256 B)
-//!   into an allocation that has since been freed — and 256 B at its base
+//!   into an allocation that has since been freed, and 256 B at its base
 //!   lands on the allocator's free-list links, so the damage is not confined
 //!   to whatever later object occupies those bytes.
 //! - `JOB.x` is worse in kind: it is `&hq`, a `QuantVec` **local of
@@ -105,7 +105,7 @@
 //!
 //! **Why the coordinator never calls `memory.atomic.wait32`:** a wait on the
 //! browser's main thread traps. The codec may well be driven from the main
-//! thread, so the coordinator only ever spins — and because it drains the
+//! thread, so the coordinator only ever spins. Because it drains the
 //! same cursor as everyone else, it only starts spinning once there are no
 //! blocks left, so a healthy join is bounded by one straggler block, not by
 //! the length of the job.
@@ -117,14 +117,14 @@
 //! those gaps has to be woken by a `notify` on the next job, and that wake
 //! costs microseconds *per worker*. Measured on an 8-vCPU box with a 2000-iteration
 //! spin budget: W = 1 was 15.5 ms/token but W = 2 was 31.0 and W = 6
-//! was 41.0 -- overhead growing linearly in W, i.e. the parallel kernel was
+//! was 41.0: overhead growing linearly in W, i.e. the parallel kernel was
 //! slower than no kernel at all. The spin budget below is sized to cover a
 //! whole serial gap, and the coordinator skips the `notify` syscall entirely
 //! while no worker is parked.
 //!
 //! The job protocol below is deliberately target-independent (the pointers
 //! ride in `AtomicUsize`, and the per-block work is a closure) so the failure
-//! paths can be tested with real threads on the host — see the tests at the
+//! paths can be tested with real threads on the host; see the tests at the
 //! bottom. Only the two functions that plug `QuantMat` into it are wasm-only.
 
 use core::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
@@ -136,7 +136,7 @@ use core::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 const SPIN_LIMIT: u32 = 1 << 20;
 
 /// Rows handed out per claim. 64 rows x 1280 int4 columns is ~40 KB of weight
-/// traffic, a few microseconds of work — two orders of magnitude more than
+/// traffic, a few microseconds of work, two orders of magnitude more than
 /// the `fetch_add` that claims it, while still giving the smallest production
 /// matrix (1280 rows) 20 blocks to spread over at most 8 participants.
 const BLOCK: usize = 64;
@@ -157,8 +157,8 @@ const JOIN_CHUNK: u32 = 4096;
 /// before declaring a participant dead.
 ///
 /// **This is a spin count, not a clock, and that is a compromise.** wasm32 has
-/// no clock without a JS import, and the one timed primitive that exists —
-/// `memory.atomic.wait32`'s timeout — traps for the coordinator, which may be
+/// no clock without a JS import, and the one timed primitive that exists
+/// (`memory.atomic.wait32`'s timeout) traps for the coordinator, which may be
 /// a browser main thread. So the bound is a calibrated iteration count:
 /// ~256k chunks x 4096 atomic loads is ~10^9 reads, on the order of a second
 /// or two on the hardware benched above; it scales with CPU speed rather
@@ -184,7 +184,7 @@ pub const JOIN_OK: u32 = 0;
 pub const JOIN_TIMEOUT: u32 = 2;
 
 /// One in-flight gemv, described in shared memory. Pointers ride in
-/// `AtomicUsize` — u32 on wasm32, where all of this actually runs, and
+/// `AtomicUsize`: u32 on wasm32, where all of this actually runs, and
 /// pointer-sized on the host so the protocol can be exercised by the tests.
 ///
 /// Padded to one 64-byte cache line per contended field. `done` is
@@ -211,14 +211,14 @@ pub struct Job {
     /// **How many** workers have reached `worker_loop`: a true count, one
     /// `fetch_add` per [`register`] call, not a `fetch_max` over the ids. A
     /// max is not a count and cannot support the instruction the loader is
-    /// given ("poll `threads_ready()` until it equals W") — with ids 1..=W, a
+    /// given ("poll `threads_ready()` until it equals W"): with ids 1..=W, a
     /// max reaches W the moment the *highest*-numbered worker registers, so a
     /// loader could pass the barrier with workers 1..W-1 still short of
     /// `worker_loop`; they would then snapshot `gen` after the first job was
     /// posted, sit it out, and the coordinator would burn its whole join
     /// bound on the very first gemv.
     ///
-    /// Never decreases — which is exactly why a dead worker is caught by
+    /// Never decreases, which is exactly why a dead worker is caught by
     /// [`join`] and not by any check on this.
     pub registered: AtomicU32,
     /// Highest id ever passed to [`register`], alongside the count. The pair
@@ -288,8 +288,7 @@ pub fn registered() -> u32 {
 }
 
 /// The highest id ever registered. Compared against [`registered`] by
-/// `codec_init` to check the loader really did boot ids 1..=N — see
-/// [`Job::max_id`].
+/// `codec_init` to check the loader booted ids 1..=N; see [`Job::max_id`].
 pub fn max_worker_id() -> u32 {
     JOB.max_id.load(Ordering::SeqCst)
 }
@@ -334,25 +333,24 @@ pub fn register(id: u32) -> u32 {
 /// address of a `'static` 4-byte-aligned `u32` inside a `static` that lives
 /// for the whole program. The wasm atomic intrinsics take `*mut i32` and only
 /// ever perform aligned 32-bit atomic accesses on it, which is the same
-/// access `AtomicU32` performs — no `&mut` is ever created, so the shared
+/// access `AtomicU32` performs: no `&mut` is ever created, so the shared
 /// reference other threads hold is never invalidated.
 #[cfg(all(target_arch = "wasm32", target_feature = "atomics"))]
 fn gen_ptr() -> *mut i32 {
     &JOB.gen as *const AtomicU32 as *mut i32
 }
 
-/// Wake any parked worker. Only pay for the syscall when somebody is actually
-/// parked: the two SeqCst operations here and the worker's mirrored pair
-/// (register as a sleeper, then re-read `gen`) cannot both miss — in the
-/// single total order, either this load is after the worker's registration,
-/// so we notify, or the worker's re-read is after the `gen` bump, so it never
-/// parks.
+/// Wake any parked worker. Only pay for the syscall when somebody is parked.
+/// The two SeqCst operations here and the worker's mirrored pair (register as
+/// a sleeper, then re-read `gen`) cannot both miss: in the single total order,
+/// either this load is after the worker's registration, so we notify, or the
+/// worker's re-read is after the `gen` bump, so it never parks.
 fn wake_workers() {
     if JOB.sleepers.load(Ordering::SeqCst) > 0 {
         // SAFETY: `gen_ptr()` is the aligned address of a `static` u32 (see
         // its doc); `memory.atomic.notify` only reads the wait queue for that
         // address and writes nothing, so it is sound for any count, including
-        // when no thread is actually parked.
+        // when no thread is parked.
         #[cfg(all(target_arch = "wasm32", target_feature = "atomics"))]
         unsafe {
             core::arch::wasm32::memory_atomic_notify(gen_ptr(), u32::MAX)
@@ -372,7 +370,7 @@ fn await_job(seen: u32) -> u32 {
             // landed in the window above it is visible here, and we skip the
             // park rather than sleeping through a notify that was never sent.
             if JOB.gen.load(Ordering::SeqCst) == seen {
-                // SAFETY: as above — an aligned `static` u32 address, and
+                // SAFETY: as above, an aligned `static` u32 address, and
                 // `wait32` compares-and-parks without writing. Only ever
                 // reached from a worker thread; the coordinator never calls
                 // it, because a wait on a browser main thread traps.
@@ -390,7 +388,7 @@ fn await_job(seen: u32) -> u32 {
 }
 
 /// Claim and compute blocks of the current job until the cursor runs past the
-/// end. Run by the coordinator and by every participating worker alike — the
+/// end. Run by the coordinator and by every participating worker alike: the
 /// only thing that differs is who bumps `done` afterwards.
 ///
 /// Relaxed ordering on the cursor is enough: the descriptor was published
@@ -399,7 +397,7 @@ fn await_job(seen: u32) -> u32 {
 /// same block, which `fetch_add` gives on its own.
 ///
 /// `epoch` is the `gen` value the caller's job was posted under, and is
-/// re-read between claiming a block and writing to it — point (3) of the
+/// re-read between claiming a block and writing to it; see point (3) of the
 /// module header. Parking the cursor on a fault already stops a worker from
 /// claiming anything *new*; the epoch check is what stops a worker that
 /// claimed a valid block and was then descheduled for longer than the join
@@ -461,7 +459,7 @@ fn join(w: u32) -> u32 {
 /// alongside the workers, then join them. `compute` must already know where
 /// the output lives (the wasm path publishes the descriptor first).
 ///
-/// Returns [`JOIN_OK`] or [`JOIN_TIMEOUT`]. Note there is no "not enough
+/// Returns [`JOIN_OK`] or [`JOIN_TIMEOUT`]. There is no "not enough
 /// workers" outcome: `codec_init` refuses a W larger than `registered()`, and
 /// `registered()` never decreases, so `workers() <= registered()` holds for
 /// the life of the session and a barrier on it would be dead code. The
@@ -488,7 +486,7 @@ use crate::model::{QuantMat, QuantVec};
 ///
 /// # Safety
 /// `base` must point at `rows` writable `f32`, and every other participant
-/// must be draining this same cursor — that is what makes the `&mut` built
+/// must be draining this same cursor: that is what makes the `&mut` built
 /// per block disjoint from every other participant's. The slice is built for
 /// one block only and dies with it, so no reference ever spans rows another
 /// participant may be writing.
@@ -501,7 +499,7 @@ unsafe fn block(mat: &QuantMat, x: &QuantVec, base: *mut f32, r0: usize, r1: usi
 /// Coordinator: `out = mat · x` using every participant. Returns [`JOIN_OK`]
 /// or [`JOIN_TIMEOUT`].
 ///
-/// **On [`JOIN_TIMEOUT`] the caller must not touch `out` at all** — not read
+/// **On [`JOIN_TIMEOUT`] the caller must not touch `out` at all**: not read
 /// it (rows the straggler owned were never written, and it may be writing
 /// them now) and not rewrite it (that would be two writers on one row). The
 /// instance is poisoned by then, so `Model::step` abandons the pass at this
@@ -512,7 +510,7 @@ unsafe fn block(mat: &QuantMat, x: &QuantVec, base: *mut f32, r0: usize, r1: usi
 /// The caller must not hold a live reference spanning them for the duration:
 /// only the disjoint per-block slices [`block`] builds may alias this memory.
 /// After a [`JOIN_TIMEOUT`] a straggler may still write inside `out` and read
-/// `x`, so both must stay allocated for as long as the caller's frame lives —
+/// `x`, so both must stay allocated for as long as the caller's frame lives;
 /// they are `Model::step` locals, and the poisoned instance is what
 /// guarantees no later call reuses those bytes for anything that is read.
 #[cfg(all(target_arch = "wasm32", target_feature = "atomics"))]
@@ -527,13 +525,13 @@ pub unsafe fn gemv_par(mat: &QuantMat, x: &QuantVec, base: *mut f32, rows: usize
 /// Worker side: take blocks off every job's cursor, forever.
 ///
 /// Never allocates and never returns. `id` is 1-based and decides only
-/// whether this worker takes part in a job at all — blocks themselves are
-/// claimed, not assigned — so that exactly `workers()` of the parked workers
+/// whether this worker takes part in a job at all (blocks themselves are
+/// claimed, not assigned), so that exactly `workers()` of the parked workers
 /// report `done` and the coordinator's wait is exact.
 ///
 /// The `unsafe` reads reconstruct the references the coordinator published.
 /// They stay valid because the coordinator does not return from `gemv_par`
-/// until this worker has bumped `done` — or until the bounded join has given
+/// until this worker has bumped `done`, or until the bounded join has given
 /// up on it, after which the instance is poisoned, nothing reads those
 /// buffers again, and the `epoch` argument below stops this worker before it
 /// starts any *further* block.
@@ -587,8 +585,8 @@ pub mod tests {
         set_join_chunks(JOIN_CHUNKS_DEFAULT);
     }
 
-    /// A worker that dies *after* registering — which no check on
-    /// `registered` can see, because it never decreases — must time out
+    /// A worker that dies *after* registering (which no check on
+    /// `registered` can see, because it never decreases) must time out
     /// rather than hang, and must poison the instance.
     ///
     /// The sibling test below covers the harder case, a worker that is merely
@@ -680,13 +678,13 @@ pub mod tests {
         assert!(poisoned());
         assert_eq!(error(), JOIN_TIMEOUT);
         assert_eq!(workers(), 0, "threading is off for the rest of the session");
-        // The bound must actually BURN the iterations it promises. The first
-        // version of `join` spun `spin_loop()` and read `done` once per
-        // chunk; the body had no observable effect, LLVM deleted the loop,
-        // and the ~10^9-iteration bound silently became ~10^5 atomic loads --
-        // sub-millisecond, which tripped on the first (cold, parked-worker)
+        // The bound must BURN the iterations it promises. A `join` that
+        // spins on `spin_loop()` and reads `done` once per chunk has a body
+        // with no observable effect, so LLVM deletes the loop and the
+        // ~10^9-iteration bound silently becomes ~10^5 atomic loads:
+        // sub-millisecond, which trips on the first (cold, parked-worker)
         // job of every mt process in the N=100 gate. 3 chunks x JOIN_CHUNK
-        // reads cannot be instant unless the loop was optimized away again.
+        // reads cannot be instant unless the loop was optimized away.
         assert!(
             waited >= std::time::Duration::from_micros(10),
             "join returned in {waited:?}: the spin loop was optimized away, \
@@ -731,8 +729,8 @@ pub mod tests {
         let mut blocks = Vec::new();
         drain_blocks(BLOCK * 4, Some(7), |r0, _| {
             blocks.push(r0);
-            // Whatever retires the job — a fault, or the next job being
-            // posted — happens while we are inside a block.
+            // Whatever retires the job (a fault, or the next job being
+            // posted) happens while we are inside a block.
             JOB.gen.store(8, Ordering::SeqCst);
         });
         assert_eq!(
@@ -754,7 +752,7 @@ pub mod tests {
     /// A tier-3 fault POISONS the instance: the failed call fails, every
     /// later call refuses to run the model, and the straggler that finishes
     /// its block afterwards writes only inside the buffer the faulted job
-    /// named — which nothing reads again.
+    /// named, which nothing reads again.
     ///
     /// This is the host half. `lib.rs`'s `poisoned_instance_refuses_every_call`
     /// asserts the ABI half (the entry points and `codec_init`), because the
@@ -766,8 +764,8 @@ pub mod tests {
         let _guard = job_lock();
         reset_job();
 
-        // The job's output is a plain caller buffer — exactly what
-        // `Model::step`'s locals are, now that the arena is gone.
+        // The job's output is a plain caller buffer: exactly what
+        // `Model::step`'s locals are.
         let mut out = vec![0f32; ROWS];
         let base = out.as_mut_ptr() as usize;
         JOB.out.store(base, Ordering::SeqCst);

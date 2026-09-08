@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The complete RUSTFLAGS for a build of this workspace. One place, because
 # cargo gives you exactly one: RUSTFLAGS, `target.<triple>.rustflags` and
-# `build.rustflags` are MUTUALLY EXCLUSIVE -- the first that applies wins
+# `build.rustflags` are MUTUALLY EXCLUSIVE. The first that applies wins
 # outright and the others are ignored. A workflow that set RUSTFLAGS for the
 # path remapping while `.cargo/config.toml` held `+crt-static` would silently
 # ship a dynamically linked binary. So both live here and nothing relies on
@@ -14,7 +14,7 @@
 # WHAT THE REMAPS ARE FOR. rustc records the absolute path of every source file
 # it compiles in panic locations, and those strings survive `strip`. Without
 # remapping, the same commit gives different bytes under a different
-# $CARGO_HOME or rustup directory -- 2 such paths in urlcodec.wasm, 19 in the
+# $CARGO_HOME or rustup directory: 2 such paths in urlcodec.wasm, 19 in the
 # threads tier, 25 in the nanourl binary. `task codec:repro`, `task cli:repro`
 # and every release leg's double build are what check that this works.
 #
@@ -44,8 +44,8 @@ flags+=("--remap-path-prefix=$sysroot=/rust")
 # must run on a machine with nothing installed: no libc of a particular
 # vintage, no Visual C++ redistributable, no TLS library. `+crt-static` is
 # already the default for *-linux-musl and is spelled out anyway, because a
-# default is not a guarantee. macOS has no static libSystem -- Apple ships none
-# and linking it is unsupported -- so those two are dynamic against the system
+# default is not a guarantee. macOS has no static libSystem (Apple ships none
+# and linking it is unsupported), so those two are dynamic against the system
 # library and nothing else. `strip=symbols` on all six: what ships is the same
 # shape everywhere, and a rebuild has no symbol table to differ in.
 case "$target" in

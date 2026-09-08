@@ -202,13 +202,13 @@ describe('the QR section', () => {
 
 // Every field of the settings schema, reached through its own control: the
 // change lands in exactly that field of the persisted settings (which are
-// what the component holds), and shows in the document it belongs to — the
+// what the component holds), and shows in the document it belongs to: the
 // on-screen SVG for what is drawn, the export link for the export-only
 // fields, the width style for the on-screen size. A control this cannot
 // reach is a defect in its markup.
 describe('every settings field, through its control', () => {
   /** Where the change shows: the drawing, the export link, the on-screen
-   *  width, the download name — or nowhere yet (`none`): "own" corner paint
+   *  width, the download name, or nowhere yet (`none`): "own" corner paint
    *  starts as the dots' colour and draws the same until its editor is
    *  used, and JPEG/WebP quality goes into a raster built on click. */
   type Observe = 'screen' | 'export' | 'width' | 'name' | 'none';

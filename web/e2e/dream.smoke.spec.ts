@@ -26,7 +26,7 @@ test('dream page: sample a batch, determinism across runs', async ({ page }) => 
   // Same seed (default 1, untouched) replays the same batch. The second
   // `toHaveCount(3)` is satisfied by the *stale* DOM, so without waiting for
   // the run to finish, a no-op second click would compare the text to itself
-  // and pass — wait for the button to finish its run (it disables while
+  // and pass. Wait for the button to finish its run (it disables while
   // sampling) before reading the rows back.
   await page.getByRole('button', { name: 'Dream' }).click();
   await expect(page.getByRole('button', { name: 'Dream' })).toBeDisabled();

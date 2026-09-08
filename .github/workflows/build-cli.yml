@@ -74,7 +74,7 @@ jobs:
         include:
           # Blacksmith wherever it offers the machine, GitHub-hosted for the one
           # it does not (ARM Windows). Every leg's host architecture matches its
-          # target, except the Intel macOS build, which Rosetta runs below —
+          # target, except the Intel macOS build, which Rosetta runs below,
           # so every archive is executed before it is packaged.
           #
           # Not `cross` for musl: its container mounts the cargo workspace

@@ -53,7 +53,7 @@ test('compressor page: encode, decode, distribution, alphabet toggle, redirect o
   // or it lands at the top with nothing highlighted (see Dist.svelte's
   // jumpChosen). The wikipedia example's early, domain-structure tokens are
   // all highly predictable (rank #1-2, so jumping to them never needs to
-  // scroll past the first page and can't exercise this path) — probe a
+  // scroll past the first page and can't exercise this path). Probe a
   // handful of later candidates and keep whichever has the highest chosen
   // rank.
   const tokenCount = await chips.count();
@@ -67,7 +67,7 @@ test('compressor page: encode, decode, distribution, alphabet toggle, redirect o
       bestRank = r;
       bestIdx = idx;
     }
-    if (bestRank > 20) break; // good enough — no need to keep probing
+    if (bestRank > 20) break; // good enough, no need to keep probing
   }
   await chips.nth(bestIdx).click();
   await expect(encodePane.locator('.ctx')).not.toHaveText('computing…');
@@ -122,7 +122,7 @@ test('compressor page: encode, decode, distribution, alphabet toggle, redirect o
 });
 
 // C1: the learn page's worked example and the compressor must agree, because
-// they are the same model. They did not — numbers.ts was generated from one
+// they are the same model. They did not: numbers.ts was generated from one
 // run's manifest while web/public carried another run's export,
 // so learn.html showed `IDrqYQdZ` (8 chars) and this page produced
 // `BAajQuI8c` (9 chars) for the same URL, two clicks apart. Every gate was
@@ -130,7 +130,7 @@ test('compressor page: encode, decode, distribution, alphabet toggle, redirect o
 // the module the page renders from.
 //
 // `tests/assets-sync.test.ts` and `tests/worker-smoke.test.ts` gate this in
-// node; this is the in-browser half — the real wasm, the real chunked
+// node; this is the in-browser half: the real wasm, the real chunked
 // download, the real UI.
 test('the learn page worked example is what the shipped compressor produces', async ({ page }) => {
   const watch = watchErrors(page);
@@ -140,7 +140,7 @@ test('the learn page worked example is what the shipped compressor produces', as
 
   const encodePane = page.locator(testIdSelector(TESTID.paneEncode));
   // base64url is the default alphabet, and the one hn-trace.json was recorded
-  // with — assert that rather than assume it.
+  // with; assert that rather than assume it.
   await expect(page.locator('.alpha button[aria-pressed="true"]')).toHaveText('base64url');
 
   await encodePane.locator('textarea').fill(numbers.hn.url);

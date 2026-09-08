@@ -1,9 +1,9 @@
 // Wire types shared between client.ts (main thread) and worker.ts (coordinator).
-// These mirror the JSON the Rust codec (rust/urlcodec/src/lib.rs) returns —
-// field names and shapes must match exactly, since later tasks import these.
+// These mirror the JSON the Rust codec (rust/urlcodec/src/lib.rs) returns:
+// field names and shapes must match exactly.
 
-/** The wasm coder's alphabet enum. Which id is which — and which one is the
- *  default — is spelled once, in `lib/alphabet.ts`'s `ALPHABETS`; this comment
+/** The wasm coder's alphabet enum. Which id is which, and which one is the
+ *  default, is spelled once, in `lib/alphabet.ts`'s `ALPHABETS`; this comment
  *  would otherwise be a third restatement of the mapping. */
 export type Alphabet = 0 | 1 | 2 | 3;
 
@@ -110,7 +110,7 @@ export interface StatusPart {
   num?: boolean;
 }
 
-/** A load-progress tick. `text` and `parts` are the SAME line — `parts` keeps
+/** A load-progress tick. `text` and `parts` are the SAME line: `parts` keeps
  *  its '·'-separated segments apart so the status line can set the numeric
  *  ones in tabular monospace, `text` is the joined form. Both are omitted on
  *  a fraction-only tick (the loader emits those at animation rate and only

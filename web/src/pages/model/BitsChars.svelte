@@ -1,11 +1,10 @@
 <script lang="ts">
-  // Bits → characters: the mechanical last step — read the bit stream six
+  // Bits → characters: the mechanical last step. Read the bit stream six
   // bits at a time, each group picks one of 64 URL-safe characters.
-  // Six-bit grouping is exact for
-  // base64url specifically (64 = 2^6, so coder.rs's bignum radix conversion
-  // reduces to simple bit-grouping from the least-significant end) — this
-  // page always encodes with alpha=1 (base64url), so the story matches what
-  // actually ran.
+  // Six-bit grouping is exact for base64url specifically (64 = 2^6, so
+  // coder.rs's bignum radix conversion reduces to simple bit-grouping from
+  // the least-significant end); this page always encodes with alpha=1
+  // (base64url), so the story matches what actually ran.
 
   import type { EncodeResult } from '../../lib/codec/types';
   import { headerBits } from '../../lib/coderReplay';

@@ -29,7 +29,7 @@ export const COLOR = {
  * A canvas is drawn at twice its CSS size so its pixels stay sharp on a 2x
  * display. Anything measured in the backing store is therefore `CANVAS_SCALE`
  * times its CSS length, and text drawn into it is that multiple of a `--fs-*`
- * step — `CANVAS_FONT` is `--fs-micro` doubled. Neither can be a custom
+ * step; `CANVAS_FONT` is `--fs-micro` doubled. Neither can be a custom
  * property: a 2D context takes numbers and a font string, not `var()`.
  */
 export const CANVAS_SCALE = 2;
@@ -54,7 +54,7 @@ export const FONT_VAR: Readonly<Record<keyof typeof FONT, string>> = {
 
 /**
  * Lengths TypeScript passes into CSS as a value rather than writing as a
- * declaration — a component prop, a `style:` directive — where a stylesheet's
+ * declaration (a component prop, a `style:` directive) where a stylesheet's
  * `var()` has nowhere to live. Multiples of the 8px step, like app.css's
  * `--m-*` measures.
  */

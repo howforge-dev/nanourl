@@ -46,7 +46,7 @@ function favicon(): Plugin {
 //
 // The generated files are written into `web/` and gitignored, because Vite
 // derives an HTML entry's output path from its path relative to the project
-// root — a file generated into a subdirectory would ship as
+// root, and a file generated into a subdirectory would ship as
 // `dist/<subdir>/model.html`, at a URL nothing links.
 //
 // Adding a page is a `PAGES` row plus a `src/pages/<id>/` directory, and
@@ -71,7 +71,7 @@ function pages(): Plugin {
         input[p.id] = file;
       }
       // A page removed from PAGES leaves its entry behind, and a stale file in
-      // the root is still served by the dev server — so it would keep working
+      // the root is still served by the dev server, so it would keep working
       // locally and 404 on the next deploy.
       for (const name of readdirSync(__dirname)) {
         if (name.endsWith('.html') && !generated.has(name)) rmSync(resolve(__dirname, name));
@@ -85,8 +85,8 @@ function pages(): Plugin {
 // Copies web/_headers into dist/ as part of `vite build` itself.
 //
 // `_headers` lives at web/_headers, not in Vite's publicDir, so without this,
-// `pnpm build` — the build command Cloudflare Pages' own Vite detection
-// suggests — would produce a dist/ with no COOP/COEP rules at all. The
+// `pnpm build` (the build command Cloudflare Pages' own Vite detection
+// suggests) would produce a dist/ with no COOP/COEP rules at all. The
 // deploy would still be green and the site would still work, but the
 // threads tier would never activate, and nothing surfaces that anywhere.
 // Making the copy part of the build means every path that produces a dist/
@@ -112,7 +112,7 @@ function copyHeaders(): Plugin {
 // with a green build.
 //
 // `buildStart`, so it fails before any bundling work. `apply: 'build'` keeps
-// `pnpm dev` iterable, and a missing assets.json is not an error — see
+// `pnpm dev` iterable, and a missing assets.json is not an error; see
 // artifactMismatch's doc comment.
 function checkNumbersMatchArtifact(): Plugin {
   return {
@@ -139,7 +139,7 @@ export default defineConfig({
     // only produce "preloaded but not used" warnings on every warm load.
     modulePreload: false,
     // `rollupOptions.input` comes from the `pages` plugin, which derives it
-    // from src/lib/pages.ts — the entry list and the page record cannot
+    // from src/lib/pages.ts: the entry list and the page record cannot
     // disagree because there is only one of them.
   },
   worker: { format: 'es' },
@@ -147,7 +147,7 @@ export default defineConfig({
   server: { headers: { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' } },
   preview: { headers: { 'Cross-Origin-Opener-Policy': 'same-origin', 'Cross-Origin-Embedder-Policy': 'require-corp' } },
   // Svelte ships both a browser and a server build behind export conditions,
-  // and under vitest node's own conditions win — so `mount()` resolves to the
+  // and under vitest node's own conditions win, so `mount()` resolves to the
   // server entry and throws `lifecycle_function_unavailable`. The component
   // tests run in jsdom, which IS a browser environment, so say so. Scoped to
   // the vitest run: forcing `browser` on a real node build would be wrong.

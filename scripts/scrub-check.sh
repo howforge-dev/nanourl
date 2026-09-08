@@ -3,7 +3,8 @@
 #
 # Exported to the public repo as scripts/scrub-check.sh and run there by CI, so
 # a leak reintroduced by a later hand-edit fails the public build rather than
-# waiting for the next export. Same script, same rules file, both sides.
+# waiting for the next export. Both sides run the same script against the same
+# rules file.
 set -euo pipefail
 
 here="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -79,7 +80,7 @@ cd "$root"
 
 # Tracked files when the root IS a repository root, every file otherwise: an
 # export is scanned before `git init` and the public repo after, and a build
-# output directory inside a repository has no tracked files at all -- taking
+# output directory inside a repository has no tracked files at all: taking
 # git's answer there would scan nothing and call it clean.
 files=()
 if [ "$mode" = stdin ]; then
@@ -102,7 +103,7 @@ for f in "${files[@]}"; do
   skipped=
   for g in "${skips[@]:-}"; do
     [ -n "$g" ] || continue
-    # shellcheck disable=SC2053  # glob match is the point
+    # shellcheck disable=SC2053  # the glob match is intended
     if [[ $f == $g ]]; then skipped=1; break; fi
   done
   [ -n "$skipped" ] || scan+=("$f")

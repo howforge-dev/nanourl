@@ -2,7 +2,7 @@
 //!
 //! Determinism contract: encode and decode run the SAME quantize() over the
 //! SAME probabilities (both sides step the model identically), so the only
-//! requirement is self-consistency within this implementation — fixed
+//! requirement is self-consistency within this implementation: fixed
 //! operation order everywhere, no platform-varying reductions.
 
 pub const PROB_BITS: u32 = 24;
@@ -27,8 +27,8 @@ impl Encoder {
         }
     }
 
-    /// bits carried but not yet writable (the coder's E3 straddle counter) —
-    /// exposed so the observatory can label them honestly
+    /// bits carried but not yet writable (the coder's E3 straddle counter),
+    /// exposed so the observatory can label them accurately
     pub fn pending(&self) -> u32 {
         self.pending
     }
@@ -136,7 +136,7 @@ impl<'a> Decoder<'a> {
 }
 
 /// f64 probabilities -> cumulative integer frequencies (len V+1, sum TOTAL).
-/// Floor of 1 per token, remainder to the (first) argmax — codec.py semantics.
+/// Floor of 1 per token, remainder to the (first) argmax: codec.py semantics.
 pub fn quantize(probs: &[f64]) -> Vec<u64> {
     let v = probs.len();
     let mut sum = 0f64;
@@ -172,12 +172,13 @@ pub fn quantize(probs: &[f64]) -> Vec<u64> {
 
 // ---------------------------------------------------------------------------
 // base-N framing: the bit stream is one big number written in the chosen
-// alphabet, which is therefore the digit table — frozen, or every code ever
-// emitted decodes to garbage. `bits_to_string_in` never writes a leading
-// zero digit (the sentinel bit makes the number non-zero and the loop stops
-// at zero), so digit 0 of a table doubles as a marker its callers can write
-// in front of a code: a leading zero leaves the value unchanged, so nothing
-// ever has to be stripped and a marker can never truncate a code.
+// alphabet, which is therefore the digit table. That table is frozen, or
+// every code ever emitted decodes to garbage. `bits_to_string_in` never
+// writes a leading zero digit (the sentinel bit makes the number non-zero
+// and the loop stops at zero), so digit 0 of a table doubles as a marker
+// its callers can write in front of a code: a leading zero leaves the value
+// unchanged, so nothing ever has to be stripped and a marker can never
+// truncate a code.
 
 /// base79: the RFC 3986 path-segment charset, with `~` at digit 0 as the
 /// marker `nanourl::link` and `web/src/lib/alphabet.ts` write in front of a
@@ -193,18 +194,18 @@ pub const ALPHABET64: &[u8; 64] =
 /// QR generator at 5.5 bits per character instead of byte mode's 8. `/` is
 /// digit 0, the marker written in front of a code that could pass as
 /// base64url. The two left out, space and `%`, do not survive a URL fragment
-/// intact — space is percent-encoded and `%` starts an escape that
+/// intact: space is percent-encoded and `%` starts an escape that
 /// `decodeURIComponent` rejects. Uppercase only: the QR charset has no
 /// lowercase, and the codec does not case-fold because its guarantee is
 /// byte-exact.
 pub const ALPHABET_QR: &[u8; 43] = b"/0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ$*+-.:";
 
-/// emoji-1k: 1024 single-code-point emoji, exactly 10 bits per glyph. ~37% fewer visible
-/// characters than base79 buys in exchange for 4 UTF-8 bytes per glyph instead
-/// of 1. Derived — and re-derivable — by tools/gen_emoji_alphabet.py, which
-/// documents why each filter is there; the short version is that no two of
-/// these can fuse into one grapheme and none of them changes under NFKC, so a
-/// code survives being pasted around.
+/// emoji-1k: 1024 single-code-point emoji, exactly 10 bits per glyph. ~37%
+/// fewer visible characters than base79 buys in exchange for 4 UTF-8 bytes per
+/// glyph instead of 1. Derived, and re-derivable, by
+/// tools/gen_emoji_alphabet.py, which documents why each filter is there: no
+/// two of these can fuse into one grapheme and none of them changes under
+/// NFKC, so a code survives being pasted around.
 pub const ALPHABET_EMOJI_1K: &str = concat!(
     "⌚⌛⏩⏪⏫⏬⏰⏳◽◾☔☕♈♉♊♋♌♍♎♏♐♑♒♓♿⚓⚡⚪⚫⚽⚾⛄",
     "⛅⛎⛔⛪⛲⛳⛵⛺⛽✅✊✋✨❌❎❓❔❕❗➕➖➗➰➿⬛⬜⭐⭕🀄🃏🆎🆑",
@@ -256,7 +257,7 @@ pub enum Alphabet {
 }
 
 impl Alphabet {
-    /// Every variant, in wire order — the list every per-alphabet test and
+    /// Every variant, in wire order: the list every per-alphabet test and
     /// the fuzz harness's case cycle iterate, so adding a variant without
     /// covering it is a compile error here rather than a gap in a test.
     pub const ALL: [Alphabet; 4] = [
@@ -267,7 +268,7 @@ impl Alphabet {
     ];
 
     /// Wire values for the wasm C ABI, where 0/1 were the original
-    /// base79/base64url flag — old callers keep their meaning.
+    /// base79/base64url flag; old callers keep their meaning.
     pub fn from_i32(v: i32) -> Self {
         match v {
             1 => Alphabet::Base64,
@@ -337,14 +338,14 @@ impl Big {
     }
 }
 
-/// Stream-version registry: id 0 = the FIRST shipped model — all three
+/// Stream-version registry: id 0 = the FIRST shipped model; all three
 /// cheap 2-bit slots belong to real releases, none to dev (pre-release
 /// streams are throwaway and become invalid when id 0 freezes). Ids are
 /// permanent once a stream escapes a session.
 /// Header cost: ids 0-2 -> 2 bits, 3-65 -> 8 bits, 66-320 -> 16 bits.
 pub const STREAM_VERSION: u32 = 0;
 
-/// Whether `version` has a header encoding at all — the CLI validates
+/// Whether `version` has a header encoding at all. The CLI validates
 /// `--stream-version` with this so an out-of-range value is a message rather
 /// than `bits_to_string_in`'s `.unwrap()`.
 pub fn version_supported(version: u32) -> bool {
@@ -502,7 +503,7 @@ mod tests {
     }
 
     /// A code never starts with digit 0, and leading zero digits decode to
-    /// the same stream — the two facts that let digit 0 serve as a marker
+    /// the same stream: the two facts that let digit 0 serve as a marker
     /// that is never stripped.
     #[test]
     fn leading_zero_digits_are_never_written_and_always_accepted() {
@@ -608,8 +609,8 @@ mod tests {
         assert!(string_to_bits_in("~AB", Alphabet::Base64).is_err());
     }
 
-    /// Every qr-alpha code is made of QR alphanumeric characters — over
-    /// random streams, not only the table.
+    /// Every qr-alpha code is made of QR alphanumeric characters (over
+    /// random streams, not only the table).
     #[test]
     fn qr_alpha_codes_use_only_the_table() {
         let mut state = 0x9e37_79b9_7f4a_7c15u64;

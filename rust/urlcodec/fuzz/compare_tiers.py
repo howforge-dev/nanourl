@@ -3,20 +3,20 @@
 run_tiers.sh's TIERS order); every other must match it on:
 
   columns 1-5  idx, alphabet, status, coded-or-error, roundtrip flag
-  column 7     dist_hash  — fnv64 over the quantized cumulative table
-                            cum[0..=vocab] (u64 LE) of EVERY step
-  column 8     logit_hash — fnv64 over the raw f32 logits of EVERY step,
-                            by bit pattern (f32::to_bits, u32 LE)
+  column 7     dist_hash: fnv64 over the quantized cumulative table
+                          cum[0..=vocab] (u64 LE) of EVERY step
+  column 8     logit_hash: fnv64 over the raw f32 logits of EVERY step,
+                           by bit pattern (f32::to_bits, u32 LE)
 
 Column 6 (fnv64 of the whole encode+decode JSON) is INFORMATIONAL and not
 compared: it also hashes `bits` fields computed through `f64::log2()`, which
 differs in the last ulp between native's libm and wasm's libm even when every
 stream byte is identical.
 
-With --expect N it also refuses to pass a run that did not actually compare
-N cases, or that contains no successfully coded case, or whose digest columns
-are not real hashes (the digests are a runtime toggle; two tiers both
-reporting "off" agree on nothing).
+With --expect N it also refuses to pass a run that did not compare N cases,
+or that contains no successfully coded case, or whose digest columns are not
+hashes (the digests are a runtime toggle; two tiers both reporting "off"
+agree on nothing).
 
 Split out of run_tiers.sh so the same comparison can be run over a set of
 already-merged tiers without rebuilding or refuzzing.
@@ -41,12 +41,12 @@ def key(line):
 
 
 def sanity(path, lines, expect):
-    """A gate that can pass having compared nothing is not a gate.
+    """Refuse a run that passed having compared nothing.
 
-    Three ways the old comparator said OK with no evidence: empty files (0
-    cases, 0 mismatches, rc 0), an all-ERR run, and -- once the digests became
-    a runtime toggle -- a run where every digest column is the literal "off",
-    which compares equal on both sides while proving nothing.
+    Three ways a comparator says OK with no evidence: empty files (0 cases,
+    0 mismatches, rc 0), an all-ERR run, and, with the digests a runtime
+    toggle, a run where every digest column is the literal "off", which
+    compares equal on both sides while proving nothing.
     """
     errs = []
     if expect is not None and len(lines) != expect:

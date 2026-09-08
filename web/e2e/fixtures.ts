@@ -4,7 +4,7 @@
 // The static server sends COOP/COEP, so every page is cross-origin isolated
 // and `detectTier()` (src/lib/codec/tier.ts) picks the threads tier: up to
 // MAX_WORKERS compute threads per page on top of the coordinator, and N
-// Playwright workers then oversubscribe the host N × 5 ways — under that
+// Playwright workers then oversubscribe the host N × 5 ways: under that
 // contention a single codec call can starve past its assertion timeout.
 // Nothing in a flow spec is about the tier, so by default a page reports no
 // isolation and the codec runs the relaxed tier on one thread. A spec that
@@ -25,9 +25,9 @@ const REPORT = '__nanourlTierSeen';
 
 /** Hide the isolation from every page of `context`, and collect the status
  *  lines that report the threads tier anyway. `detectTier()` reads the flag
- *  once at load, so the override is an init script — it runs before any
- *  page script — and the check is a page-side observer of `#status`, so a
- *  page that is closed or navigated away mid-test is still covered. */
+ *  once at load, so the override is an init script (it runs before any page
+ *  script), and the check is a page-side observer of `#status`, so a page
+ *  that is closed or navigated away mid-test is still covered. */
 async function forceRelaxedTier(context: BrowserContext): Promise<string[]> {
   const seen: string[] = [];
   await context.exposeBinding(REPORT, ({ page }, text: string) => {

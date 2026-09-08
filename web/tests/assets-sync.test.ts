@@ -1,13 +1,12 @@
 // The staleness gate: `src/lib/numbers.ts` (every figure the learn page
-// shows) and `src/lib/assets.json` (the bytes the browser actually
-// downloads) must describe the SAME artifact — and byte count alone cannot
-// tell that apart. Two different runs that share a config produce the same
-// `model.artifact_bytes`
-// (130,862,112) and the same architecture numbers by construction, even
-// though the weights differ: numbers.ts could describe one run's worked
-// example (HN URL compressing to `IDrqYQdZ`) while `web/public/*.bin` is
-// actually the other run's export (producing `BAajQuI8c` instead), with
-// every other gate green.
+// shows) and `src/lib/assets.json` (the bytes the browser downloads) must
+// describe the SAME artifact, and byte count alone cannot tell that apart.
+// Two different runs that share a config produce the same
+// `model.artifact_bytes` (130,862,112) and the same
+// architecture numbers by construction, even though the weights differ:
+// numbers.ts could describe one run's worked example (HN URL compressing to
+// `IDrqYQdZ`) while `web/public/*.bin` is the other run's export (producing
+// `BAajQuI8c` instead), with every other gate green.
 //
 // The digest is the one field that can tell two runs of one config apart, so
 // numbers.ts records it (`web/scripts/numbers.ts --nurl`) and this compares.

@@ -1,4 +1,4 @@
-//! Browser-facing wasm library: hand-rolled C ABI (no wasm-bindgen — the
+//! Browser-facing wasm library: hand-rolled C ABI (no wasm-bindgen: the
 //! module stays tiny and dependency-free). JS copies the model + tokenizer
 //! bytes in, then calls codec_encode/codec_decode with UTF-8 in and JSON out.
 //!
@@ -7,8 +7,8 @@
 //!
 //! Two wasm builds come out of this file: the single-threaded tiers 1-2
 //! (stable rust, own memory) and the tier-3 `urlcodec-mt.wasm` (nightly,
-//! `-Zbuild-std`, imported shared memory) whose extra exports —
-//! `thread_setup` / `worker_main` — let JS park N worker instances in
+//! `-Zbuild-std`, imported shared memory) whose extra exports
+//! (`thread_setup` / `worker_main`) let JS park N worker instances in
 //! `threads::worker_loop`. Everything else is identical in both.
 
 // `memory.atomic.wait32` / `memory.atomic.notify` are still unstable in
@@ -26,13 +26,13 @@
 #![allow(clippy::assign_op_pattern)]
 #![allow(clippy::unnecessary_map_or)]
 #![allow(clippy::field_reassign_with_default)]
-// `coder` (and its `Encoder`/`Decoder`) went private -> pub in this task so
-// abi_test.rs can build a version-1 stream directly; that visibility flip is
-// what makes clippy's public-API lint fire on ported new()s it never saw before.
+// `coder` (and its `Encoder`/`Decoder`) is public so abi_test.rs can build a
+// version-1 stream directly; that visibility is what makes clippy's
+// public-API lint fire on the ported new()s.
 #![allow(clippy::new_without_default)]
 // clippy 1.98 added `chunks_exact_to_as_chunks`, which fires on the two
 // fixed-order f32 reductions in model.rs. Those chunk sizes ARE the
-// determinism guarantee (see model.rs's header) — they are not rewritten for
+// determinism guarantee (see model.rs's header) and are not rewritten for
 // a style lint. `unknown_lints` is allowed alongside it so an older clippy,
 // which does not know the name, does not fail the same gate.
 #![allow(unknown_lints)]
@@ -66,17 +66,17 @@ static mut DIGESTS: bool = false; // parity digests, from codec_init's DIGEST_BI
 static mut ARTIFACT_BYTES: usize = 0;
 
 /// `codec_init`'s `threads` word, bit 17: fold the two per-step parity
-/// digests during `codec_encode`. OFF in production — it is ~98 KB of
+/// digests during `codec_encode`. OFF in production: it is ~98 KB of
 /// byte-at-a-time hashing per step (32 KB of logits + 64 KB of `cum`) on the
 /// coordinator, unparallelised, which is pure Amdahl serial time against a
 /// ~6 ms/token threaded kernel. The fuzz harnesses set it; nothing else
 /// should. With it off, `dist_hash`/`logit_hash` are reported as "off", and
 /// `fuzz/compare_tiers.py` refuses to pass a run whose digest columns are not
-/// real hashes — so the gate cannot silently "agree" on a disabled digest.
+/// real hashes, so the gate cannot silently "agree" on a disabled digest.
 pub const DIGEST_BIT: i32 = 1 << 17;
 
 /// What `codec_info().kernel` reports: the compile-time SIMD tier, plus the
-/// runtime worker count when tier 3 is active. `threads:0` never appears —
+/// runtime worker count when tier 3 is active. `threads:0` never appears:
 /// zero workers IS the single-threaded tier, and saying so twice would make
 /// two different builds report the same string.
 #[allow(static_mut_refs)]
@@ -129,7 +129,7 @@ impl Fnv {
             self.bytes(&c.to_le_bytes());
         }
     }
-    /// Every step's raw logits by BIT PATTERN — this is the hash that proves
+    /// Every step's raw logits by BIT PATTERN: the hash that proves
     /// the int4 kernel itself is bit-identical across tiers, before softmax
     /// and quantization can round a difference away.
     #[inline]
@@ -174,8 +174,8 @@ fn err_json(msg: &str) -> u64 {
 ///
 /// **`"code": "instance_poisoned"` is the documented, machine-readable
 /// signal**, and the only error string in this ABI that carries a `code`
-/// field. A client that sees it must throw the whole instance away — module,
-/// workers and `WebAssembly.Memory` — and, if it wants to keep going, build a
+/// field. A client that sees it must throw the whole instance away (module,
+/// workers and `WebAssembly.Memory`) and, if it wants to keep going, build a
 /// new one at a lower tier. Retrying against the same instance will only get
 /// this again; `codec_init` over the same memory returns 6 for the same
 /// reason.
@@ -217,7 +217,7 @@ pub extern "C" fn fuzz_url(seed: u64, idx: u64) -> u64 {
 }
 
 /// Model observatory: replay <eos> + the first k URL tokens and trace the
-/// FINAL step — the forward pass whose logits predict token k. Returns per
+/// FINAL step: the forward pass whose logits predict token k. Returns per
 /// layer: every head's attention row over the cached positions, residual
 /// L2 norms (entering / after attention / after MLP), and the residual
 /// stream at layer exit. Position labels come with the response so the
@@ -304,20 +304,20 @@ pub unsafe extern "C" fn ufree(p: *mut u8, n: usize) {
 /// Returns 0 on success; on failure call codec_encode etc. is invalid and the
 /// error JSON is retrievable via the returned packed ptr from codec_last().
 ///
-/// `threads`: bit 16 is "relaxed available" (informational only — the JS
+/// `threads`: bit 16 is "relaxed available" (informational only: the JS
 /// loader already chose between urlcodec.wasm and urlcodec-relaxed.wasm
 /// before this call, so it cannot change which SIMD tier this build takes;
 /// `codec_info().kernel` stays truthful from `model::kernel_name()`'s
 /// compile-time `cfg`). Bit 17 is [`DIGEST_BIT`] (test instrumentation, off
 /// in production). `threads & 0xFFFF` is W, the number of compute workers
-/// already parked in `worker_main` — 0 (the default, and the only value the
+/// already parked in `worker_main`; 0 (the default, and the only value the
 /// non-shared builds accept) keeps every gemv on this thread.
 ///
 /// # The W contract, which the loader MUST honour
 /// Spawn workers with ids `1..=W`, then **poll `threads_ready()` until it
 /// equals W (to a deadline)** before calling this. `threads_ready()` is a
 /// true COUNT of the workers that reached the worker loop, so "equals W" is
-/// the real barrier — not `max(id)`, which reaches W as soon as the
+/// the real barrier, not `max(id)`, which reaches W as soon as the
 /// highest-numbered worker registers and is therefore satisfiable with the
 /// others still booting.
 ///
@@ -337,7 +337,7 @@ pub unsafe extern "C" fn ufree(p: *mut u8, n: usize) {
 /// finishing a block somewhere in this linear memory, and nothing can tell us
 /// when: `Worker.terminate()` returns immediately and gives no completion
 /// signal, and there is no join for a wasm thread. Rebuilding a codec on top
-/// of that — even single-threaded — would put fresh weights and a fresh
+/// of that, even single-threaded, would put fresh weights and a fresh
 /// tokenizer into bytes a straggler is still writing. So the instance is
 /// written off: drop the module, the workers and the `WebAssembly.Memory`
 /// together and instantiate again (the web loader already builds a new memory
@@ -383,7 +383,7 @@ pub unsafe extern "C" fn codec_init(
     // cached tokenizer against a new model is a live path. Every id the
     // tokenizer can emit indexes `cum[id + 1]` (a table sized by the model)
     // and `wte.row_f32(id, ..)` (rows sized by the model), and this target is
-    // `panic-strategy: abort` -- an over-long tokenizer traps the module with
+    // `panic-strategy: abort`: an over-long tokenizer traps the module with
     // no JSON, no return code and no diagnostic, poisoning the instance. One
     // comparison here turns that into an error code.
     if tok.vocab_size() != model.cfg.vocab {
@@ -397,7 +397,7 @@ pub unsafe extern "C" fn codec_init(
             // the first gemv instead (which is what waiting would do) is the
             // one failure mode a browser cannot recover from. This also
             // establishes `workers() <= registered()` for the session, which
-            // is why `threads::coordinate` has no ready barrier -- the
+            // is why `threads::coordinate` has no ready barrier: the
             // reachable failure is a worker dying later, and only the bounded
             // join can see that.
             let n = threads::registered();
@@ -432,7 +432,7 @@ pub unsafe extern "C" fn codec_init(
 
 /// Static facts about the loaded model + build, for the observatory header
 /// and support bug reports: shape, parameter count, artifact layout, and
-/// which int4 kernel this runtime actually took.
+/// which int4 kernel this runtime took.
 #[no_mangle]
 #[allow(static_mut_refs)]
 pub extern "C" fn codec_info() -> u64 {
@@ -468,8 +468,8 @@ pub extern "C" fn codec_info() -> u64 {
 /// Every entry point except `codec_info` runs through here, which is the
 /// gate that makes a tier-3 fault terminal.
 ///
-/// **Before**: a poisoned instance never runs the model again. That is the
-/// whole recovery story — see `threads.rs`'s header. A straggler that was
+/// **Before**: a poisoned instance never runs the model again. There is no
+/// other recovery; see `threads.rs`'s header. A straggler that was
 /// merely slow rather than dead may still be finishing one block inside the
 /// buffer the faulted job named, and no browser API can tell us when it is
 /// done: `Worker.terminate()` returns immediately and reports nothing. So the
@@ -477,8 +477,8 @@ pub extern "C" fn codec_info() -> u64 {
 ///
 /// **After**: the call that hit the fault fails too. Its forward pass was
 /// abandoned at the faulting matrix (`Model::step`), so what it produced is
-/// not a stream anyone should keep — and a torn stream is one that decodes to
-/// a different URL somewhere else.
+/// not a stream anyone should keep: a torn stream decodes to a different URL
+/// somewhere else.
 ///
 /// `codec_info` deliberately does NOT go through here: reporting
 /// `threads_error` is exactly what a client needs after seeing the poison
@@ -587,12 +587,12 @@ pub unsafe extern "C" fn codec_encode(p: *const u8, l: usize, alpha: i32) -> u64
         let mut model_bits = 0f64;
         // Two per-step parity digests, folded over EVERY step of this URL when
         // DIGEST_BIT was set at init (see fuzz/run_tiers.sh). `dist_h` covers
-        // the quantized cumulative table the arithmetic coder actually charges
+        // the quantized cumulative table the arithmetic coder charges
         // against; `logit_h` covers the raw f32 logits by bit pattern, one
         // layer earlier, so a kernel that diverges by an ulp is caught even on
         // the cases where softmax + 24-bit quantization would have rounded the
         // difference away. Both are integer-only folds over data the encode
-        // loop already has in hand -- but ~98 KB per step of it, so production
+        // loop already has in hand, but ~98 KB per step of it, so production
         // leaves them off.
         let on = unsafe { DIGESTS };
         let mut dist_h = Fnv::new(on);
@@ -607,9 +607,9 @@ pub unsafe extern "C" fn codec_encode(p: *const u8, l: usize, alpha: i32) -> u64
             let bits = PROB_BITS as f64 - width.log2();
             model_bits += bits;
             enc.encode(cum[id as usize], cum[id as usize + 1]);
-            // clo/chi/emit/pend: the token's true slice of the probability
-            // line and the coder's real output state right after taking it —
-            // the observatory's coder stepper replays these exactly
+            // clo/chi/emit/pend: the token's slice of the probability line
+            // and the coder's output state right after taking it; the
+            // observatory's coder stepper replays these exactly
             toks.push(serde_json::json!({
                 "piece": c.tok.piece(id),
                 "bits": (bits * 100.0).round() / 100.0,
@@ -741,7 +741,7 @@ pub unsafe extern "C" fn codec_decode(p: *const u8, l: usize, alpha: i32) -> u64
                 "bits": (bits_cost * 100.0).round() / 100.0,
             }));
             out.push(sym as u32);
-            // chaining removed the block limit; keep a generous cap so a
+            // chaining leaves no block limit; keep a generous cap so a
             // corrupt stream cannot loop forever
             if out.len() > 65536 {
                 return err_json("no <eos> within 65536 tokens: corrupt input?");
@@ -836,7 +836,7 @@ pub extern "C" fn thread_stack_bytes() -> u32 {
 
 /// Tier-3 worker bring-up, called once per worker instance before
 /// `worker_main`. **Returns 0 on success, non-zero if this worker is not
-/// safe to run** — the caller must throw rather than continue.
+/// safe to run**: the caller must throw rather than continue.
 ///
 /// # The stack pointer is JS's job, and this checks JS did it
 /// The caller MUST write the exported mutable global first:
@@ -854,12 +854,12 @@ pub extern "C" fn thread_stack_bytes() -> u32 {
 /// `nightly-2026-09-06` at both `-O0` and `-O`; the emitted body for
 /// `asm!("local.get {sp}", "global.set __stack_pointer", sp = in(local) x)`
 /// is `global.get $sp; local.set; local.get x; global.set $sp; local.get
-/// saved; global.set $sp` — two `global.set`, the second restoring the old
+/// saved; global.set $sp`: two `global.set`, the second restoring the old
 /// value. wasm-bindgen's thread helper writes it from JS for the same reason.
 ///
 /// So this function makes the omission LOUD instead of silent. A worker whose
-/// `__stack_pointer` was never written runs on the module's default value —
-/// the same constant in every instance — i.e. every worker silently shares
+/// `__stack_pointer` was never written runs on the module's default value
+/// (the same constant in every instance), i.e. every worker silently shares
 /// the coordinator's stack. That is concurrent stack corruption with no
 /// diagnostic: wrong logits, or a trap somewhere unrelated, depending on
 /// timing. Here it becomes a non-zero return before any work is done.
@@ -895,7 +895,7 @@ pub extern "C" fn worker_main(id: u32) -> ! {
     threads::worker_loop(id)
 }
 
-/// **A COUNT** of the workers that have reached `worker_loop` — one per
+/// **A COUNT** of the workers that have reached `worker_loop`, one per
 /// `register` call, not the highest id.
 ///
 /// **The loader MUST poll this to a deadline before calling `codec_init`,**
@@ -904,7 +904,7 @@ pub extern "C" fn worker_main(id: u32) -> ! {
 /// registers, so a loader could clear the barrier with workers 1..W-1 still
 /// short of `worker_loop`. Those workers would then snapshot `gen` after the
 /// first job was posted, sit that job out, and the coordinator would burn its
-/// entire join bound on the first gemv of the first encode — ~1-2 s of a
+/// entire join bound on the first gemv of the first encode: ~1-2 s of a
 /// pinned core, then "tier-3 worker lost mid-call" and a session stuck on the
 /// single-threaded tier.
 ///
@@ -984,7 +984,7 @@ mod tests {
         assert_eq!(v["code"], "instance_poisoned");
 
         // codec_init is refused for ANY threads value, before it looks at a
-        // single input byte -- deliberately garbage arguments below.
+        // single input byte: deliberately garbage arguments below.
         let junk = [0u8; 4];
         for w in [0i32, 1, 4] {
             assert_eq!(

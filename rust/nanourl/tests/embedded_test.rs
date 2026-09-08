@@ -3,13 +3,13 @@
 //! `nanourl` embeds the weights and the tokenizer; `web/src/lib/assets.json`
 //! records the digests of what `task web:assets` packed for the browser. If
 //! those ever differ, the CLI and the site are two different products wearing
-//! one name — and the failure is silent, because both would still round-trip
-//! internally and simply disagree about what a code means.
+//! one name, and the failure is silent, because both would still round-trip
+//! internally and disagree about what a code means.
 //!
 //! This is the site end of the chain. `build.rs` holds the artifact end: it
 //! refuses to embed a file whose length and sha256 are not `model_pin.rs`'s,
 //! the same constants asserted here, and `cli_test` re-hashes what the binary
-//! actually carries.
+//! carries.
 //!
 //! `assets.json` is generated and gitignored, so its absence is a loud skip
 //! rather than a failure, on the same terms as the crate's other artifact

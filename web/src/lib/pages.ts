@@ -5,7 +5,7 @@
 //
 // A page therefore says once what it is called on its own header (`suffix`),
 // what other pages call it (`nav`), how wide its column is (`width`) and where
-// it lives — and no two of those can disagree.
+// it lives, and no two of those can disagree.
 
 export type PageId = 'index' | 'model' | 'learn' | 'dream' | 'bench';
 
@@ -13,25 +13,23 @@ export interface PageDef {
   id: PageId;
   href: string;
   /** How OTHER pages link to this one. Every label says what the destination
-   *  does, not what it is called — "model observatory", "how it works",
-   *  "dream URLs" — and "home" for the compressor, which is the site itself. `← nanourl` named the
-   *  site rather than the page, two lines under a wordmark already reading
-   *  "nanourl". */
+   *  does, not what it is called ("model observatory", "how it works", "dream
+   *  URLs"), and "home" for the compressor, which is the site itself. */
   nav: string;
-  /** What follows the wordmark on this page's own header — the page's name. */
+  /** What follows the wordmark on this page's own header: the page's name. */
   suffix?: string;
   /** One line on what the page is, shown under the wordmark and used as the
    *  document title and meta description (scripts/page-html.ts renders both
    *  from it), so the header and the <head> cannot disagree. */
   tagline?: string;
-  /** A page reached directly and linked from nowhere — it neither appears in
+  /** A page reached directly and linked from nowhere: it neither appears in
    *  the menu nor carries one. Nothing is unlisted today. */
   unlisted?: boolean;
   /** How wide this page's column is.
    *
    *  `text` (the default) is the reading measure: prose, a form, a result.
    *  `wide` is for a page whose content is canvases and tables rather than
-   *  sentences — the observatory's residual heatmap sits at full resolution
+   *  sentences: the observatory's residual heatmap sits at full resolution
    *  beside its norms chart only if the column is wider than a paragraph
    *  should ever be.
    *
@@ -42,8 +40,8 @@ export interface PageDef {
 
 /** Reading order: the compressor first (it is the back-link target for every
  *  other page), then the explanatory pages and the kernel benchmark in the
- *  order the compressor offers them. `PageHeader` walks this list, which is why the order here is
- *  the order on screen. */
+ *  order the compressor offers them. `PageHeader` walks this list, so the
+ *  order here is the order on screen. */
 export const PAGES: readonly PageDef[] = [
   { id: 'index', href: '/', nav: 'home', suffix: 'offline URL shortener' },
   { id: 'model', href: '/model.html', nav: 'observatory', suffix: 'observatory', tagline: 'inspect the weights and predictions behind the compressor', width: 'wide' },
@@ -64,14 +62,14 @@ export const pageSuffix = (id: PageId): string | undefined => page(id).suffix;
 export interface NavLink {
   href: string;
   label: string;
-  /** the page being viewed — rendered as the selected item, not a link */
+  /** the page being viewed, rendered as the selected item, not a link */
   current: boolean;
 }
 
 /**
  * The page menu for `here`: every listed page in `PAGES` order, the current
  * one marked. The same menu on every page, in the same order, so a visitor
- * learns it once — no per-page back-links, no arrows.
+ * learns it once: no per-page back-links, no arrows.
  */
 export function navFor(here: PageId): NavLink[] {
   if (page(here).unlisted) return [];
@@ -81,7 +79,7 @@ export function navFor(here: PageId): NavLink[] {
 export const pageTagline = (id: PageId): string | undefined => page(id).tagline;
 
 /** Document title: the site name, the page name, then the tagline if the
- *  page has one — the same words the header shows. */
+ *  page has one, the same words the header shows. */
 export function pageTitle(id: PageId): string {
   const p = page(id);
   const name = p.suffix ? `nanourl · ${p.suffix}` : 'nanourl';

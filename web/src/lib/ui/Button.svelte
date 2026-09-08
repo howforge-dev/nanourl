@@ -16,22 +16,22 @@
 <script lang="ts">
   // Every button on the site, and every link that has to sit beside one.
   //
-  // The chrome — surface, border, radius, sizes, tones, and the one focus ring
-  // — is `.btn*` in app.css, because Segmented's options are buttons too and
-  // have to be the same button. This component owns the markup and the props
-  // a caller chooses behaviour with.
+  // The chrome (surface, border, radius, sizes, tones, and the one focus
+  // ring) is `.btn*` in app.css, because Segmented's options are buttons too
+  // and have to be the same button. This component owns the markup and the
+  // props a caller chooses behaviour with.
   import type { Snippet } from 'svelte';
 
   let {
     variant = 'secondary',
     size = 'md',
     tone = 'default',
-    /** Renders an <a>. A control that navigates is a link — it must open in a
-     *  new tab, be copied from a context menu and be announced as a link — but
-     *  it sits beside buttons, which is a shared appearance, not a shared
+    /** Renders an <a>. A control that navigates is a link: it must open in a
+     *  new tab, be copied from a context menu and be announced as a link. It
+     *  sits beside buttons, which is a shared appearance, not a shared
      *  element. */
     href,
-    /** `href` only. `_blank` additionally gets `rel="noopener"`: without it the
+    /** `href` only. `_blank` also gets `rel="noopener"`: without it the
      *  opened page can reach back through `window.opener`. */
     target,
     /** `href` only: the file name a click saves the target as, instead of
@@ -53,7 +53,7 @@
     /** `data-testid`. On the control itself: a wrapper element carrying it
      *  instead would let a click land beside the button rather than on it. */
     testid,
-    /** Extra classes for the caller's own layout — never its chrome, which is
+    /** Extra classes for the caller's own layout, never its chrome, which is
      *  what `variant`, `size`, `block` and `flush` are for. */
     class: klass = '',
     onclick,

@@ -47,10 +47,10 @@ pub fn canonical(url: &str) -> String {
     // port split), or dotted quad. Label reversal preserves the multiset of
     // characters, so "contains" gives the same answer on both sides of the
     // involution where "starts with" (brackets) or "ends with a valid port"
-    // (colon) do not - both found by the fuzz goldens. A retained host holds
+    // (colon) do not; both found by the fuzz goldens. A retained host holds
     // ':' only when the port split above was rejected (non-digit tail), and
     // reversal can move that ':' so a later pass's split accepts it as a
-    // port - so any ':' in host must also freeze it.
+    // port, so any ':' in host must also freeze it.
     let host = if host.contains('[') || host.contains(':') || is_ipv4(host) {
         host.to_string()
     } else {
@@ -98,7 +98,7 @@ mod tests {
             "https://COM.Example.WWW/Case",
         ),
         // rejected port split ("notaport" isn't digits) retains the ':' in
-        // host, which now freezes reversal instead of reordering around it.
+        // host, which freezes reversal instead of reordering around it.
         ("https://a.b:notaport/x", "https://a.b:notaport/x"),
     ];
     #[test]

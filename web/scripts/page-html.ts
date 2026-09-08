@@ -2,17 +2,16 @@
 // this plus its row in `src/lib/pages.ts`; none of them is checked in.
 //
 // Five hand-written entry files state a page's <head> in a second place, and
-// a build-time rewrite that fills them in from the page record is a third —
-// one that `pnpm dev`, or any build that skips the plugin, does not apply. The
+// a build-time rewrite that fills them in from the page record is a third
+// that `pnpm dev`, or any build that skips the plugin, does not apply. The
 // page record is the only declaration: this renders the file, and
 // `vite.config.ts`'s `pages()` plugin writes it and derives the build's entry
 // list from the same list.
 import { pageEntryModule, pageMeta, pageWidth, type PageId } from '../src/lib/pages';
 
 /** Escapes text for an HTML text node or a double-quoted attribute value.
- *  Titles and descriptions are ours, not user input, but a template that
- *  interpolates raw strings is a template that will eventually be handed one
- *  that is not. */
+ *  Titles and descriptions are ours rather than user input, but a template
+ *  that interpolates raw strings will eventually be handed one that is not. */
 const esc = (t: string): string =>
   t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 

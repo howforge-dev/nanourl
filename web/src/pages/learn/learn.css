@@ -1,4 +1,4 @@
-/* Prose styles for the learn page only — imported once by main.ts, after
+/* Prose styles for the learn page only, imported once by main.ts, after
    app.css, so it can restyle body copy for this page without touching the
    compressor/observatory/dream pages.
 
@@ -6,7 +6,7 @@
    is app.css's `.surface` and its scrolling is `.scroller`, both emitted by
    lib/ui/ScrollBox.svelte; the pulled-out asides are lib/ui/Callout.svelte;
    the piece chips are lib/ui/Chip.svelte; the table of contents is a Card.
-   Every value below comes from a token — this file is the last place a
+   Every value below comes from a token; this file is the last place a
    hand-typed colour or radius would still look local and harmless. */
 body {
   font: var(--fs-lg) / 1.65 var(--font-sans);
@@ -30,7 +30,7 @@ code, .m {
      `box-decoration-break: clone` is what earns its place beside it: without
      it a broken inline box draws its background and border once around the
      whole run, so the fragment on the second line has no left border and the
-     first has no right one — which is what a clipped tail looks like. */
+     first has no right one, which is what a clipped tail looks like. */
   overflow-wrap: anywhere;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
@@ -43,7 +43,7 @@ li { margin-bottom: var(--s-1); }
 
    `margin-block`, never the `margin` shorthand: a figure may also be
    `.breakout`, whose whole job is a horizontal offset, and this file is
-   imported after app.css — a shorthand here silently resets that offset to 0
+   imported after app.css, so a shorthand here silently resets that offset to 0
    and leaves the figure's `translateX` shifting it half its own width off the
    left of the page, where nothing can scroll to it. */
 .fig {
@@ -65,7 +65,7 @@ li { margin-bottom: var(--s-1); }
 .fig .pseudo { font: var(--fs-sm) / 1.75 var(--font-mono); color: var(--prose); margin: 0; }
 .fig .pseudo.wide-lines { line-height: 1.8; }
 
-/* A caption ABOVE its figure — it names what follows rather than commenting
+/* A caption ABOVE its figure: it names what follows rather than commenting
    on what came before. */
 .fig .cap.head { margin: 0 0 var(--s-2); }
 
@@ -88,7 +88,7 @@ details.mathbox {
   margin: var(--s-3) 0 var(--s-4);
 }
 /* The chevron, gap, focus ring and rotation all come from app.css's one
-   shared `summary` rule — this only adds the box's own padding and colour,
+   shared `summary` rule; this only adds the box's own padding and colour,
    and the sigma that says what kind of disclosure it is. */
 details.mathbox summary {
   color: var(--acc);

@@ -15,14 +15,14 @@ export const hashName = (base: string, sha256: string, ext: string) => `${base}.
  * Name for one model chunk: the whole-model digest **and the chunk size**.
  *
  * Both axes have to be in the name. The model digest is what makes "chunk 3
- * from yesterday + chunk 4 from today" impossible — any weight change renames
+ * from yesterday + chunk 4 from today" impossible: any weight change renames
  * every chunk together. The chunk size is the other axis: without it in the
  * name, retuning `CHUNK` from 20 MiB to 16 MiB with the model unchanged would
  * leave `model.<sha8>.00.bin` with its old name but a different length and
  * content. A returning visitor's Cache API entry would survive `pruneCache`
  * (its name is still in the manifest), get replayed with no length check, and
- * land 20 MiB wide in a 16 MiB slot — scrambled weights for returning
- * visitors, a fine site for everyone else. `loader.ts` independently
+ * land 20 MiB wide in a 16 MiB slot: scrambled weights for returning
+ * visitors, a working site for everyone else. `loader.ts` independently
  * length-checks every cache read against the manifest, which catches the same
  * aliasing from the other side; the digest is checked once on download,
  * before anything is written to the cache, not on every read.

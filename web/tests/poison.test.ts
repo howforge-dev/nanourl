@@ -14,7 +14,7 @@ import {
 
 // `rust/urlcodec/src/lib.rs`'s POISONED_JSON, byte for byte. Copied rather
 // than imported because it lives in the wasm module's data section and there
-// is nothing on this side to import it from — so this literal is the pin: if
+// is nothing on this side to import it from, so this literal is the pin: if
 // the Rust constant is reworded, the classifier must still key on `code` and
 // this test says which field that is.
 const POISONED_JSON =
@@ -30,7 +30,7 @@ describe('isPoisonReply', () => {
 
   it('keys on `code`, not on the error prose', () => {
     // `code` is the documented machine-readable signal and the only error in
-    // this ABI that carries one — a reworded `error` must not stop this
+    // this ABI that carries one. A reworded `error` must not stop this
     // working, and a matching prose without the code must not start it.
     expect(isPoisonReply({ ok: false, code: POISON_CODE, error: 'anything at all' })).toBe(true);
     expect(isPoisonReply({ ok: false, error: 'This instance is poisoned and will answer every call' })).toBe(false);
@@ -53,7 +53,7 @@ describe('isPoisonReply', () => {
 
 describe('infoThreadFault', () => {
   // codec_info is deliberately outside `with_codec`'s gate, so it answers on a
-  // poisoned instance — which means a load can complete "successfully" against
+  // poisoned instance, which means a load can complete "successfully" against
   // a codec that will refuse the very first encode. This is the check that
   // stops that shipping as a working load.
   const healthy = {
@@ -80,7 +80,7 @@ describe('infoThreadFault', () => {
   it('catches a non-zero threads_error, not only the known code', () => {
     expect(infoThreadFault({ ...healthy, threads_error: JOIN_TIMEOUT })).toBe(true);
     // JOIN_TIMEOUT is the only non-zero code today, but the Rust documents
-    // the field as a code space — a future fault must not read as healthy.
+    // the field as a code space: a future fault must not read as healthy.
     expect(infoThreadFault({ ...healthy, threads_error: 7 })).toBe(true);
   });
 
@@ -114,7 +114,7 @@ describe('faultAction — two concurrent RPCs across one fault', () => {
   // calls are in flight at once (the observatory's `run` and `traceSel`; the
   // compressor's encode and `Dist`'s distribution fetch). One of them hits the
   // tier-3 fault. `client.ts` tears the instance down to recover, which
-  // settles the OTHER call's pending promise with the terminate sentinel — an
+  // settles the OTHER call's pending promise with the terminate sentinel, an
   // answer it never got. Returning that verbatim would show the visitor a
   // bogus "terminated" error beside an otherwise successful recovery.
   const TERMINATED = { ok: false, error: 'terminated' };
@@ -122,7 +122,7 @@ describe('faultAction — two concurrent RPCs across one fault', () => {
   const ENCODED = { ok: true, coded: 'g44sQkgwH9ruzM5' };
 
   it('call A receives the poison and drives the recovery', () => {
-    // No recovery in flight yet — A is the one that discovers the fault.
+    // No recovery in flight yet: A is the one that discovers the fault.
     expect(faultAction(POISON, false)).toBe('recover');
   });
 
@@ -131,13 +131,13 @@ describe('faultAction — two concurrent RPCs across one fault', () => {
   });
 
   it('call B is returned unchanged when no recovery is in flight', () => {
-    // Same reply, no fault: a caller really did call terminate(), and
+    // Same reply, no fault: a caller did call terminate(), and
     // "terminated" is the honest answer.
     expect(faultAction(TERMINATED, false)).toBe('return');
   });
 
   it('a reply that SUCCEEDED during the recovery window is kept, not replayed', () => {
-    // The codec's calls are pure, so replaying would be correct — but it would
+    // The codec's calls are pure, so replaying would be correct, but it would
     // discard an answer that already arrived and pay for it twice.
     expect(faultAction(ENCODED, true)).toBe('return');
     expect(faultAction(ENCODED, false)).toBe('return');
@@ -158,9 +158,9 @@ describe('faultAction — two concurrent RPCs across one fault', () => {
   });
 });
 
-// The `code` string is the contract between two languages that never compile
+// The `code` string has to match across two languages that never compile
 // together. Rust asserts it (lib.rs's `a_poisoned_instance_refuses_every_call`)
-// and so does this file, but neither reads the other — so read the Rust here.
+// and so does this file, but neither reads the other, so read the Rust here.
 describe('cross-language pin', () => {
   it('POISON_CODE is the code the wasm actually emits', async () => {
     const { readFileSync } = await import('node:fs');

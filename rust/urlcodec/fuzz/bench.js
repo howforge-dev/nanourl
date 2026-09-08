@@ -1,11 +1,11 @@
 // Kernel bench: init once, encode a fixed URL 20 times, print median ms per
-// token. driver.js minus the cross-runtime diffing -- same wasm ABI calls,
+// token. driver.js minus the cross-runtime diffing: same wasm ABI calls,
 // timed instead of hashed. The loop lives in driver_common.js so the bench
 // and the parity gate exercise identical code.
 //
 // Which memory to use is decided by the MODULE, not by W: urlcodec-mt.wasm
 // imports `env.memory` and must be given a shared one whatever W is (W = 0 on
-// the mt file is a real measurement -- it isolates the cost of the atomics
+// the mt file is a valid measurement: it isolates the cost of the atomics
 // build from the cost of the workers). The single-thread tiers export their
 // own memory and take no import object.
 //

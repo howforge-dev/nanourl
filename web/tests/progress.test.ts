@@ -12,7 +12,7 @@ import {
 
 // Figures carry a non-breaking space before their unit (lib/format.ts's
 // NBSP), so the readable assertions below normalise it back to a plain space.
-// Sizes and seconds themselves are lib/format.ts's job now, and are covered
+// Sizes and seconds themselves are lib/format.ts's job, and are covered
 // by tests/format.test.ts; what is this module's own is the composition
 // below.
 describe('formatting', () => {
@@ -83,7 +83,7 @@ describe('downloadParts', () => {
   });
 
   // The restore line must quote the bytes actually restored (`got`), not the
-  // artifact `total` — otherwise a bucket holding only the ~1 MiB wasm would
+  // artifact `total`; otherwise a bucket holding only the ~1 MiB wasm would
   // claim to be restoring the whole 124.8 MiB artifact from cache.
   it('quotes the bytes actually restored, not the artifact total', () => {
     const early = partsText(downloadParts({ ...base, got: 1_048_576, fromCache: true })).replace(/\u00a0/g, ' ');

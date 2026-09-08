@@ -15,7 +15,7 @@ export const REPO_URL = 'https://github.com/howforge-dev/nanourl';
  *  the command line and a link minted in the browser are the same string. */
 export const SITE_URL = 'https://qv.lc/';
 
-/** The release the model weights ship under — too large for git, so they are
+/** The release the model weights ship under: too large for git, so they are
  *  a tagged asset the browser and CI both fetch by the same URL, and the one
  *  the `nanourl` binary is built around. */
 export const MODEL_RELEASE_URL = `${REPO_URL}/releases/tag/model-v0`;

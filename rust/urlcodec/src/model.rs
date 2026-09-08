@@ -2,8 +2,8 @@
 //! incremental with a KV cache. Both encode and decode call the same step()
 //! on the same prefix, so their conditionals are identical by construction.
 //!
-//! Determinism: all reductions use a fixed 8-lane accumulation order —
-//! SIMD-friendly for the compiler, bit-stable across runs.
+//! Determinism: all reductions use a fixed 8-lane accumulation order,
+//! SIMD-friendly for the compiler and bit-stable across runs.
 
 use std::fs::File;
 use std::io::{BufReader, Read};
@@ -73,7 +73,7 @@ pub const CHAIN_CARRY: usize = 256;
 /// Fixed-context chaining: feed tokens forever; when the model's block fills,
 /// deterministically reset the cache and re-feed the last CHAIN_CARRY tokens
 /// as fresh context. Both codec directions use this feeder, so arbitrarily
-/// long URLs encode/decode with no framing — compression just degrades a
+/// long URLs encode/decode with no framing; compression degrades a
 /// little right after each shift (the model loses distant context, and the
 /// re-fed tokens sit at positions the training distribution associates with
 /// URL starts).
@@ -129,7 +129,7 @@ impl Chained {
         logits
     }
 
-    /// Tokens currently in the attention window — the labels for the cached
+    /// Tokens currently in the attention window: the labels for the cached
     /// positions a traced step's attention rows refer to.
     pub fn window_toks(&self) -> &[usize] {
         &self.window
@@ -160,21 +160,21 @@ fn dot(a: &[f32], b: &[f32]) -> f32 {
 
 /// Quantized matrix kept PACKED in RAM: int4 values (stored sign-extended as
 /// i8) + one f32 scale per 64-group. Row dot = sum over groups of
-/// (sum q_i*x_i) * s — 4x less memory traffic than f32 weights, which is the
-/// whole game for single-core (wasm) GEMV. Fixed 4-lane accumulation order:
+/// (sum q_i*x_i) * s: 4x less memory traffic than f32 weights, which is what
+/// bounds single-core (wasm) GEMV. Fixed 4-lane accumulation order:
 /// deterministic, and maps 1:1 onto wasm simd128 / SSE lanes.
 pub struct QuantMat {
     pub rows: usize,
     pub cols: usize,
     q: Vec<u8>, // PACKED nibbles, rows*cols/2: byte k of a group holds
     // orig indices 2k (lo nibble) and 2k+1 (hi), value+7.
-    // 72MB streamed per token — the bandwidth floor.
+    // 72MB streamed per token: the bandwidth floor.
     scales: Vec<f32>, // rows * cols/GROUP
 }
 
 pub const GROUP: usize = 64;
 
-/// Activations quantized per 64-group to i8 — the other half of the integer
+/// Activations quantized per 64-group to i8: the other half of the integer
 /// kernel. Integer MAC loops are associative, so LLVM vectorizes them fully
 /// (pmaddwd on AVX2, i16x8/i32x4 dot forms on wasm simd128) with bit-exact
 /// determinism at any lane width.
@@ -183,7 +183,7 @@ pub struct QuantVec {
     // matching the lo/hi nibble split of QuantMat's packing
     pub q: Vec<i8>,
     pub scales: Vec<f32>, // one per 64-group: absmax/127
-    pub sums: Vec<i32>,   // per group: sum of quantized elems — corrects the
+    pub sums: Vec<i32>,   // per group: sum of quantized elems; corrects the
                           // +7 nibble offset when using unsigned-weight MACs
 }
 
@@ -252,9 +252,9 @@ fn have_vnni() -> bool {
     })
 }
 
-/// Which int4 kernel this build/runtime actually takes. Native picks the best
+/// Which int4 kernel this build/runtime takes. Native picks the best
 /// ISA extension detected at runtime; wasm reports the compile-time SIMD
-/// level (which may be "relaxed"); anything else has only the scalar fallback.
+/// level; anything else has only the scalar fallback.
 #[cfg(target_arch = "x86_64")]
 pub fn kernel_name() -> &'static str {
     if have_vnni() {
@@ -267,7 +267,7 @@ pub fn kernel_name() -> &'static str {
 }
 
 /// The wasm SIMD tier only. Tier 3 (threads) is a runtime property of the
-/// same build — `codec_init` is told W — so the worker count is appended by
+/// same build (`codec_init` is told W), so the worker count is appended by
 /// `lib::kernel_label()`, which is what `codec_info().kernel` reports.
 #[cfg(target_arch = "wasm32")]
 pub fn kernel_name() -> &'static str {
@@ -357,9 +357,9 @@ impl QuantMat {
         self.gemv_scalar(x, out);
     }
 
-    /// The kernel body is `gemv_rows`; this splits its row range
-    /// across shared-memory workers when the mt build was
-    /// initialised with W > 0. Rows are owned whole by one participant, so the parallel
+    /// The kernel body lives in `gemv_rows`; this splits its row range
+    /// across shared-memory workers when the mt build was initialised
+    /// with W > 0. Rows are owned whole by one participant, so the parallel
     /// and serial results are bit-identical (see `threads.rs`).
     ///
     /// The `rows >= 512` floor keeps a matrix too small to pay the ~µs job
@@ -372,13 +372,13 @@ impl QuantMat {
     /// written and it may be writing them right now, so recomputing into
     /// `out` would put two writers on one row, and reading `out` would read a
     /// value being written. Instead the instance is poisoned and the pass is
-    /// abandoned — `step` checks `poisoned()` after every gemv whose output
+    /// abandoned: `step` checks `poisoned()` after every gemv whose output
     /// is about to be read, before that read (see `threads.rs`'s header for
     /// why a fault is terminal: JS cannot wait for `Worker.terminate()`, so
     /// the only safe contract is "discard the instance").
     ///
-    /// Note what stays live for the straggler: `out` is a heap buffer, but
-    /// `x` is `&hq`, a `QuantVec` **local of `Model::step`** — a shadow-stack
+    /// What stays live for the straggler: `out` is a heap buffer, but
+    /// `x` is `&hq`, a `QuantVec` **local of `Model::step`**, a shadow-stack
     /// address. A straggler reconstructs it from `JOB.x` and reads through it
     /// with an unchecked `v128_load`. Once this frame is gone that read is
     /// stale, and it is survivable only because the instance is discarded.
@@ -430,8 +430,8 @@ impl QuantMat {
                     _mm256_add_epi16(_mm256_maddubs_epi16(lo, xe), _mm256_maddubs_epi16(hi, xo));
                 let a = _mm256_madd_epi16(p, ones);
                 // exact integer reduction per group (order-free), then a
-                // scalar float chain IDENTICAL on every architecture — the
-                // cross-runtime stream-identity contract lives here
+                // scalar float chain IDENTICAL on every architecture: this
+                // is where the cross-runtime stream-identity contract holds
                 let l = _mm256_castsi256_si128(a);
                 let h = _mm256_extracti128_si256(a, 1);
                 let t = _mm_add_epi32(l, h);
@@ -493,25 +493,25 @@ impl QuantMat {
 
 #[cfg(target_arch = "wasm32")]
 impl QuantMat {
-    /// Rows r0..r1 of out = W·x. The unit handed to one worker.
+    /// Rows r0..r1 of out = W·x. The unit handed to a worker.
     ///
     /// Two kernel tiers compiled from one body, selected at COMPILE time by
     /// `cfg(target_feature = "relaxed-simd")` (the web build produces two
-    /// separate .wasm files — a module containing relaxed-simd opcodes fails
-    /// validation on an engine without the feature, even if never executed —
+    /// separate .wasm files; a module containing relaxed-simd opcodes fails
+    /// validation on an engine without the feature, even if never executed,
     /// so there is no runtime branch here to keep in sync).
     ///
     /// Both branches reduce the same 64 exact integer products per group to
     /// one i32 `isum` via nothing but integer addition (and, for the relaxed
-    /// branch, one integer subtraction removing a constant bias — see below),
+    /// branch, one integer subtraction removing a constant bias; see below),
     /// which is exactly associative (no rounding), so grouping the products
-    /// differently — four lanes of 16 products each below vs. the relaxed
+    /// differently (four lanes of 16 products each below vs. the relaxed
     /// dot's own internal pairing, biased weights vs. unbiased weights
-    /// corrected afterward — cannot change the final sum. `isum` is
+    /// corrected afterward) cannot change the final sum. `isum` is
     /// bit-identical in both tiers, and `acc` follows the same fixed f32
     /// accumulation afterward, so the two tiers are bit-identical end to end
     /// (see fuzz/run_tiers.sh).
-    /// `out` covers EXACTLY rows `r0..r1` — row `r` lands at `out[r - r0]`,
+    /// `out` covers EXACTLY rows `r0..r1`: row `r` lands at `out[r - r0]`,
     /// not `out[r]`. That is what lets tier 3 hand each participant a `&mut`
     /// over its own block only: two live `&mut` slices over the same memory
     /// are UB even when the writes are disjoint, and this function receives
@@ -546,12 +546,12 @@ impl QuantMat {
                             // always signed i8 (activations). b (weights) hits
                             // relaxed-simd's actual contract per the spec: "when
                             // the second operand has the high bit set in a lane,
-                            // that lane's result is implementation defined" --
-                            // determinism needs b's bytes in 0..127. A biased
+                            // that lane's result is implementation defined".
+                            // Determinism needs b's bytes in 0..127. A biased
                             // weight (nibble-7, -7..7) fails that half the time
                             // (a negative i8 byte always has the high bit set),
                             // so pass the RAW unbiased nibble instead (0..15,
-                            // never negative -- always safe) and correct the +7
+                            // never negative, always safe) and correct the +7
                             // bias afterward via x.sums[g], exactly like the
                             // AVX2/VNNI native kernels correct maddubs/dpbusd's
                             // own unsigned-operand requirement (gemv_avx2 /
@@ -561,7 +561,7 @@ impl QuantMat {
                             // clamps q to [-7,7]), giving |lane| <= 2*127*14 =
                             // 3556; the bound is stated over the full nibble
                             // range 0..15 (|lane| <= 3810) because a corrupt
-                            // .nurl must not be able to saturate either --
+                            // .nurl must not be able to saturate either;
                             // both are far inside i16, and every tier computes
                             // the same integer regardless.
                             let lo_u = v128_and(b, m4); // unbiased evens, 0..15
@@ -611,7 +611,7 @@ impl QuantMat {
                         + i32x4_extract_lane::<2>(iacc)
                         + i32x4_extract_lane::<3>(iacc);
                     // relaxed branch summed UNBIASED (0..15) weights above;
-                    // remove the +7*sum(x) bias now, once per group -- the
+                    // remove the +7*sum(x) bias now, once per group: the
                     // same correction the AVX2/VNNI kernels apply for the
                     // same reason (gemv_avx2 / gemv_vnni above).
                     #[cfg(target_feature = "relaxed-simd")]
@@ -628,8 +628,9 @@ impl QuantMat {
 
 /// Deterministic exp: libm's exp differs across platforms (glibc vs wasm
 /// libm), which would let a native-encoded stream fail to decode in wasm.
-/// This polynomial uses only IEEE-exact ops (+,-,*,from_bits) — bit-identical
-/// everywhere. |rel err| < 1e-11, far below the 24-bit table resolution.
+/// This polynomial uses only IEEE-exact ops (+,-,*,from_bits) and is
+/// bit-identical everywhere. |rel err| < 1e-11, far below the 24-bit table
+/// resolution.
 pub fn det_exp64(x: f64) -> f64 {
     const LOG2E: f64 = 1.4426950408889634;
     const LN2_HI: f64 = 0.6931471805598953;
@@ -835,13 +836,14 @@ impl Model {
     /// **Abandons the pass if the tier-3 kernel faults.** `bail_if_poisoned!`
     /// runs after every gemv **whose output is about to be read**, before
     /// that read: on a fault those rows were never written and a straggler
-    /// may be writing them now. Four bails per layer, not five — `gate` and
+    /// may be writing them now. Four bails per layer, not five: `gate` and
     /// `up` share one, because nothing reads `gate` until after `up`'s gemv,
     /// and `up`'s gemv touches only `hq` and its own buffer. **Insert a read
-    /// between those two and you must split the bail.** The value returned in that case is a constant, not a read of
-    /// any buffer, and the entry point turns it into the poison result — see
-    /// `lib.rs`'s `POISONED_JSON` and `threads.rs`'s header. On every build
-    /// but the mt one the check is a compile-time `false` and disappears.
+    /// between those two and you must split the bail.** The value returned in
+    /// that case is a constant, not a read of any buffer, and the entry point
+    /// turns it into the poison result (see `lib.rs`'s `POISONED_JSON` and
+    /// `threads.rs`'s header). On every build but the mt one the check is a
+    /// compile-time `false` and disappears.
     pub fn step(&self, cache: &mut KvCache, token: usize, pos: usize) -> Vec<f32> {
         bail_if_poisoned!(self);
         let d = self.cfg.n_embd;
@@ -942,8 +944,7 @@ impl Model {
     /// the attention and MLP adds, and the residual snapshot at layer exit.
     /// A DELIBERATE copy of step() rather than a shared inner: the untraced
     /// path is under the cross-runtime stream-identity contract and must not
-    /// change shape while other work is landing in this file — keep the two
-    /// bodies in sync when step() changes.
+    /// change shape; keep the two bodies in sync when step() changes.
     pub fn step_traced(
         &self,
         cache: &mut KvCache,

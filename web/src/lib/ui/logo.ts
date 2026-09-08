@@ -1,8 +1,8 @@
 // The wordmark's logo: one long URL bar over one short one, in a rounded
-// tile. Written as data rather than as markup because it is drawn twice —
+// tile. Written as data rather than as markup because it is drawn twice,
 // inline in the page header (lib/ui/PageHeader.svelte) and as the standalone
-// `dist/favicon.svg` the build emits (vite.config.ts's `favicon` plugin) —
-// so a hand-copied `<svg>` per page plus a URL-encoded `data:` URI per entry
+// `dist/favicon.svg` the build emits (vite.config.ts's `favicon` plugin), so
+// a hand-copied `<svg>` per page plus a URL-encoded `data:` URI per entry
 // document is ten places for three rectangles to drift apart.
 import { COLOR } from './tokens';
 
@@ -27,7 +27,7 @@ export const LOGO_RECTS: readonly LogoRect[] = [
   { x: 18, y: 58, width: 26, height: 15, rx: 7.5, fill: COLOR.acc },
 ];
 
-/** The mark as a standalone SVG document — what `dist/favicon.svg` contains.
+/** The mark as a standalone SVG document: what `dist/favicon.svg` contains.
  *  Colours are literals from `tokens.ts` rather than `var(--…)`: a favicon is
  *  fetched on its own, with no stylesheet in scope to resolve a custom
  *  property against. */

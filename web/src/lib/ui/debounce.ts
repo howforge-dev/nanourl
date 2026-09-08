@@ -1,10 +1,8 @@
 // Trailing-edge debounce, and the one interval the app types against.
 //
-// Three byte-identical copies of the function before, and — more to the point
-// — three call sites with two different intervals and no reason given
-// anywhere: the compressor's encode and decode fields waited 400 ms, the
-// observatory 450. Nothing about the observatory's work is 50 ms more
-// expensive to start; it is a copy that drifted.
+// One function and one interval, because nothing about the observatory's work
+// is more expensive to start than the compressor's: a second value would only
+// be a copy that drifted.
 
 /** Run `fn` once the caller has stopped calling for `ms`. */
 export function debounce(fn: () => void, ms: number): () => void {

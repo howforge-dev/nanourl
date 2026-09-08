@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { isSkipWaitingMessage, SKIP_WAITING_MESSAGE } from '../src/lib/sw-messages';
 
-// Unit coverage for src/sw.ts's `message` handler predicate — the only
+// Unit coverage for src/sw.ts's `message` handler predicate, the only
 // thing allowed to call self.skipWaiting(): install must never call it
 // unconditionally, or a waiting worker would activate before the user
 // approves the reload.

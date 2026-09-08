@@ -1,7 +1,7 @@
 <script lang="ts">
   // Arithmetic coder stepper: walks the interval-halving coder one action at
   // a time, reusing the JS replica in web/src/lib/coderReplay.ts. Disabled
-  // with an inline error — never silently wrong — if the replica's bitstr
+  // with an inline error (never silently wrong) if the replica's bitstr
   // doesn't reproduce the wasm's own bitstr exactly.
 
   import type { EncodeResult } from '../../lib/codec/types';
@@ -32,7 +32,7 @@
 
   let subB = $state(0);
   // undefined until the first effect run, which seeds it from k's current
-  // value — a plain (non-reactive) tracker deliberately only capturing a
+  // value; a plain (non-reactive) tracker deliberately only capturing a
   // snapshot each time, not a live binding to the k prop.
   let lastSeenK: number | undefined;
   let pendingOverride: number | null = null;
@@ -41,15 +41,15 @@
     if (!lastEnc || !lastEnc.tokens.length || lastEnc.tokens[0].clo === undefined) return null;
     try {
       const r = replay(lastEnc.tokens, lastEnc.version);
-      // strict equality: replay() now includes coder.rs's finish() flush, so
+      // strict equality: replay() includes coder.rs's finish() flush, so
       // the replica's bitstr must equal the wasm's exactly, not just prefix it
       const ok = r.bitstr === lastEnc.bitstr && r.steps.every((st, i) => st.emitted === lastEnc.tokens[i].emit);
       return ok ? r : null;
     } catch (e) {
       // Logged, not swallowed: the panel below tells the user "this is a bug
-      // in coderReplay.ts", and without this that message came with zero
-      // diagnostic. It also turns a real drift into
-      // an E2E failure — every spec asserts no console.error.
+      // in coderReplay.ts", and without this that message carries zero
+      // diagnostic. It also turns a drift into an E2E failure: every spec
+      // asserts no console.error.
       // eslint-disable-next-line no-console -- see above; this is a "must never happen" path
       console.error('coderReplay threw against the wasm bitstream:', e);
       return null;
@@ -81,7 +81,7 @@
     selectToken(k + 1);
   }
   /** Real renormalization actions for token `kk`, plus one extra reachable
-   * sub-step on the LAST token only — coder.rs's finish() flush, which is
+   * sub-step on the LAST token only: coder.rs's finish() flush, which is
    * not part of any token's own renormalization loop but is the true final
    * state of the stream, so the stepper models it as one more click. */
   function maxSubFor(kk: number): number {
@@ -156,7 +156,7 @@
     const done = cumBits(k);
     const total = lastEnc.coded_bits;
 
-    // coder.rs's finish() — pending += 1; emit(low < QUARTER ? 0 : 1) — isn't
+    // coder.rs's finish() (pending += 1; emit(low < QUARTER ? 0 : 1)) isn't
     // part of any token's renormalization loop, so it's modeled as one more
     // reachable step past the last token's real actions rather than folded
     // into the branches below.
@@ -164,7 +164,7 @@
       const lastKnown: Bar = realActs > 0 ? st.acts[realActs - 1] : { lo: st.post[0], hi: st.post[1] };
       const prevWritten = realActs > 0 ? st.acts[realActs - 1].emitted : st.emitted;
       const stepStart = st.prevEmitted;
-      const written = replayResult.bitstr.length; // the full stream — finish() is always the true end
+      const written = replayResult.bitstr.length; // the full stream; finish() is always the true end
       const { bit: finishBit, flush } = replayResult.finish;
       const flipped = finishBit === '0' ? '1' : '0';
       const actionHtml =

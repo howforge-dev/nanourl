@@ -1,15 +1,15 @@
 # Response headers for Cloudflare Pages / Netlify. Copied into dist/ by
-# vite.config.ts's copyHeaders plugin, so `pnpm build` — the build command
-# Cloudflare's own Vite detection suggests — ships it, not just `task
+# vite.config.ts's copyHeaders plugin, so `pnpm build` (the build command
+# Cloudflare's own Vite detection suggests) ships it, not just `task
 # web:build`. tools/web/nginx-nanourl.conf expresses the same policy for a
 # self-hosted box, and web/tests/headers.test.ts parses both files and
-# compares them per path, so "they mirror each other" is checked, not claimed.
+# compares them per path, which checks that they mirror each other.
 #
 # Cloudflare Pages applies ALL matching rules and comma-joins a header set
 # twice, so without `! Cache-Control`, `/*`'s `Cache-Control: no-cache` would
 # prepend onto the immutable rules below ("no-cache, public,
 # max-age=31536000, immutable"). RFC 9111 §5.2.2.4: no-cache is not cancelled
-# by max-age or immutable — the response must be revalidated before every
+# by max-age or immutable; the response must be revalidated before every
 # reuse, which would make the content-hashed chunks uncacheable. `! Header`
 # is Cloudflare's documented remedy: clear what the broader rule set, then
 # set our own.

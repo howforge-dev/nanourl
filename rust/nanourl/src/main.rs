@@ -1,4 +1,4 @@
-//! `nanourl` — the shipped command line. The logic is all in this crate's
+//! `nanourl`, the shipped command line. The logic is all in this crate's
 //! library, so that it compiles and is unit-tested as something the tests can
 //! reach rather than as a binary nothing else can.
 //!
@@ -16,7 +16,7 @@
 /// Used in place: `codec_init` takes a pointer and a length, and
 /// `Model::load_bytes` consumes them as a byte STREAM, decoding each matrix
 /// into its own buffer as it goes. Nothing casts this slice to a wider type, so
-/// its alignment of 1 constrains nothing — and nothing copies 124.8 MiB into a
+/// its alignment of 1 constrains nothing, and nothing copies 124.8 MiB into a
 /// `Vec` on the way in.
 static MODEL: &[u8] = include_bytes!(env!("NANOURL_MODEL_PATH"));
 

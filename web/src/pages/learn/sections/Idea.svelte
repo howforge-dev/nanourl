@@ -4,7 +4,7 @@
   import { fmtCount } from '../../../lib/format';
 
   // This tokenizer's own pieces for the worked HN example, not a made-up
-  // generic one — same slicing convention as AttentionFig.svelte. Hosts are
+  // generic one; same slicing convention as AttentionFig.svelte. Hosts are
   // stored TLD-first and maximally split, so "ycombinator.com"
   // is not one token but several: com · . · y · com · bin · ator.
   const tld = numbers.hn.tokens[1].piece; // "com"

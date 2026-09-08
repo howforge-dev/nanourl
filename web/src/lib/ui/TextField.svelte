@@ -116,9 +116,8 @@
     /* 16px stops iOS zooming the page on focus. */
     .field { font-size: var(--fs-lg); }
     /* rows="2" is two lines of a 900px-wide desktop box; at 375px the same
-       URL needs three or four, and the last one was cut off mid-word inside
-       the scroller — which reads as clipped content, not as a scrollable
-       field. */
+       URL needs three or four, and the last one cut off mid-word inside the
+       scroller reads as clipped content, not as a scrollable field. */
     textarea.field { min-height: var(--m-field); }
   }
 </style>

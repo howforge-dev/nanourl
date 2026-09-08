@@ -1,14 +1,14 @@
 // Unit test for compute-worker.ts's setupThread: thread_setup's return value
 // must be treated as a thrown error, not ignored, since a build that can't
 // validate its own stack handoff must fail this worker's handshake loudly
-// (see compute-worker.ts for why the wasm side can't just fix the stack
+// (see compute-worker.ts for why the wasm side cannot fix the stack
 // pointer itself).
 // Exercises the pure function directly against a fake `ex`, so it needs no
-// real wasm module, Worker global, or self.postMessage — the module's own
+// real wasm module, Worker global, or self.postMessage. The module's own
 // self.onmessage wrapper (real WebAssembly.instantiate + postMessage, plus
 // the failHandshake test hook) is covered instead by the browser E2E in
 // e2e/threads.smoke.spec.ts, the only place a module worker's ready/error
-// message can actually be observed.
+// message can be observed.
 import { describe, it, expect } from 'vitest';
 import { setupThread } from '../src/lib/codec/compute-worker';
 

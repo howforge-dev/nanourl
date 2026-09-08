@@ -142,8 +142,8 @@ tasks:
         pnpm exec tsx scripts/pack-assets.ts --nurl {{.NURL}} --tokenizer {{.TOK}} --wasm "$WASM" $RELAXEDFLAG $MTFLAG $ATLASFLAG
 
   web:build:
-    # NOT `deps:` — go-task runs deps in PARALLEL, and web:assets reads the
-    # very ../rust/target/urlcodec*.wasm files codec:wasm is
+    # Not `deps:`, because go-task runs deps in PARALLEL, and web:assets reads
+    # the very ../rust/target/urlcodec*.wasm files codec:wasm is
     # concurrently cp-ing into place, so the hash in assets.json could name
     # bytes nobody built. Sequential `cmds:` with `task:` steps is the only
     # ordering go-task guarantees. CLI vars (NURL=, TOK=, ATLAS=) are global,

@@ -79,7 +79,7 @@
   }
 
   /** The attention panel is a horizontal strip of per-layer blocks, so opening
-   *  it is not enough — the selected layer has to be brought into the strip's
+   *  it is not enough: the selected layer has to be brought into the strip's
    *  own scroll port too. Runs after Panel has opened and scrolled the card. */
   let wrapEl: HTMLDivElement | undefined = $state();
 

@@ -4,7 +4,7 @@
   // mixing (a Weyl constant XORed in) to give every row a distinct,
   // reproducible seed.
   //
-  // The prefix is typed in the model's own canonical form (hosts TLD-first —
+  // The prefix is typed in the model's own canonical form (hosts TLD-first;
   // it's the space `codec.sample` conditions on directly, uncanonicalised).
   // `result.url` is de-canonicalised back to original form, so what's shown
   // here never needs reordering, but the note under the input says so since
@@ -42,7 +42,7 @@
 
   // Cancellation: Stop supersedes the current claim, so the loop below (and
   // any in-flight call it's awaiting) notices on its next check and drops out
-  // without pushing a stale result — at most the one call already in flight
+  // without pushing a stale result; at most the one call already in flight
   // still completes.
   const latest = createLatest();
 
@@ -166,8 +166,8 @@
 
   .out-list { margin-top: var(--s-4); }
   /* Each result is a Chip: the surface, the hairline and the leading are the
-     primitive's. This is the row's own layout — a number, the URL and its
-     actions — and the wider padding a line of URL needs over a label.
+     primitive's. This is the row's own layout (a number, the URL and its
+     actions) and the wider padding a line of URL needs over a label.
      `:global` where the subject is the chip element itself. */
   .out-list :global(.u) {
     display: flex;

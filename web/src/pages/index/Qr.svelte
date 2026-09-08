@@ -143,7 +143,7 @@
    *  when asked. */
   let displayWidth = $derived(screen && settings.roundSize ? Math.max(1, Math.floor(settings.width / screen.width)) * screen.width : settings.width);
 
-  // A plate — the logo, an image or a label — needs level H to stay
+  // A plate (the logo, an image or a label) needs level H to stay
   // readable; the presets raise it, and this is the warning when it has
   // been lowered.
   let lowered = $derived(hasPlate(settings) && settings.level !== 'H');
@@ -348,7 +348,7 @@
     {/if}
 
     <!-- The readout: exactly the text in the symbol, and how the library
-         segmented it. Caption, label and image are not in here — they are
+         segmented it. Caption, label and image are not in here; they are
          drawn. -->
     <div class="readout">
       <div class="text" data-testid={TESTID.qrText}>{text}</div>

@@ -3,7 +3,7 @@
 // The contract is `rust/urlcodec/src/threads.rs`'s module header and
 // `lib.rs`'s `with_codec` gate. In short: a compute worker that never reports
 // `done` within the bounded join is presumed dead, and giving up on it does
-// NOT stop it — a merely descheduled worker is still inside `compute(r0, r1)`
+// NOT stop it: a merely descheduled worker is still inside `compute(r0, r1)`
 // and will finish that block whenever the OS runs it again. Nothing in wasm
 // can revoke that write and nothing in JS can wait for it (`terminate()`
 // returns immediately and gives no completion signal), so the codec does not
@@ -11,23 +11,23 @@
 //
 // After that:
 //
-//   - every entry point returns `POISONED_JSON` verbatim instead of running
-//     the model — a static string in the module's data section, so the one
-//     message the client must receive intact cannot be sitting in memory a
-//     straggler is still writing;
+//   - every entry point returns `POISONED_JSON`, a static string in the
+//     module's data section, verbatim instead of running the model, so the
+//     one message the client must receive intact cannot be sitting in memory
+//     a straggler is still writing;
 //   - `codec_init` returns 6 for ANY `threads` value, checked first, so the
 //     instance cannot even be rebuilt single-threaded over the same memory;
-//   - `codec_info` keeps working — it is deliberately outside the gate,
-//     because it is what tells the client WHY its call failed.
+//   - `codec_info` keeps working: it is outside the gate, because it is what
+//     tells the client WHY its call failed.
 //
-// The client's obligation is therefore not "retry": it is discard the module,
-// the workers and the `WebAssembly.Memory` together, and build a new instance
-// off the shared-memory path. `client.ts` does exactly that; this module is
-// the pure half — what a fault looks like — so it can be tested without a
-// wasm instance, a worker or a browser.
+// The client's obligation is therefore to discard the module, the workers and
+// the `WebAssembly.Memory` together and build a new instance off the
+// shared-memory path, rather than to retry. `client.ts` does exactly that;
+// this module is the pure half, what a fault looks like, so it can be tested
+// without a wasm instance, a worker or a browser.
 
 /** The `code` field of `POISONED_JSON`. The only error in this ABI that
- *  carries a `code` at all, and the documented machine-readable signal — so
+ *  carries a `code` at all, and the documented machine-readable signal, so
  *  it is matched on, never the prose in `error`. */
 export const POISON_CODE = 'instance_poisoned';
 
@@ -62,7 +62,7 @@ export function isPoisonReply(r: unknown): boolean {
 /**
  * Does this `codec_info()` describe a faulted instance?
  *
- * `codec_info` answers on a poisoned instance (that is its whole job after a
+ * `codec_info` answers on a poisoned instance (that is its job after a
  * fault), so a load can complete "successfully" against a codec that will
  * refuse the very first encode. Both fields are checked: `threads_poisoned`
  * is the boolean the Rust exposes, `threads_error` the code behind it, and
@@ -76,10 +76,10 @@ export function infoThreadFault(info: unknown): boolean {
   return typeof i.threads_error === 'number' && i.threads_error !== 0;
 }
 
-/** True for either shape — an RPC reply or a `codec_info` result. */
+/** True for either shape: an RPC reply or a `codec_info` result. */
 export const isThreadFault = (r: unknown): boolean => isPoisonReply(r) || infoThreadFault(r);
 
-/** Any `{ ok: false, … }` — a poison reply, a codec error, or the sentinel a
+/** Any `{ ok: false, … }`: a poison reply, a codec error, or the sentinel a
  *  terminated worker's pending calls are settled with. */
 export const isFailure = (r: unknown): boolean => asReply(r).ok === false;
 
@@ -98,11 +98,11 @@ export type FaultAction =
  * The whole fault policy for one reply, as a decision.
  *
  * Pure, so the concurrent case can be exercised without a worker: two calls
- * are in flight, the first comes back poisoned (`recover`), and the second —
+ * are in flight, the first comes back poisoned (`recover`), and the second,
  * already posted, never answered, settled `{ok:false,error:'terminated'}` by
- * the teardown the first one triggered — comes back while `recovering` is
- * true (`replay`). Returning that second reply verbatim showed the visitor a
- * bogus "terminated" error beside an otherwise successful recovery
+ * the teardown the first one triggered, comes back while `recovering` is
+ * true (`replay`). Returning that second reply verbatim would show the
+ * visitor a bogus "terminated" error beside an otherwise successful recovery.
  *
  * A reply that SUCCEEDED during the recovery window is kept, not replayed:
  * the codec's calls are pure, so a replay would be correct but would throw

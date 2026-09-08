@@ -45,8 +45,8 @@ describe('describeKernel', () => {
 
   it('knows the threads build is also a relaxed build', () => {
     // Taskfile.yml's codec:wasm builds urlcodec-mt.wasm with
-    // +simd128,+relaxed-simd,+atomics — "threads:8" alone hides two thirds
-    // of that, which is the whole reason this helper exists.
+    // +simd128,+relaxed-simd,+atomics; "threads:8" alone hides two thirds
+    // of that, which is why this helper exists.
     const b = describeKernel('threads:8');
     expect(b.features).toEqual(['SIMD128', 'relaxed SIMD', '8 workers on shared memory']);
     expect(b.workers).toBe(8);

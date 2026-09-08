@@ -8,7 +8,7 @@ import { SHELL_CACHE_PREFIX } from '../src/lib/codec/cacheNames';
 import { TESTID, testIdSelector, waitForModelReady, watchErrors } from './helpers';
 import { CODEC_CALL, MODEL_RELOAD, SW_ACTIVE, SW_UPDATE_BANNER, SW_WAITING } from './timeouts';
 
-// A newly installed service worker must never take over on its own — it
+// A newly installed service worker must never take over on its own; it
 // parks itself as `registration.waiting` until BuildInfo.svelte's "reload"
 // button posts SKIP_WAITING_MESSAGE to it, and only *that* activates it
 // (clients.claim() + old-cache cleanup) and reloads the page, via
@@ -20,13 +20,13 @@ import { CODEC_CALL, MODEL_RELOAD, SW_ACTIVE, SW_UPDATE_BANNER, SW_WAITING } fro
 // name and registered at the same scope ('/'). Per spec a
 // ServiceWorkerRegistration is keyed by (origin, scope), not scriptURL, so
 // the browser treats this exactly like a same-URL update that found
-// different bytes: it installs a genuinely new worker version alongside the
-// still-active original, without ever overwriting the real dist/sw.js that
-// other spec files running against the same shared preview server rely on.
+// different bytes: it installs a new worker version alongside the still-active
+// original, without ever overwriting the real dist/sw.js that other spec files
+// running against the same shared preview server rely on.
 // A page.route intercept of the SW's own script fetch cannot substitute for
 // this: Chromium does not route a service worker's internal script fetch
 // through the same interception layer page.route hooks into. The fixture's
-// own filename must be unique per test invocation too — mobile and desktop
+// own filename must be unique per test invocation too: mobile and desktop
 // run concurrently against that same shared server/filesystem
 // (playwright.config.ts's `workers: 2`), or a fixed name would race the
 // write/unlink between them.
@@ -34,7 +34,7 @@ import { CODEC_CALL, MODEL_RELOAD, SW_ACTIVE, SW_UPDATE_BANNER, SW_WAITING } fro
 // Runs under both mobile/desktop projects like every other spec.
 
 const swPath = SW_JS;
-// 8 hex chars — same shape as a real build id (scripts/sw-manifest-lib.ts's
+// 8 hex chars, same shape as a real build id (scripts/sw-manifest-lib.ts's
 // buildId, sha256.slice(0,8)), so isShellCache (web/src/lib/codec/
 // cacheNames.ts) recognises this fixture's shell cache exactly like a real
 // one, and unique per test invocation so mobile/desktop's concurrent runs
@@ -72,7 +72,7 @@ test('a waiting service worker only activates after the user clicks reload', asy
 
     // BuildInfo.svelte only mounts inside Encode.svelte's "advanced"
     // disclosure once there's a real encode result (`{#if hasOutput &&
-    // result}`), and that <details> starts closed — so the update banner it
+    // result}`), and that <details> starts closed, so the update banner it
     // will render can't be visible without both a completed encode and
     // opening the disclosure first (same as index.smoke.spec.ts's own
     // "advanced" interactions).
@@ -85,9 +85,9 @@ test('a waiting service worker only activates after the user clicks reload', asy
     await page.evaluate((url: string) => navigator.serviceWorker.register(url), `/${fixtureName}`);
 
     // the new worker installs (precaching its own nanourl-shell-<fixtureBuild>)
-    // and parks itself as `registration.waiting` — it must NOT take over on
+    // and parks itself as `registration.waiting`. It must NOT take over on
     // its own; both shell caches coexist and the original worker is still
-    // the one actually `active` throughout.
+    // the one `active` throughout.
     await page.waitForFunction(
       async () => (await navigator.serviceWorker.getRegistration())?.waiting?.state === 'installed',
       undefined,
@@ -109,19 +109,19 @@ test('a waiting service worker only activates after the user clicks reload', asy
     // time the page reloads. `clients.claim()` fires `controllerchange` on
     // affected clients as soon as *it* resolves, independent of whether the
     // rest of the `activate` handler (the cache cleanup, which runs after
-    // it in the same `waitUntil`) has finished — so a fast reload can race
+    // it in the same `waitUntil`) has finished, so a fast reload can race
     // ahead of the delete. That's harmless in practice (the reloaded page
     // is controlled by the new worker regardless, whose fetch handler never
-    // references the old cache name at all — the old entry is just
-    // disk space reclaimed a little later) and, in this specific synthetic
-    // test, doubly unprovable: the reloaded page's own registerSw.ts also
+    // references the old cache name at all; the old entry is disk space
+    // reclaimed a little later) and, in this specific synthetic test, doubly
+    // unprovable: the reloaded page's own registerSw.ts also
     // fires on `load` and re-registers the real, unmodified `/sw.js` (a
-    // different scriptURL from this fixture — a real deploy overwrites
+    // different scriptURL from this fixture; a real deploy overwrites
     // /sw.js in place instead, so this second registration cycle is itself
     // an artifact of this test's fixture-file methodology), which can
     // independently reinstall a worker generation carrying the old build's
     // shell list and recreate its cache. What matters and *is* asserted:
-    // the click causes the new build to actually take over.
+    // the click causes the new build to take over.
     // Register the load listener before the click: the reload the click
     // triggers destroys the old execution context, and a "model ready" wait
     // alone can be satisfied by the OLD page a moment before it goes away.

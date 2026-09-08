@@ -1,6 +1,6 @@
 <script lang="ts">
   // Build/version footer: what model, tokenizer and wasm kernel this page is
-  // actually running, assembled from the asset manifest (names, produced by
+  // running, assembled from the asset manifest (names, produced by
   // scripts/pack-assets.ts) and the codec's own self-reported Info.
   //
   // Laid out as a label/value grid rather than three dim sentences: these are
@@ -17,7 +17,7 @@
   import Button from './Button.svelte';
   import FactsGrid from './FactsGrid.svelte';
 
-  // wasmName is the asset actually fetched for this load (manifest.wasm /
+  // wasmName is the asset fetched for this load (manifest.wasm /
   // wasmRelaxed / wasmMt, picked by loader.ts's pickWasm at load time). It
   // falls back to the portable build's name, so a caller that cannot say
   // which tier loaded shows something plausible rather than undefined.
@@ -31,21 +31,21 @@
   }: { info: Info; wasmName?: string; version?: number; title?: string } = $props();
 
   let params = $derived(paramsM(info.params));
-  // The three wasm builds nest and the label does not say so — "threads:8" is
+  // The three wasm builds nest and the label does not say so: "threads:8" is
   // also relaxed SIMD, which is also SIMD128. Spelled out from the reported
   // string by tier.ts, never from a table typed here.
   let kernel = $derived(describeKernel(info.kernel));
 
-  // src/sw.ts never activates a new build on its own — a newly installed
+  // src/sw.ts never activates a new build on its own: a newly installed
   // worker sits as `registration.waiting` until this component's "reload"
   // button explicitly asks for it (applyUpdate below), so an update never
   // yanks the page out from under an in-progress encode.
   //
   // `updatefound` and the installing worker's own `statechange` catch the
   // moment a new build reaches `installed` (i.e. is now the waiting worker)
-  // and offer the reload; `controllerchange` — fired once applyUpdate's
-  // SKIP_WAITING message actually gets the new worker to activate and claim —
-  // performs the reload itself.
+  // and offer the reload; `controllerchange`, fired once applyUpdate's
+  // SKIP_WAITING message gets the new worker to activate and claim, performs
+  // the reload itself.
   //
   // Via `navigator.serviceWorker.ready`, not `getRegistration()`: `ready`
   // resolves once *a* registration exists whether that happens before or
@@ -74,13 +74,13 @@
     });
   });
 
-  // Posts SKIP_WAITING_MESSAGE to the waiting worker — the only thing that
-  // ever calls self.skipWaiting() (src/sw.ts's `message` handler) — and lets
-  // the controllerchange listener above perform the actual reload once that
-  // worker has genuinely taken over. Falls back to a plain reload if there's
-  // no waiting worker by the time this runs (e.g. it already activated via
-  // every old client naturally dropping off), so the button always does
-  // something rather than silently no-op.
+  // Posts SKIP_WAITING_MESSAGE to the waiting worker (the only thing that
+  // ever calls self.skipWaiting(), in src/sw.ts's `message` handler) and lets
+  // the controllerchange listener above perform the reload once that worker
+  // has taken over. Falls back to a plain reload if there's no waiting worker
+  // by the time this runs (e.g. it already activated via every old client
+  // naturally dropping off), so the button always does something rather than
+  // silently no-op.
   async function applyUpdate(): Promise<void> {
     const reg = await navigator.serviceWorker.getRegistration();
     const waiting = reg?.waiting;

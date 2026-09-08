@@ -5,7 +5,7 @@ import { atMobile, expectNoHorizontalOverflow, watchErrors } from './helpers';
 import { DESKTOP, MOBILE } from './viewports';
 
 // End-to-end smoke test for the learn page: static content, no codec, no
-// model load — so this only needs a real build+preview to
+// model load, so this only needs a real build+preview to
 // check ids, links and layout, not "model ready" like index.smoke.spec.ts.
 
 test('learn page: all 12 sections, TOC links resolve, real numbers, no overflow', async ({ page }) => {
@@ -35,7 +35,7 @@ test('learn page: all 12 sections, TOC links resolve, real numbers, no overflow'
   await tocLinks.first().click();
   await expect(page).toHaveURL(/#idea$/);
 
-  // the page shows the real generated bits/char figure — not a placeholder
+  // the page shows the real generated bits/char figure, not a placeholder
   const bodyText = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
   expect(bodyText).toContain(String(numbers.bitsPerChar));
   expect(bodyText).toContain(String(numbers.bitsPerCharKernel));
@@ -50,8 +50,8 @@ test('learn page: all 12 sections, TOC links resolve, real numbers, no overflow'
   await atMobile(page, () => expectNoHorizontalOverflow(page));
 
   // A breakout figure is positioned, not just sized. It is centred with a
-  // half-width `translateX`, so anything that resets its balancing margin —
-  // a `margin` shorthand in a later stylesheet, a utility — leaves it shifted
+  // half-width `translateX`, so anything that resets its balancing margin (a
+  // `margin` shorthand in a later stylesheet, a utility) leaves it shifted
   // half its own width off the LEFT of the page, where no scrollWidth
   // assertion can see it, because leftward overflow contributes to none.
   // Measured position, at both widths, is the only check that catches that.
@@ -68,8 +68,8 @@ test('learn page: all 12 sections, TOC links resolve, real numbers, no overflow'
     for (const b of boxes) {
       expect(b.left, `breakout at ${vp.width}px starts off the left edge`).toBeGreaterThanOrEqual(-0.5);
       expect(b.right, `breakout at ${vp.width}px runs past the right edge`).toBeLessThanOrEqual(b.viewport + 0.5);
-      // and it is actually breaking out: wider than the reading column it sits
-      // in, or the whole viewport when that is narrower than the column.
+      // and it is breaking out: wider than the reading column it sits in,
+      // or the whole viewport when that is narrower than the column.
       expect(b.width, `breakout at ${vp.width}px is no wider than the prose`).toBeGreaterThanOrEqual(Math.min(vp.width, 880) - 0.5);
     }
   }

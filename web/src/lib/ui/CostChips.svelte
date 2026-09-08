@@ -14,9 +14,9 @@
   // components they are two grids, two chip shells, two bar treatments and two
   // bit formatters that disagree on the near-zero case.
   //
-  // The only genuine difference is precision. Both sources carry 2dp — the
-  // codec rounds `bits` to 2dp on every encode and the learn page's stored
-  // trace keeps the same — but the compressor's live strip prints 1dp, where
+  // The only difference is precision. Both sources carry 2dp (the codec
+  // rounds `bits` to 2dp on every encode and the learn page's stored trace
+  // keeps the same), but the compressor's live strip prints 1dp, where
   // a second decimal is noise beside a bar that moves as you type, and the
   // learn figure's worked example prints the full 2dp it is walking through.
   // That is one prop, not one component each.

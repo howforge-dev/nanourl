@@ -3,7 +3,7 @@ import { createSendGate } from '../src/lib/codec/send-gate';
 
 // Pure part of client.ts's load handshake (no Worker/DOM involved): actions
 // queue until the gate opens, then flush in order; a gate that never opens
-// (the 'setup' RPC came back ok:false) discards the queue instead — `ready`
+// (the 'setup' RPC came back ok:false) discards the queue instead. `ready`
 // must track the setup reply's `ok`, not flip true regardless of it, or
 // queued chunk/tokenizer sends would flush at a worker that already failed
 // to compile/instantiate.
@@ -49,7 +49,7 @@ describe('createSendGate', () => {
     gate.discard();
     expect(gate.discarded).toBe(true);
 
-    // discard() must latch, not just clear the queue once — otherwise every
+    // discard() must latch, not just clear the queue once; otherwise every
     // chunk arriving after a failed 'setup' would be re-queued and never
     // drained, accumulating the whole ~125 MiB model as closures for a
     // worker that has already given up.

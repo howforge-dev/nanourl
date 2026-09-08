@@ -48,15 +48,15 @@ function io(w, mem) {
 // hold the event loop open.
 //
 // Then BLOCK until threads_ready() === W. threads_ready() is a true COUNT of
-// the workers that reached the worker loop, one per register() call -- not
+// the workers that reached the worker loop, one per register() call, not
 // max(id), which reaches W the instant the highest-numbered worker registers,
 // leaving 1..W-1 still booting. Waiting on a count is what makes this barrier
-// real: codec_init refuses a W larger than the registered count (rc 4), and
-// a worker that misses the barrier would
-// snapshot `gen` after the first job was posted, sit it out, and burn the
-// coordinator's whole join bound on the first gemv.
+// hold: codec_init refuses a W larger than the registered count (rc 4), and a
+// worker that misses the barrier would snapshot `gen` after the first job was
+// posted, sit it out, and burn the coordinator's whole join bound on the
+// first gemv.
 //
-// Ids must be exactly 1..=W with no gap and no repeat -- codec_init also
+// Ids must be exactly 1..=W with no gap and no repeat: codec_init also
 // rejects a registered set whose max id disagrees with the count (rc 4),
 // because a job completes only when every id <= W reports done. Workers run
 // on their own OS threads, so a synchronous spin here does not prevent them
@@ -68,7 +68,7 @@ function spawnWorkers(w, mem, mod, W, deadlineMs = 10000) {
   const stackBytes = w.thread_stack_bytes();
   if (!w.__tls_size) {
     // Defaulting tlsBase to 0 would make thread_setup splatter the TLS
-    // template over address 0 -- it rejects that, but the build is broken
+    // template over address 0: it rejects that, but the build is broken
     // either way, so say so here rather than after N confusing failures.
     throw new Error('module does not export __tls_size: add -C link-arg=--export=__tls_size');
   }
@@ -96,9 +96,9 @@ function spawnWorkers(w, mem, mod, W, deadlineMs = 10000) {
 // codec_init + the model/tokenizer copy, shared by every harness.
 // Codes: 1 tokenizer not UTF-8, 2 bad model, 3 bad tokenizer JSON, 4 W vs the
 // registered set, 5 vocab mismatch, 6 the instance is poisoned by a tier-3
-// fault (terminal -- build a new module/workers/memory).
+// fault (terminal: build a new module/workers/memory).
 // `digests` sets DIGEST_BIT: on for the parity harnesses, off for the bench
-// so it times the code a user actually runs.
+// so it times the code a user runs.
 function initCodec(w, mem, modelPath, tokPath, threads, digests) {
   const { put, readPacked } = io(w, mem);
   const model = fs.readFileSync(modelPath), tok = fs.readFileSync(tokPath);
@@ -108,7 +108,7 @@ function initCodec(w, mem, modelPath, tokPath, threads, digests) {
     // 1 tokenizer not UTF-8, 2 bad model, 3 bad tokenizer JSON, 4 W exceeds
     // the registered count or the ids are not 1..=N, 5 tokenizer/model vocab
     // mismatch, 6 threads asked for after a tier-3 fault (terminal for this
-    // instance -- make a new one).
+    // instance: make a new one).
     const why = {
       4: `asked for ${threads} workers, ${w.threads_ready ? w.threads_ready() : '?'} registered`,
       5: 'the tokenizer and the model disagree on the vocabulary size',

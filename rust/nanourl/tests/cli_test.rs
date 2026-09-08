@@ -1,14 +1,14 @@
 //! End-to-end checks on the shipped `nanourl` binary.
 //!
-//! The point of the parity test is that `nanourl` and the site mint the SAME
-//! code for the same URL. It gets there in two hops: `nanourl` calls the
-//! crate's C ABI, which is literally the code the wasm builds export (the
-//! tier-parity gate in `fuzz/run_tiers.sh` pins native ABI to every wasm
-//! tier), and this file pins that against `urlcodec encode` — the other
-//! crate's own, independent codec loop, pointed at the artifact on disk. A third
-//! opinion is what makes the CLI's alphabet plumbing testable at all: the ABI
-//! and the site agree by construction, so only an outside encoder can catch
-//! the CLI handing them the wrong alphabet.
+//! The parity test checks that `nanourl` and the site mint the SAME code for
+//! the same URL. It gets there in two hops: `nanourl` calls the crate's C
+//! ABI, which is literally the code the wasm builds export (the tier-parity
+//! gate in `fuzz/run_tiers.sh` pins native ABI to every wasm tier), and this
+//! file pins that against `urlcodec encode`, the other crate's own,
+//! independent codec loop, pointed at the artifact on disk. A third opinion
+//! is what makes the CLI's alphabet plumbing testable at all: the ABI and
+//! the site agree by construction, so only an outside encoder can catch the
+//! CLI handing them the wrong alphabet.
 //!
 //! `nanourl` is never given `--model` below, except where the override itself
 //! is what is being tested. That is deliberate: it exercises the weights built
@@ -64,7 +64,7 @@ fn model() -> String {
 /// Two reasons to sit out. Without the 124.8 MiB artifact there is nothing to
 /// compare, which `URLCODEC_REQUIRE_ARTIFACTS=1` turns into a failure. And an
 /// unoptimized build spends ~30 s per model load against ~0.45 s optimized,
-/// which over the invocations below is minutes — so a debug run says so and
+/// which over the invocations below is minutes, so a debug run says so and
 /// stops. `task codec:test` runs `cargo test --release`, so the gate is
 /// unaffected.
 fn should_run() -> bool {
@@ -175,7 +175,7 @@ fn a_link_it_minted_decodes_back_to_the_url_it_came_from() {
         for (cli_name, _, alpha) in ALPHABETS {
             // The default output is the link, written through `fragment_for`,
             // so feeding it straight back exercises the marker and the sniffing
-            // together: the round trip a person actually performs.
+            // together: the round trip a person performs.
             let enc = run(NANOURL, &["encode", &url, "--alphabet", cli_name]);
             assert!(enc.status.success(), "encode {cli_name} {url}");
             let link = stdout(&enc);
@@ -213,8 +213,8 @@ fn json_output_carries_the_same_answer_as_the_lines() {
     assert_eq!(v["link"], stdout(&linked));
 }
 
-/// The exit codes are the CLI's contract with a script, so they are asserted
-/// rather than left to whatever the last `return` happened to be.
+/// A script reads the exit codes, so they are asserted rather than left to
+/// whatever the last `return` happened to be.
 #[test]
 fn exit_codes_separate_bad_input_from_an_unusable_override() {
     // No case here reaches a forward pass, so this one runs unoptimized too.
@@ -236,7 +236,7 @@ fn exit_codes_separate_bad_input_from_an_unusable_override() {
     let blank = run(NANOURL, &["encode", "   "]);
     assert_eq!(blank.status.code(), Some(1), "no URL in the input");
 
-    // An override that cannot be read is 2 even when nothing is being coded --
+    // An override that cannot be read is 2 even when nothing is being coded:
     // `model info` must not report success about a model that is not there.
     let gone = run(
         NANOURL,

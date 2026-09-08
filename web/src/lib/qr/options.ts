@@ -1,7 +1,7 @@
 // The QR section's settings: one object, its defaults, its validation, its
 // persistence, its presets, and `qrOptions`, the one place that turns it into
 // what the matrix builder (node-qrcode's `create`) and our renderer
-// (`render.ts`) each take — for the screen and for the export, which differ
+// (`render.ts`) each take, for the screen and for the export, which differ
 // only in colour and scale.
 //
 // The option list follows qr-code-styling's, group for group (main, dots,
@@ -27,7 +27,7 @@ export const PLATE_SHARE_MAX = COVER_SHARE.H;
 /** How the dark modules are drawn: squares; squares softened where a run
  *  ends; full pills across a run; one corner rounded, alternating by
  *  position so runs read as woven; the same with the free corners softened;
- *  dots; and `nanourl`, the site's own — dots under the gradient with the
+ *  dots; and `nanourl`, the site's own: dots under the gradient with the
  *  logo on a plate. */
 export const MODULE_STYLES = ['classic', 'rounded', 'extra-rounded', 'classy', 'classy-rounded', 'dots', 'nanourl'] as const;
 export type ModuleStyle = (typeof MODULE_STYLES)[number];
@@ -37,7 +37,7 @@ export const CORNER_TYPES = ['square', 'rounded', 'extra-rounded', 'dot', 'dots'
 export type CornerType = (typeof CORNER_TYPES)[number];
 
 /** Dotted corners on dotted modules: too little contiguous dark for a
- *  decoder's finder search (measured with jsqr on every combination — the
+ *  decoder's finder search (measured with jsqr on every combination: the
  *  `dots` corner type reads on every other module style, and every other
  *  corner type on these). The page warns, and the scannability gate skips
  *  exactly these. */
@@ -190,7 +190,7 @@ export const presetGradient = (dark: string): Gradient => ({
 export const solid = (color: string): Paint => ({ color, gradient: null });
 
 /** The gradient a paint gets when its switch is first turned on: from its
- *  colour to the accent, top to bottom — two different colours, so the
+ *  colour to the accent, top to bottom: two different colours, so the
  *  change shows at once. A paint already in the accent runs to the text
  *  colour instead. */
 export const defaultGradient = (color: string): Gradient => ({
@@ -292,8 +292,8 @@ export function sanitizePaint(raw: unknown, fallback: Paint): Paint {
 /**
  * A full, valid settings object from anything: every field checked for type
  * and range, defaults where a value is missing or wrong, out-of-range
- * numbers clamped. It validates and nothing else — no sorting, swapping,
- * tinting or replacing: the settings are exactly what was chosen, and every
+ * numbers clamped. It validates and nothing else: no sorting, swapping,
+ * tinting or replacing. The settings are exactly what was chosen, and every
  * colour in them is the one drawn (or, on dark, its exact swap).
  * `null`/`'auto'` and an empty string all mean "auto" for the version and
  * the mask.
@@ -356,26 +356,26 @@ export function saveSettings(s: QrSettings): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(s));
   } catch {
-    // storage blocked or full: the settings simply do not persist
+    // storage blocked or full: the settings do not persist
   }
 }
 
-/** Whether the symbol carries something on its centre — an image or a
- *  label — and so needs the error correction to carry the loss. */
+/** Whether the symbol carries something on its centre (an image or a label)
+ *  and so needs the error correction to carry the loss. */
 export const hasPlate = (s: QrSettings): boolean => s.imageSource !== 'none' || s.centreLabel.trim() !== '';
 
 /** The largest image side, as a share of the symbol's, the level allows:
  *  the covered area must stay under `COVER_SHARE`. */
 export const maxImageSize = (level: EcLevel): number => Math.sqrt(COVER_SHARE[level]);
 
-/** The image side actually drawn: the setting, clamped by the level. */
+/** The image side drawn: the setting, clamped by the level. */
 export const effectiveImageSize = (s: QrSettings): number => Math.min(s.imageSize, maxImageSize(s.level));
 
 /**
  * The settings a style choice brings with it. The signature style is a
- * preset — dots under the preset gradient, rounded finders, the logo,
- * level H — each part of which stays a setting of its own afterwards;
- * picking the style sets them, it does not lock them.
+ * preset (dots under the preset gradient, rounded finders, the logo, level
+ * H), each part of which stays a setting of its own afterwards; picking the
+ * style sets them, it does not lock them.
  */
 export function applyStyle(s: QrSettings, style: ModuleStyle): QrSettings {
   if (style === 'nanourl') {
@@ -392,7 +392,7 @@ export function applyStyle(s: QrSettings, style: ModuleStyle): QrSettings {
   return { ...s, style };
 }
 
-/** The presets: each a named look, as its own overrides on the defaults —
+/** The presets: each a named look, as its own overrides on the defaults, so
  *  applying one resets everything it does not set. Looks only: no preset
  *  sets a caption or a label, which are the person's. Colours are tokens
  *  where a token fits; the fixed ones live in this table and nowhere else.
@@ -444,8 +444,8 @@ export const PRESET_TABLE: Readonly<Record<string, { hint: string; settings: Par
 export const PRESETS = Object.keys(PRESET_TABLE) as Preset[];
 export type Preset = keyof typeof PRESET_TABLE;
 
-/** A preset applied: the defaults, then its own overrides — so it resets
- *  everything it does not set — validated like any other settings. */
+/** A preset applied: the defaults, then its own overrides, so it resets
+ *  everything it does not set, validated like any other settings. */
 export function applyPreset(preset: Preset): QrSettings {
   return sanitize({ ...DEFAULT_SETTINGS, ...PRESET_TABLE[preset].settings });
 }
@@ -457,14 +457,14 @@ export function presetOf(s: QrSettings): Preset | null {
   return PRESETS.find((name) => JSON.stringify(applyPreset(name)) === now) ?? null;
 }
 
-/** An image is a plate, and a plate needs level H — applied when a picture
+/** An image is a plate, and a plate needs level H, applied when a picture
  *  first appears, once, so the person can lower it again on purpose. */
 export function applyImageSource(s: QrSettings, source: ImageSource): QrSettings {
   const raise = !hasPlate(s) && source !== 'none';
   return { ...s, imageSource: source, level: raise ? 'H' : s.level };
 }
 
-/** A centre label is a plate, and a plate needs level H — applied when the
+/** A centre label is a plate, and a plate needs level H, applied when the
  *  label goes from empty to something, once, so the person can lower it
  *  again on purpose. */
 export function applyCentreLabel(s: QrSettings, label: string): QrSettings {
@@ -562,8 +562,8 @@ export function addStop(g: Gradient): Gradient {
 
 /**
  * The one mapping from settings to what each consumer takes. The renderer
- * draws the config verbatim — the same paints on screen and in the export;
- * the two differ only in scale — so every colour in the settings is the
+ * draws the config verbatim: the same paints on screen and in the export,
+ * the two differing only in scale, so every colour in the settings is the
  * colour drawn. The one thing the renderer does to a value is sort a copy
  * of a gradient's stops by offset when it emits the definition.
  */

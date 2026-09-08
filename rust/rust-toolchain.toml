@@ -10,7 +10,7 @@
 # rustup reads this file for any cargo command run under rust/, so CI, a
 # developer's box and a compute server all get the same compiler with no flag.
 # The tier-3 (threads) build is the one exception: it needs -Zbuild-std and is
-# invoked as `cargo +nightly-2026-09-06`, which overrides this pin -- that
+# invoked as `cargo +nightly-2026-09-06`, which overrides this pin; that
 # nightly is dated for the same reason this channel is exact.
 [toolchain]
 channel = "1.97.1"

@@ -1,4 +1,4 @@
-//! Alphabet sniffing, code marking and link parsing — the rules the web app
+//! Alphabet sniffing, code marking and link parsing: the rules the web app
 //! states in `web/src/lib/alphabet.ts`, so that `nanourl decode` accepts
 //! exactly what the site's Decode pane accepts.
 //!
@@ -14,7 +14,7 @@
 use urlcodec::coder::{Alphabet, ALPHABET, ALPHABET64, ALPHABET_QR};
 
 /// The alphabet a code falls back to when sniffing cannot tell base79 from
-/// base64url — base64url, the charset every link is minted in.
+/// base64url: base64url, the charset every link is minted in.
 pub const DEFAULT_ALPHABET: Alphabet = Alphabet::Base64;
 
 /// base79's digit 0, written in front of a base79 code that could pass as
@@ -74,7 +74,7 @@ fn qr_only(c: char) -> bool {
     ALPHABET_QR.contains(&b) && !ALPHABET64.contains(&b)
 }
 
-/// Every character a qr-alpha digit — the shape a qr-alpha code has, and the
+/// Every character a qr-alpha digit: the shape a qr-alpha code has, and the
 /// shape ~1 in 3,000 base79 codes of a typical length (~13 characters; more
 /// often for shorter ones) happen to have too, since every qr-alpha digit
 /// but `/` is a base79 digit.
@@ -130,7 +130,7 @@ pub fn fragment_for(code: &str, alpha: Alphabet) -> String {
 /// A parsed link or bare code.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Parsed {
-    /// The code as written — a marker is a digit, so nothing is removed.
+    /// The code as written; a marker is a digit, so nothing is removed.
     pub code: String,
     /// The alphabet the input identifies, or `None` when ambiguous.
     pub alpha: Option<Alphabet>,
@@ -138,8 +138,8 @@ pub struct Parsed {
 
 /// JavaScript's `decodeURIComponent`, which is what wrote the fragment.
 ///
-/// Errors on a truncated escape, a non-hex digit, and — like the original —
-/// on bytes that are not valid UTF-8 once decoded.
+/// Errors on a truncated escape, a non-hex digit, and, like the original, on
+/// bytes that are not valid UTF-8 once decoded.
 fn decode_uri_component(s: &str) -> Result<String, ()> {
     let b = s.as_bytes();
     let mut out = Vec::with_capacity(b.len());

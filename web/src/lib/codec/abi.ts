@@ -5,10 +5,10 @@
 // the browser path uses.
 //
 // Callers pass their wasm exports object (typed `any` there, since the
-// hand-rolled C ABI in rust/urlcodec has no generated type information — that
+// hand-rolled C ABI in rust/urlcodec has no generated type information; that
 // stays internal to the codec worker/test and never reaches the public Codec
-// API in client.ts); only the one export this module actually calls is typed
-// here, so `any` isn't needed in this file's own signature.
+// API in client.ts); only the one export this module calls is typed here, so
+// `any` isn't needed in this file's own signature.
 export interface Ualloc {
   ualloc(n: number): number;
 }
@@ -27,12 +27,12 @@ export function read(memory: WebAssembly.Memory, packed: bigint): unknown {
   const l = Number(packed & 0xffffffffn);
   // The mt build's memory is a SharedArrayBuffer, and TextDecoder.decode()
   // throws ("The provided ArrayBufferView value must not be shared") on a
-  // view backed by one — found by hand running the threads tier in a real
-  // browser (single-thread build's plain-ArrayBuffer memory never hit this).
-  // `.slice()` always constructs its result via the plain `Uint8Array`
-  // intrinsic (TypedArray species), so it copies into a fresh non-shared
-  // ArrayBuffer regardless of the source's buffer kind — cheap (these are
-  // small JSON replies, not model-sized) and correct for both builds.
+  // view backed by one; the single-thread build's plain-ArrayBuffer memory
+  // never hits this. `.slice()` always constructs its result via the plain
+  // `Uint8Array` intrinsic (TypedArray species), so it copies into a fresh
+  // non-shared ArrayBuffer regardless of the source's buffer kind: cheap
+  // (these are small JSON replies, not model-sized) and correct for both
+  // builds.
   const bytes = new Uint8Array(memory.buffer, p, l).slice();
   return JSON.parse(new TextDecoder().decode(bytes));
 }

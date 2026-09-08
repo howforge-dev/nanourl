@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# THE cross-runtime fuzz gate: rust-only, single-process per shard —
+# THE cross-runtime fuzz gate: rust-only, single-process per shard.
 # fuzzpair embeds the wasm build via wasmtime next to the native
 # x86 codec and asserts per-case equality, fail-fast. No node involved.
 # (fuzz/run_fuzz.sh remains for occasional V8/browser-engine validation.)

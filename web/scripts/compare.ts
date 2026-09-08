@@ -2,7 +2,8 @@
 //
 // Playwright is already a dependency and already knows how to rasterize a
 // page, so the "image compositor" is an HTML page with two <img> tags and a
-// full-page screenshot of it — no canvas, no image library, no new deps.
+// full-page screenshot of it, with no canvas, no image library and no new
+// dependency.
 //
 //   pnpm exec tsx scripts/compare.ts <beforeDir> <afterDir> <outDir> <name>...
 //

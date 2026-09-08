@@ -2,10 +2,10 @@
 // waits on the coordinator worker's 'setup' reply: actions posted before the
 // gate opens are queued in arrival order; opening the gate flushes them once,
 // in order, and lets any later action through immediately. A gate that never
-// opens — 'setup' failed — discards whatever was queued instead of ever
+// opens (because 'setup' failed) discards whatever was queued instead of ever
 // flushing it, so a broken worker never receives a chunk/tokenizer send.
 //
-// Deliberately has no Worker/DOM dependency (an "action" is just a closure
+// Deliberately has no Worker/DOM dependency (an "action" is a closure
 // the caller supplies, e.g. `() => worker.postMessage(...)`), so this is the
 // one piece of the load handshake that's unit-testable without a real Worker.
 export interface SendGate {
@@ -36,12 +36,12 @@ export function createSendGate(): SendGate {
       return discarded;
     },
     send(action) {
-      // `discarded` is the latch, and it must exist: without it `discard()` clears
-      // the queue once and left `ready === false`, so every chunk that
-      // arrived *after* a failed 'setup' was re-queued and never drained —
-      // the whole 130,862,112-byte model accumulating as closures for a
-      // worker that had already been given up on, on top of the failed
-      // tier's shared memory and the loader's own transients
+      // `discarded` is the latch, and it must exist: without it `discard()`
+      // clears the queue once and leaves `ready === false`, so every chunk
+      // arriving *after* a failed 'setup' is re-queued and never drained, the
+      // whole 130,862,112-byte model accumulating as closures for a worker
+      // that has already been given up on, on top of the failed tier's shared
+      // memory and the loader's own transients.
 
       if (discarded) return;
       if (ready) action();

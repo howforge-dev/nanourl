@@ -3,7 +3,7 @@
 // has to behave the same wherever it's served from. Cloudflare applies ALL
 // matching rules and comma-joins duplicates, so without `! Cache-Control`,
 // `/*`'s `no-cache` would prepend onto the immutable rules and serve
-// content-hashed chunks must-revalidate instead of immutable — exactly the
+// content-hashed chunks must-revalidate instead of immutable, exactly the
 // kind of drift a comment claiming "mirrors web/_headers" cannot catch.
 //
 // So the mirroring is enforced here as a test, not asserted as a comment.
@@ -18,7 +18,7 @@ const nginx = parseNginxConf(readFileSync(NGINX_CONF, 'utf8'));
 
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 
-// One representative path per class of thing dist/ actually contains.
+// One representative path per class of thing dist/ contains.
 const PATHS = [
   '/',
   '/index.html',
@@ -34,8 +34,8 @@ const PATHS = [
   '/urlcodec-mt.be6068c4.wasm.bin',
   '/atlas.8c7e850b.bin',
   // The favicon is its own class: root-level, not `.html`, and deliberately
-  // NOT content-hashed — so the immutable rule, which is only ever correct for
-  // a hashed name, must not reach it. Both configs get there through their
+  // NOT content-hashed. The immutable rule, which is only ever correct for a
+  // hashed name, must not reach it. Both configs get there through their
   // catch-alls today; this pins that they still agree if either grows a rule.
   '/favicon.svg',
 ];
@@ -94,7 +94,7 @@ describe('nginx-nanourl.conf mirrors _headers', () => {
     expect(conf).toMatch(/ssl_certificate\s+\S+/);
     expect(conf).toMatch(/ssl_certificate_key\s+\S+/);
     expect(conf).toMatch(/return\s+30[18]\s+https:/);
-    // the port-80 block must not have a root/try_files of its own — the app
+    // the port-80 block must not have a root/try_files of its own: the app
     // must never be served over plain HTTP, where crypto.subtle is undefined
     const port80 = /server\s*\{[^}]*listen\s+80[^}]*\}/.exec(conf)?.[0] ?? '';
     expect(port80).not.toMatch(/try_files/);

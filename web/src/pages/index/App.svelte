@@ -19,7 +19,7 @@
   type Tab = 'Encode' | 'Decode';
 
   // captured once at mount, before anything (including the model load) can
-  // change location — the redirect overlay decides its own fate from this
+  // change location; the redirect overlay decides its own fate from this
   const initialHref = location.href;
   let showRedirect = $state(location.hash.length > 1);
 
@@ -50,7 +50,7 @@
 <!-- Two segmented controls, one component, deliberately two looks: the left
      one SWITCHES PANES (a real ARIA tablist), the right one CHANGES A SETTING
      the pane below re-renders under (a group of toggles). They sit in one row,
-     so telling them apart at a glance is the point — see Segmented.svelte's
+     so telling them apart at a glance is the point; see Segmented.svelte's
      `SegmentedLook`. -->
 <div class="tabrow">
   <Segmented options={TABS} value={tab} onchange={(t) => (tab = t as Tab)} />

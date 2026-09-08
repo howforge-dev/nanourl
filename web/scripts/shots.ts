@@ -1,6 +1,6 @@
-// Screenshot harness: what the pages actually look like. Serves `web/dist`
-// with e2e/serve.ts — the same server, and the same dist/_headers policy, the
-// Playwright suite runs against — and drives it, writing one full-page PNG per
+// Screenshot harness: what the pages look like. Serves `web/dist` with
+// e2e/serve.ts (the same server, and the same dist/_headers policy, the
+// Playwright suite runs against) and drives it, writing one full-page PNG per
 // (page, state, viewport) triple into an output directory, so a before/after
 // pair can be compared shot for shot.
 //
@@ -20,8 +20,7 @@ import { startServer } from '../e2e/serve';
 import { BENCH_URL } from '../src/lib/examples';
 // The same registry the app and the E2E specs use: a renamed testid is a
 // TypeScript error here too, rather than a screenshot matrix of the wrong
-// states — which is exactly the failure mode that lets a visual bug through a
-// judged by eye.
+// states.
 import { TESTID, testIdSelector } from '../src/lib/testids';
 
 // The same URL the bench page times and the observatory prefills.
@@ -106,7 +105,7 @@ const SHOTS: Shot[] = [
   {
     name: 'loading',
     run: async (page, out) => {
-      // Throttle the model chunks so the loading line is actually on screen.
+      // Throttle the model chunks so the loading line is on screen.
       await page.route('**/model.*.bin', async (route) => {
         await new Promise((r) => setTimeout(r, 2500));
         await route.continue();
@@ -133,8 +132,8 @@ const SHOTS: Shot[] = [
   },
   {
     // The redirect overlay: encode something, then open its own link so the
-    // overlay is the page. `?stop` is not a thing — the countdown is real, so
-    // the shot has to happen inside the two seconds before it fires.
+    // overlay is the page. There is no `?stop`: the countdown runs, so the
+    // shot has to happen inside the two seconds before it fires.
     name: 'redirect',
     run: async (page, out) => {
       await page.goto('/');
@@ -152,7 +151,7 @@ const SHOTS: Shot[] = [
     },
   },
   {
-    // Just the header band of every page, both widths — the one piece of
+    // Just the header band of every page, both widths, the one piece of
     // chrome all five share.
     name: 'headers',
     run: async (page, out) => {
@@ -228,7 +227,7 @@ const SHOTS: Shot[] = [
         await out(`learn-${label}-b`);
       }
       // Every boxed figure on its own, cropped to the element: the only way
-      // to actually judge a diagram on a 15,000-px page.
+      // to judge a diagram on a 15,000-px page.
       const figs = page.locator('.fig');
       const n = await figs.count();
       for (let i = 0; i < n; i++) {
@@ -274,7 +273,7 @@ async function main(): Promise<void> {
   mkdirSync(outDir, { recursive: true });
   // e2e/serve.ts, the same server the suite runs against: it applies the
   // real dist/_headers policy, so a shot is taken under the same
-  // cross-origin isolation — and therefore the same kernel tier — the E2E
+  // cross-origin isolation (and therefore the same kernel tier) the E2E
   // suite asserts, rather than under a weaker server of the harness's own.
   const server = await startServer(port);
 
@@ -283,7 +282,7 @@ async function main(): Promise<void> {
       if (only && !only.has(shot.name)) continue;
       // One browser per shot: each page holds the ~125 MiB model plus a
       // shared-memory wasm heap and up to 8 compute-worker threads, and
-      // reusing one browser across the whole matrix reliably killed it.
+      // reusing one browser across the whole matrix reliably kills it.
       const browser: Browser = await chromium.launch({ args: ['--disable-dev-shm-usage'] });
       try {
         const ctx = await browser.newContext({

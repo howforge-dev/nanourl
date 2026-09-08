@@ -5,7 +5,7 @@
   import { paramsM } from '../../../lib/format';
 
   // real data: numbers.hn always has a "000000" piece (the worked HN
-  // example's story-id digits) — fail loudly at build time if that ever
+  // example's story-id digits); fail loudly at build time if that ever
   // stops being true, rather than showing a placeholder in the rendered page
   const digits = numbers.hn.tokens.find((t) => t.piece === '000000');
   if (!digits) throw new Error('lib/numbers.ts: expected a "000000" token in numbers.hn.tokens');

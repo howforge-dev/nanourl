@@ -104,8 +104,8 @@ for f in "${files[@]}"; do
   fi
 done
 
-# Reproducibility is settled above. The pin is a SECOND question -- are these
-# the bytes a parity gate proved? -- and it is only answerable on the
+# Reproducibility is settled above. The pin is a SECOND question (are these
+# the bytes a parity gate proved?) and it is only answerable on the
 # architecture the pin describes, so on any other host it is reported and not
 # counted against the run. build-wasm.sh exits 3 to say exactly that.
 if [ "$what" != cli ]; then

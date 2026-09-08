@@ -3,8 +3,8 @@
 //! `nanourl` is offline by construction: it opens no socket, keeps no cache
 //! directory and carries no TLS stack, because the 124.8 MiB artifact is linked
 //! into the executable. That is what makes a link decodable when nothing about
-//! this project is reachable any more — the binary a person already has is
-//! complete. It costs a ~131 MB executable, which is the whole trade.
+//! this project is reachable any more: the binary a person already has is
+//! complete. It costs a ~131 MB executable.
 //!
 //! The bytes themselves are embedded by `src/main.rs` and passed in here, so
 //! only that one binary carries them: this crate's own library and tests, the
@@ -13,10 +13,9 @@
 //!
 //! `build.rs` refuses to produce a binary around any other file: it checks the
 //! artifact's length and sha256 against `model_pin.rs`, the same file this
-//! module includes, before emitting the path `src/main.rs` embeds. So the digest
-//! reported here is not a promise about the bytes, it is a fact about them, and
-//! [`verify`] exists for the case where the executable has been damaged since
-//! it was built.
+//! module includes, before emitting the path `src/main.rs` embeds. So the
+//! digest reported here is a fact about the bytes, and [`verify`] exists for
+//! the case where the executable has been damaged since it was built.
 
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
@@ -48,7 +47,7 @@ include!("../sha256_file.rs");
 /// Re-hash the embedded weights.
 ///
 /// `build.rs` already proved this at build time; running it again catches the
-/// executable having been damaged since — a truncated copy, a bad download of
+/// executable having been damaged since: a truncated copy, a bad download of
 /// the archive, bit rot on the disk it sits on.
 pub fn verify(model: &[u8]) -> Result<String, String> {
     if model.len() as u64 != MODEL_BYTES {

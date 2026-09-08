@@ -32,14 +32,14 @@ export const ALPHABETS = [
  *  visitor asks otherwise, and the one hn-trace.json was recorded with. */
 export const DEFAULT_ALPHABET: Alphabet = 1;
 
-/** base79 — marked with its digit 0, `~`, when it could pass as base64url
+/** base79, marked with its digit 0, `~`, when it could pass as base64url
  *  or as qr-alpha (see `bareFor`). */
 export const BASE79: Alphabet = 0;
 
-/** emoji-1k — every character outside ASCII, so it needs no marker. */
+/** emoji-1k: every character outside ASCII, so it needs no marker. */
 export const EMOJI: Alphabet = 2;
 
-/** qr-alpha — 43 of QR alphanumeric mode's 45 characters (`/ 0-9 A-Z $ * + - . :`),
+/** qr-alpha: 43 of QR alphanumeric mode's 45 characters (`/ 0-9 A-Z $ * + - . :`),
  *  so a link in it rides through a QR code at 5.5 bits per character instead
  *  of byte mode's 8. Marked with its digit 0, `/`, when it could pass as
  *  base64url. */
@@ -146,10 +146,10 @@ export function parseLink(input: string): { code: string; alpha: Alphabet | null
  * `HTTPS://QV.LC/` lets the base ride in the same 5.5-bit segment as the
  * code behind it instead of forcing a byte-mode segment in front. The path
  * is case-sensitive and is left alone; at the site's root it is `/`, so the
- * base is one alphanumeric run and the code another — `HTTPS://QV.LC/#CODE`
- * unmarked, `HTTPS://QV.LC/#/CODE` marked — with only the `#` between them
+ * base is one alphanumeric run and the code another (`HTTPS://QV.LC/#CODE`
+ * unmarked, `HTTPS://QV.LC/#/CODE` marked), with only the `#` between them
  * (not an alphanumeric-mode character) in byte mode. Every other alphabet's
- * link is carried as it is — its code needs byte mode anyway.
+ * link is carried as it is, since its code needs byte mode anyway.
  */
 export function qrText(link: string, alpha: Alphabet, { scheme = true }: { scheme?: boolean } = {}): string {
   const text = scheme ? link : link.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');

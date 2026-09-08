@@ -1,7 +1,7 @@
 // The static server's port, in one place.
 //
 // `playwright.config.ts` always passes `--port`, so `serve.ts`'s own default
-// is dead code — but "dead" and "wrong" look identical until someone runs
+// is dead code, but "dead" and "wrong" look identical until someone runs
 // `tsx e2e/serve.ts` by hand and gets a different port from the one the config
 // would have used. Both read this.
 //

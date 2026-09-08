@@ -1,10 +1,10 @@
 // The digest of a file on disk. Included verbatim by `build.rs`, which checks
 // the artifact before it is embedded, and by `src/weights.rs`, which re-checks
-// a `--model` override -- so the two cannot disagree about what the sha256 of a
+// a `--model` override, so the two cannot disagree about what the sha256 of a
 // file is, and a change to the block size or the hex formatting reaches both.
 //
 // `include!`, not a module: `build.rs` compiles before the crate exists and
-// cannot reach into it. Fully qualified paths for the same reason -- it has to
+// cannot reach into it. Fully qualified paths for the same reason: it has to
 // compile with whatever else is in scope where it lands.
 
 /// Lowercase hex sha256 of a file, read in 1 MiB blocks so a file of any size

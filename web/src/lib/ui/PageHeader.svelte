@@ -5,7 +5,7 @@
   //
   // The tagline and the links are separate rows, not one run of text joined
   // by "·": in one run the browser breaks the line wherever it happens to
-  // fit — mid-sentence on desktop, and on a phone leaving a link's arrow
+  // fit, mid-sentence on desktop, and on a phone leaving a link's arrow
   // alone on its own line. Each nav item is a flex item with
   // `white-space: nowrap`, so it wraps whole or not at all.
   import { navFor, pageSuffix, pageTagline, type PageId } from '../pages';

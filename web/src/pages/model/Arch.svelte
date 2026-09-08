@@ -7,7 +7,7 @@
   // Every size comes from `info`, never a hardcoded constant, so this reads
   // correctly whatever shape ships next.
   import type { Info } from '../../lib/codec/types';
-  // Never hard-code a model figure in web/ — the tokenizer's
+  // Never hard-code a model figure in web/; the tokenizer's
   // 24-character cap already lives in numbers.static.maxTokenLength.
   import { numbers } from '../../lib/numbers';
   import { fmtBytes, fmtExact } from '../../lib/format';
@@ -106,14 +106,15 @@
   /* The rows are `<Button variant="well" block>`: surface, border, radius,
      cursor and the shared focus ring are the primitive's, and `block` is what
      puts the label left and the shape right. Only the pipeline's own layout is
-     here — the indent under the connector, the monospace the panel is set in,
+     here: the indent under the connector, the monospace the panel is set in,
      and the sizing.
 
-     `max-content` with a `min-width` floor, not a plain `width`: a row's label
-     and its shape are both unbreakable runs of monospace, so at a narrow
-     viewport their combined min-content width exceeds the card and the shape
-     spills out of a fixed-width row, past the page's own edge. Sized to its
-     content instead, the row stays whole and the panel scrolls. */
+     `max-content` with a `min-width` floor rather than a plain `width`: a
+     row's label and its shape are both unbreakable runs of monospace, so at
+     a narrow viewport their combined min-content width exceeds the card and
+     the shape spills out of a fixed-width row, past the page's own edge.
+     Sized to its content instead, the row stays whole and the panel
+     scrolls. */
   .arch :global(.stage) {
     gap: var(--s-3);
     padding: var(--s-2) var(--s-3);
@@ -123,8 +124,8 @@
     font: inherit;
   }
   /* The connector drops from the left edge of a row's CONTENT, which is the
-     row's own indent plus its padding — derived, so moving either keeps the
-     line under the text rather than beside it. */
+     row's own indent plus its padding, derived so that moving either keeps
+     the line under the text rather than beside it. */
   .arch .conn { border-left: var(--stroke) solid var(--line); height: var(--s-3); margin-left: calc(var(--s-4) + var(--s-3)); }
   .arch .dims { color: var(--dim); text-align: right; flex: none; }
   .arch :global(.stage.blk:hover), .arch :global(.stage.sel) { border-color: var(--acc); }

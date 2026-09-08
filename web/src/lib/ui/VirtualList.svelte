@@ -16,16 +16,17 @@
     if (el) scrollTop = el.scrollTop;
   }
 
-  // Instant, not smooth — smooth-scrolling a virtual table hundreds of
+  // Instant, not smooth: smooth-scrolling a virtual table hundreds of
   // thousands of pixels tall crawls.
   export function scrollTo(i: number) {
     if (!el) return;
     el.scrollTop = Math.max(0, i * rowHeight);
     // A programmatic scrollTop write dispatches a native 'scroll' event
-    // asynchronously (next frame) in real browsers, and not at all in jsdom
-    // — so a caller that jumps and then immediately reads back the visible
-    // range (e.g. a "flash the chosen row" highlight) would see stale rows
-    // for a frame or forever. Refresh synchronously from the clamped value.
+    // asynchronously (next frame) in real browsers, and not at all in
+    // jsdom, so a caller that jumps and then immediately reads back the
+    // visible range (e.g. a "flash the chosen row" highlight) would see stale
+    // rows for a frame or forever. Refresh synchronously from the clamped
+    // value.
     scrollTop = el.scrollTop;
   }
 </script>

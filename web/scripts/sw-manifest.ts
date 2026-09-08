@@ -1,7 +1,7 @@
 // Injects `self.__SHELL__` / `self.__BUILD__` into dist/sw.js as two plain
 // assignments prepended ahead of the bundle scripts/build-sw.ts already
 // wrote there. Run by `pnpm build`, strictly after both `vite build` (the
-// page shell) and build-sw.ts (dist/sw.js itself must already exist) — see
+// page shell) and build-sw.ts (dist/sw.js itself must already exist). See
 // package.json's `build` script.
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';

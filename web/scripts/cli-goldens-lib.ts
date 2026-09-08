@@ -1,8 +1,8 @@
 // The goldens that pin the Rust CLI to this app's own link handling.
 //
-// `nanourl decode` accepts exactly what the Decode pane accepts — a full
+// `nanourl decode` accepts exactly what the Decode pane accepts (a full
 // redirect link, a link without its scheme, or a bare code in any of the four
-// alphabets — which means `rust/nanourl/src/link.rs` is a second
+// alphabets), which means `rust/nanourl/src/link.rs` is a second
 // implementation of `src/lib/alphabet.ts`. Two implementations of one format
 // drift, and the way this one drifts is silent: a code read under the wrong
 // alphabet still decodes, to a different URL, with no error.
@@ -10,7 +10,7 @@
 // So the cases are computed HERE, from the TypeScript, and written to
 // `rust/nanourl/tests/goldens/`. `tests/cli-goldens.test.ts` fails when the
 // checked-in file no longer matches this module, and the Rust side's
-// `tests/link_test.rs` fails when the port no longer matches the file — so a
+// `tests/link_test.rs` fails when the port no longer matches the file, so a
 // change to either implementation alone breaks a gate.
 import type { Alphabet } from '../src/lib/codec/types';
 import { ALPHABETS, BASE79, DEFAULT_ALPHABET, EMOJI, QR_ALPHA, bareFor, fragmentFor, parseLink, sniff } from '../src/lib/alphabet';
@@ -25,16 +25,16 @@ export interface CodeCase {
   kind: 'code';
   alpha: Alphabet;
   code: string;
-  /** `fragmentFor(code, alpha)` — what the app writes after the '#'. */
+  /** `fragmentFor(code, alpha)`: what the app writes after the '#'. */
   fragment: string;
-  /** `sniff(code)` — null where base64url and base79 are indistinguishable. */
+  /** `sniff(code)`: null where base64url and base79 are indistinguishable. */
   sniff: Alphabet | null;
   /** `parseLink(SITE_URL + '#' + fragment)`. */
   fromLink: { code: string; alpha: Alphabet | null };
-  /** `bareFor(code, alpha)` — the code as written down: behind its marker
+  /** `bareFor(code, alpha)`, the code as written down: behind its marker
    *  digit when it could pass as another alphabet. */
   bare: string;
-  /** `parseLink(bare)` — the spelling comes back as itself. */
+  /** `parseLink(bare)`: the spelling comes back as itself. */
   fromBare: { code: string; alpha: Alphabet | null };
 }
 
@@ -64,14 +64,14 @@ export interface CliConstants {
   examples: string[];
 }
 
-// A dozen or more codes per alphabet, chosen for the shapes that have
-// actually gone wrong rather than for coverage of the digit tables (the
-// tables themselves are pinned by coder.rs's own tests). base79 leads with
-// codes that contain no base79-only character at all and with codes of the
-// qr-alpha shape (uppercase, every digit a qr-alpha one), which are the ones
-// `bareFor` has to mark, plus codes already carrying '~' as a digit, which
-// it must not mark again. base64url includes the all-uppercase codes that
-// must stay ambiguous, never qr-alpha.
+// A dozen or more codes per alphabet, chosen for the shapes that have gone
+// wrong rather than for coverage of the digit tables (the tables themselves
+// are pinned by coder.rs's own tests). base79 leads with codes that contain
+// no base79-only character at all and with codes of the qr-alpha shape
+// (uppercase, every digit a qr-alpha one), which are the ones `bareFor` has
+// to mark, plus codes already carrying '~' as a digit, which it must not
+// mark again. base64url includes the all-uppercase codes that must stay
+// ambiguous, never qr-alpha.
 const B64_CODES = [
   'BAddTS_zj',
   'A',
@@ -130,8 +130,8 @@ const EMOJI_CODES = [
 // Every character below is a digit of coder.rs's ALPHABET_QR. The shapes:
 // codes that could pass as base64url (all letters, all digits, a '-'), which
 // take the marker, and codes carrying one of `$*+.:` or a '/' digit, which
-// identify themselves — each of the five leading, all of them together, and
-// a '/' inside.
+// identify themselves, with each of the five leading, all of them together,
+// and a '/' inside.
 const QR_CODES = [
   'PDKLHLL',
   'A',
@@ -197,7 +197,7 @@ const PARSE_INPUTS = [
   'AB$C',
 ];
 
-/** Every golden case, in a fixed order — the file is diffed, not searched. */
+/** Every golden case, in a fixed order: the file is diffed, not searched. */
 export function linkCases(): LinkCase[] {
   return [
     ...B64_CODES.map((c) => codeCase(c, DEFAULT_ALPHABET)),
