@@ -35,6 +35,10 @@
   h2 { color: var(--txt); font-size: var(--fs-md); margin: 0 0 var(--s-2); }
   p { margin: 0 0 var(--s-2); }
   code { font-family: var(--font-mono); font-size: var(--fs-xs); }
+  /* Links in a footnote read as the footnote: same dim ink, an underline as
+     the only cue, and the accent kept for hover. */
+  a { color: inherit; text-decoration: underline; text-underline-offset: 0.15em; }
+  a:hover { color: var(--acc); }
   /* The one command a reader might retype, so it wraps at the '#' rather than
      forcing the column wider on a phone. */
   .cmd { color: var(--txt); overflow-wrap: anywhere; }
