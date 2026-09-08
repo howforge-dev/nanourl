@@ -31,7 +31,6 @@
     color: var(--dim);
     font-size: var(--fs-sm);
     line-height: 1.55;
-    max-width: 62ch;
   }
   h2 { color: var(--txt); font-size: var(--fs-md); margin: 0 0 var(--s-2); }
   p { margin: 0 0 var(--s-2); }
