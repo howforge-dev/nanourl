@@ -18,17 +18,17 @@
       <tr><th>method</th><th>output</th></tr>
       <tr>
         <td>raw deflate (zip's engine), max effort</td>
-        <td class="n"
+        <td
           >{numbers.zip.deflate} bytes ({numbers.zip.raw - numbers.zip.deflate >= 0 ? 'saves' : 'costs'}
           {Math.abs(numbers.zip.raw - numbers.zip.deflate)} vs the {numbers.zip.raw}-byte input)</td
         >
       </tr>
-      <tr><td>gzip (deflate + its container)</td><td class="n">{numbers.zip.gzip} bytes — <i>larger</i> than the input</td></tr>
-      <tr><td>bzip2</td><td class="n">{numbers.zip.bzip2} bytes — much larger</td></tr>
-      <tr><td>xz</td><td class="n">{numbers.zip.xz} bytes — much larger</td></tr>
+      <tr><td>gzip (deflate + its container)</td><td>{numbers.zip.gzip} bytes — <i>larger</i> than the input</td></tr>
+      <tr><td>bzip2</td><td>{numbers.zip.bzip2} bytes — much larger</td></tr>
+      <tr><td>xz</td><td>{numbers.zip.xz} bytes — much larger</td></tr>
       <tr>
         <td>nanourl</td>
-        <td class="n"
+        <td
           ><b>{numbers.hn.coded_bits} bits</b> — that is {Math.ceil(numbers.hn.coded_bits / 8)} bytes,
           written <code>{numbers.hn.coded}</code> in {numbers.hn.coded_chars} characters</td
         >
