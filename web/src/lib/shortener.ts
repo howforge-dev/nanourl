@@ -75,5 +75,7 @@ export async function shorten(url: string, turnstile = '', fetchImpl: typeof fet
   if (field('ok') !== true || typeof slug !== 'string' || !slug || typeof link !== 'string' || !link.startsWith(SITE_URL)) {
     return { ok: false, error: 'unexpected answer from qv.lc' };
   }
-  return { ok: true, slug, link, created: res.status === 201 };
+  // A slug reads case-insensitively, so the link is spelled the way the rest
+  // of it is, in lowercase; the QR section capitalises it for the compact mode.
+  return { ok: true, slug: slug.toLowerCase(), link: link.toLowerCase(), created: res.status === 201 };
 }

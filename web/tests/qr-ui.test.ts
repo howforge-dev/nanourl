@@ -4,7 +4,7 @@ import ColorField from '../src/lib/ui/ColorField.svelte';
 import Hint from '../src/lib/ui/Hint.svelte';
 import Qr from '../src/pages/index/Qr.svelte';
 import { HINTS } from '../src/lib/qr/hints';
-import { DEFAULT_SETTINGS, PRESETS, STORAGE_KEY, type QrSettings } from '../src/lib/qr/options';
+import { DEFAULT_SETTINGS, STORAGE_KEY, type QrSettings } from '../src/lib/qr/options';
 import { bounded } from '../src/lib/qr/fields';
 import { DEFAULT_ALPHABET, QR_ALPHA } from '../src/lib/alphabet';
 import { TESTID, testIdSelector } from '../src/lib/testids';
@@ -134,8 +134,7 @@ describe('the QR section', () => {
     const labels = host.querySelectorAll('.lbl');
     const hints = host.querySelectorAll(testIdSelector(TESTID.hint));
     expect(labels.length).toBeGreaterThan(20);
-    // one hint per label, and one per preset chip
-    expect(hints.length).toBe(labels.length + PRESETS.length);
+    expect(hints.length).toBe(labels.length);
     for (const q of hints) {
       const id = q.getAttribute('aria-describedby')!;
       expect(host.querySelector(`#${id}[role=tooltip]`), id).not.toBeNull();

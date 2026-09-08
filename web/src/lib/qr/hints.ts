@@ -11,7 +11,7 @@ export const HINTS = {
   presets: 'Named looks. Picking one sets every option to that look; reset puts every option back to its default.',
   size: 'How wide the code is drawn on this page, in pixels. It does not change the exported files.',
   margin:
-    'Blank space around the code, counted in modules (the small squares). Scanners want about 4; less looks tighter but some phones struggle.',
+    'Blank space around the code, counted in modules (the small squares). One is enough for phone cameras on a plain background; the QR standard asks for 4, for print and for busy surroundings.',
   padding: 'Extra room between that blank space and the edge of the image, in modules, for when a caption or the logo needs it.',
   shape: 'Square keeps the image a square. Circle cuts the background to a disc and scatters a few extra dots in the ring around the code, which stays square and readable.',
   version: 'The grid size, 1 (21×21) to 40 (177×177); auto picks the smallest that fits.',

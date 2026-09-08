@@ -272,7 +272,7 @@ async function stubShortener(page: Page, reply: (body: { url: string; turnstile?
 
 const minted = (slug: string, status = 201): ShortenReply => ({ status, body: { ok: true, slug, link: `${SITE_URL}${slug}` } });
 
-test('short link: offered before the model is ready, made once with a token, shown, copied, and dropped when the URL changes', async ({ page, context }) => {
+test('short link: offered before the model is ready, made once with a token, shown in lowercase, copied, and dropped when the URL changes', async ({ page, context }) => {
   const watch = watchErrors(page);
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   const { posted } = await stubShortener(page, () => minted('ABC123'));
@@ -285,13 +285,13 @@ test('short link: offered before the model is ready, made once with a token, sho
 
   await button.click();
   const row = pane.locator(testIdSelector(TESTID.shortLink));
-  await expect(row).toHaveText('qv.lc/ABC123');
+  await expect(row).toHaveText('qv.lc/abc123');
   expect(posted).toEqual([{ url: HN.url, turnstile: 'e2e-token' }]);
   await expect(button).toHaveCount(0);
   await expect(pane.getByText(/A short link: 6 characters, stored on qv\.lc/)).toBeVisible();
 
   await row.locator('..').getByRole('button', { name: 'copy', exact: true }).click();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${SITE_URL}ABC123`);
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${SITE_URL}abc123`);
 
   await pane.locator('textarea').fill(EXAMPLE.url);
   await expect(row).toHaveCount(0);
@@ -307,7 +307,7 @@ test('short link: an existing link is told apart from a new one', async ({ page 
   const pane = page.locator(testIdSelector(TESTID.paneEncode));
   await pane.locator('textarea').fill(HN.url);
   await pane.locator(testIdSelector(TESTID.shortLinkButton)).click();
-  await expect(pane.locator(testIdSelector(TESTID.shortLink))).toHaveText('qv.lc/EX1ST5');
+  await expect(pane.locator(testIdSelector(TESTID.shortLink))).toHaveText('qv.lc/ex1st5');
   await expect(pane.getByText(/This URL already had a short link/)).toBeVisible();
   watch.expectClean();
 });
@@ -341,7 +341,7 @@ test('short link: a rate limit, a refusal and an unreachable server are said in 
   watch.expectClean([NETWORK_FAILURE]);
 });
 
-test('short link: the QR section carries it on request, in one compact segment, and it scans', async ({ page }) => {
+test('short link: the QR section carries it in capitals by default, in one compact segment, and it scans', async ({ page }) => {
   const watch = watchErrors(page);
   await stubShortener(page, () => minted('ABC123'));
   await page.goto('/');
@@ -354,13 +354,11 @@ test('short link: the QR section carries it on request, in one compact segment, 
   await expect(qr.locator(testIdSelector(TESTID.qrTarget))).toHaveCount(0);
 
   await pane.locator(testIdSelector(TESTID.shortLinkButton)).click();
-  await expect(pane.locator(testIdSelector(TESTID.shortLink))).toHaveText('qv.lc/ABC123');
+  await expect(pane.locator(testIdSelector(TESTID.shortLink))).toHaveText('qv.lc/abc123');
   const target = qr.locator(testIdSelector(TESTID.qrTarget));
   await expect(target).toBeVisible();
   const text = qr.locator(testIdSelector(TESTID.qrText));
-  await expect(text).toContainText('#');
-
-  await target.getByRole('button', { name: 'short link' }).click();
+  // the short link is the default the moment it exists
   await expect(text).toHaveText('HTTPS://QV.LC/ABC123');
   await expect(qr.locator(testIdSelector(TESTID.qrInfo))).toContainText('all 20 characters stored in the compact mode');
   await expect(qr.locator(testIdSelector(TESTID.qrOffer))).toHaveCount(0);
@@ -368,5 +366,11 @@ test('short link: the QR section carries it on request, in one compact segment, 
 
   await target.getByRole('button', { name: 'compressed link' }).click();
   await expect(text).toContainText('#');
+  await target.getByRole('button', { name: 'short link' }).click();
+  await expect(text).toHaveText('HTTPS://QV.LC/ABC123');
+  // a new URL drops the short link, and with it the switch
+  await pane.locator('textarea').fill(EXAMPLE.url);
+  await expect(target).toHaveCount(0);
+  await expect(text).toContainText('#', { timeout: CODEC_CALL });
   watch.expectClean();
 });

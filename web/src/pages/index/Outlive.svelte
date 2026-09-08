@@ -20,7 +20,7 @@
   </p>
   <p>
     Nothing is kept server-side, so there is no database to lose and no redirect to expire. The one
-    exception is a <em>short link</em> made with the button: <code>{SITE_URL}ABC123</code> is a row in
+    exception is a <em>short link</em> made with the button: <code>{SITE_URL}abc123</code> is a row in
     a database and lasts as long as this service does.
   </p>
 </section>

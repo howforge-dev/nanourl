@@ -178,12 +178,15 @@ export const GRADIENT_MIX = 0.4;
 
 /** The preset gradient: the accent, pulled toward `dark`, down to `dark`,
  *  top to bottom. */
+/** Where the site's gradient ends: a purple, so the dots fade from the accent
+ *  blue into it rather than into the ink. */
+export const GRADIENT_END = '#62307e';
 export const presetGradient = (dark: string): Gradient => ({
   type: 'linear',
   rotation: 90,
   stops: [
     { offset: 0, color: mix(COLOR.acc, dark, GRADIENT_MIX) },
-    { offset: 1, color: dark },
+    { offset: 1, color: GRADIENT_END },
   ],
 });
 
@@ -210,7 +213,7 @@ export const DEFAULT_SETTINGS: QrSettings = {
   scheme: true,
   width: 240,
   scale: 8,
-  margin: 4,
+  margin: 1,
   padding: 0,
   shape: 'square',
   style: 'classic',
@@ -397,49 +400,34 @@ export function applyStyle(s: QrSettings, style: ModuleStyle): QrSettings {
  *  sets a caption or a label, which are the person's. Colours are tokens
  *  where a token fits; the fixed ones live in this table and nowhere else.
  *  Every preset scans (the e2e applies each and reads it back). */
-export const PRESET_TABLE: Readonly<Record<string, { hint: string; settings: Partial<QrSettings> }>> = {
-  classic: { hint: 'The plain code: black squares on white, nothing else.', settings: {} },
+export const PRESET_TABLE: Readonly<Record<string, Partial<QrSettings>>> = {
+  classic: {},
   nanourl: {
-    hint: 'The site’s own look: dots under the blue gradient, rounded corners, the logo in the middle.',
-    settings: {
-      style: 'nanourl',
-      dots: { color: DEFAULT_SETTINGS.dots.color, gradient: presetGradient(DEFAULT_SETTINGS.dots.color) },
-      cornersSquareType: 'extra-rounded',
-      cornersDotType: 'rounded',
-      imageSource: 'logo',
-      level: 'H',
-    },
+    style: 'nanourl',
+    dots: { color: DEFAULT_SETTINGS.dots.color, gradient: presetGradient(DEFAULT_SETTINGS.dots.color) },
+    cornersSquareType: 'extra-rounded',
+    cornersDotType: 'rounded',
+    imageSource: 'logo',
+    level: 'H',
   },
-  rounded: { hint: 'Softened squares and rounded corners, dark on light.', settings: { style: 'rounded', cornersSquareType: 'rounded', cornersDotType: 'rounded' } },
-  dots: {
-    hint: 'Every module a dot, round corners, ink on light.',
-    settings: { style: 'dots', cornersSquareType: 'dot', cornersDotType: 'dot', dots: solid(COLOR.ink) },
-  },
-  classy: { hint: 'One corner of each module rounded so runs look woven, with matching corners.', settings: { style: 'classy', cornersSquareType: 'classy', cornersDotType: 'classy' } },
+  rounded: { style: 'rounded', cornersSquareType: 'rounded', cornersDotType: 'rounded' },
+  dots: { style: 'dots', cornersSquareType: 'dot', cornersDotType: 'dot', dots: solid(COLOR.ink) },
+  classy: { style: 'classy', cornersSquareType: 'classy', cornersDotType: 'classy' },
   ocean: {
-    hint: 'Pills across the runs, fading from the site’s blue down to its ink, on white.',
-    settings: {
-      style: 'extra-rounded',
-      cornersSquareType: 'extra-rounded',
-      cornersDotType: 'extra-rounded',
-      dots: { color: COLOR.ink, gradient: { type: 'linear', rotation: 90, stops: [{ offset: 0, color: mix(COLOR.acc, COLOR.ink, 0.35) }, { offset: 1, color: COLOR.ink }] } },
-    },
+    style: 'extra-rounded',
+    cornersSquareType: 'extra-rounded',
+    cornersDotType: 'extra-rounded',
+    dots: { color: COLOR.ink, gradient: { type: 'linear', rotation: 90, stops: [{ offset: 0, color: mix(COLOR.acc, COLOR.ink, 0.35) }, { offset: 1, color: COLOR.ink }] } },
   },
   sunset: {
-    hint: 'Dots in a warm diagonal fade, with rounded corners.',
-    settings: {
-      style: 'dots',
-      cornersSquareType: 'rounded',
-      cornersDotType: 'rounded',
-      dots: { color: '#7a1f2b', gradient: { type: 'linear', rotation: 45, stops: [{ offset: 0, color: '#7a1f2b' }, { offset: 1, color: '#b3410f' }] } },
-    },
+    style: 'dots',
+    cornersSquareType: 'rounded',
+    cornersDotType: 'rounded',
+    dots: { color: '#7a1f2b', gradient: { type: 'linear', rotation: 45, stops: [{ offset: 0, color: '#7a1f2b' }, { offset: 1, color: '#b3410f' }] } },
   },
-  'mono-dark': { hint: 'Light on dark: the paper as ink and the ink as paper. Phone cameras read it; some scanners do not.', settings: { dots: solid(COLOR.txt), background: solid(COLOR.ink) } },
-  poster: {
-    hint: 'Large, with a tight quiet zone and the strongest error correction, for a label or a picture of your own in the middle.',
-    settings: { style: 'classy-rounded', cornersSquareType: 'classy-rounded', cornersDotType: 'rounded', width: 320, margin: 2, level: 'H' },
-  },
-  minimal: { hint: 'The smallest text and the tightest frame: no scheme, a one-module quiet zone, no padding.', settings: { margin: 1, padding: 0, scheme: false } },
+  'mono-dark': { dots: solid(COLOR.txt), background: solid(COLOR.ink) },
+  poster: { style: 'classy-rounded', cornersSquareType: 'classy-rounded', cornersDotType: 'rounded', width: 320, margin: 2, level: 'H' },
+  minimal: { margin: 1, padding: 0, scheme: false },
 };
 export const PRESETS = Object.keys(PRESET_TABLE) as Preset[];
 export type Preset = keyof typeof PRESET_TABLE;
@@ -447,7 +435,7 @@ export type Preset = keyof typeof PRESET_TABLE;
 /** A preset applied: the defaults, then its own overrides, so it resets
  *  everything it does not set, validated like any other settings. */
 export function applyPreset(preset: Preset): QrSettings {
-  return sanitize({ ...DEFAULT_SETTINGS, ...PRESET_TABLE[preset].settings });
+  return sanitize({ ...DEFAULT_SETTINGS, ...PRESET_TABLE[preset] });
 }
 
 /** The preset the settings currently are, exactly, or `null` once any

@@ -27,6 +27,7 @@ import {
   PLATE_SHARE_MAX,
   applyStyle,
   presetGradient,
+  GRADIENT_END,
   qrOptions,
   solid,
   type QrSettings,
@@ -55,6 +56,9 @@ const parse = (svg: string): Document => {
 };
 
 const o = (over: Partial<QrSettings> = {}) => qrOptions({ ...DEFAULT_SETTINGS, ...over });
+/** The default quiet zone, in modules: where the symbol starts and what the
+ *  document grows by on each side. */
+const Q = DEFAULT_SETTINGS.margin;
 const free = { tl: true, tr: true, br: true, bl: true };
 const arcs = (s: string): number => (s.match(/A/g) ?? []).length;
 
@@ -212,7 +216,7 @@ describe('paints', () => {
     const lin = paintFill({ color: '#000000', gradient: presetGradient('#000000') }, 'p', box);
     expect(lin.fill).toBe('url(#p)');
     expect(lin.def).toMatch(/^<linearGradient id="p" gradientUnits="userSpaceOnUse" x1="5" y1="0" x2="5" y2="10">/);
-    expect(lin.def).toContain('stop-color="#000000"');
+    expect(lin.def).toContain(`stop-color="${GRADIENT_END}"`);
     // stops are emitted in offset order, stably, whatever order they were kept in
     const unsorted = paintFill({ color: '#000000', gradient: { type: 'linear', rotation: 0, stops: [{ offset: 1, color: '#111111' }, { offset: 0, color: '#222222' }, { offset: 1, color: '#333333' }] } }, 'p', box);
     expect(unsorted.def.match(/stop-color="(#\w+)"/g)).toEqual(['stop-color="#222222"', 'stop-color="#111111"', 'stop-color="#333333"']);
@@ -264,7 +268,7 @@ describe('renderSvg', () => {
       for (const t of CORNER_TYPES) {
         const r = renderSvg(m, o({ style, cornersSquareType: t, cornersDotType: t }).screen);
         const doc = parse(r.svg);
-        expect(doc.documentElement.getAttribute('viewBox')).toBe(`0 0 ${m.size + 8} ${m.size + 8}`);
+        expect(doc.documentElement.getAttribute('viewBox')).toBe(`0 0 ${m.size + 2 * Q} ${m.size + 2 * Q}`);
         expect(doc.querySelectorAll('path.modules')).toHaveLength(1);
         expect(doc.querySelectorAll('path.ring')).toHaveLength(1);
         expect(doc.querySelectorAll('path.core')).toHaveLength(1);
@@ -305,8 +309,8 @@ describe('renderSvg', () => {
     const classic = renderSvg(m, o().screen).svg;
     const styled = renderSvg(m, o({ style: 'dots', cornersSquareType: 'dot', cornersDotType: 'dot' }).screen).svg;
     const ring = (svg: string): string => parse(svg).querySelector('path.ring')!.getAttribute('d')!;
-    expect(ring(classic)).toBe(finderPaths(m.size, 'square', 'square', 4).ring);
-    expect(ring(styled)).toBe(finderPaths(m.size, 'dot', 'dot', 4).ring);
+    expect(ring(classic)).toBe(finderPaths(m.size, 'square', 'square', Q).ring);
+    expect(ring(styled)).toBe(finderPaths(m.size, 'dot', 'dot', Q).ring);
     const squares = new Set([...modulesPath(m, 'classic', 4).matchAll(/M([\d.]+) ([\d.]+)h1/g)].map((x) => `${Number(x[1]) + 0.5},${Number(x[2]) + 0.5}`));
     for (const c of modulesPath(m, 'dots', 4).matchAll(/M([\d.]+) ([\d.]+)a/g)) {
       expect(squares.has(`${Number(c[1]) + 0.4},${c[2]}`)).toBe(true);
@@ -317,9 +321,9 @@ describe('renderSvg', () => {
     const m = real();
     const painted = parse(renderSvg(m, o({ background: solid('#abcdef') }).export).svg);
     expect(painted.querySelector('rect.background')?.getAttribute('fill')).toBe('#abcdef');
-    expect(painted.documentElement.getAttribute('width')).toBe(String((m.size + 8) * 8));
+    expect(painted.documentElement.getAttribute('width')).toBe(String((m.size + 2 * Q) * 8));
     const round = parse(renderSvg(m, o({ backgroundRound: 0.5 }).export).svg);
-    expect(round.querySelector('rect.background')?.getAttribute('rx')).toBe(String((m.size + 8) / 4));
+    expect(round.querySelector('rect.background')?.getAttribute('rx')).toBe(String((m.size + 2 * Q) / 4));
     const grad = parse(renderSvg(m, o({ background: { color: '#ffffff', gradient: { type: 'radial', rotation: 0, stops: [{ offset: 0, color: '#ffffff' }, { offset: 1, color: '#dddddd' }] } } }).export).svg);
     expect(grad.querySelector('radialGradient#qr-bg')).not.toBeNull();
     expect(grad.querySelector('rect.background')?.getAttribute('fill')).toBe('url(#qr-bg)');
@@ -357,7 +361,7 @@ describe('renderSvg', () => {
     const doc = parse(renderSvg(m, o(s).export).svg);
     const g = doc.querySelector('linearGradient#qr-dots')!;
     expect(g.getAttribute('gradientUnits')).toBe('userSpaceOnUse');
-    const [x1, y1, x2, y2] = gradientLine(45, { x: 4, y: 4, w: m.size, h: m.size });
+    const [x1, y1, x2, y2] = gradientLine(45, { x: Q, y: Q, w: m.size, h: m.size });
     expect(Number(g.getAttribute('x1'))).toBeCloseTo(x1, 2);
     expect(Number(g.getAttribute('y1'))).toBeCloseTo(y1, 2);
     expect(Number(g.getAttribute('x2'))).toBeCloseTo(x2, 2);
@@ -421,7 +425,7 @@ describe('renderSvg', () => {
     expect(lines.map((l) => l.textContent).join(' ')).toBe('scan & open "the" article on qv.lc today please');
     expect(r.svg).toContain('&amp;');
     expect(doc.documentElement.getAttribute('viewBox')).toBe(`0 0 ${r.width} ${r.height}`);
-    for (const l of lines) expect(Number(l.getAttribute('y'))).toBeGreaterThan(m.size + 8);
+    for (const l of lines) expect(Number(l.getAttribute('y'))).toBeGreaterThan(m.size + 2 * Q);
   });
 
   it('escapes every XML special character and rounds rectangles per corner', () => {

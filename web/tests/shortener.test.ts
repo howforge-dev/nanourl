@@ -30,10 +30,10 @@ describe('shorten', () => {
     expect(JSON.parse(String(c.calls[1].init.body))).toEqual({ url: 'https://example.com/x', turnstile: 'tok' });
   });
 
-  it('reads a new link from a 201 and an existing one from a 200', async () => {
+  it('reads a new link from a 201 and an existing one from a 200, spelled in lowercase', async () => {
     const body = { ok: true, slug: 'ABC123', link: `${SITE_URL}ABC123` };
-    expect(await shorten('u', '', reply(201, body))).toEqual({ ok: true, slug: 'ABC123', link: `${SITE_URL}ABC123`, created: true });
-    expect(await shorten('u', '', reply(200, body))).toEqual({ ok: true, slug: 'ABC123', link: `${SITE_URL}ABC123`, created: false });
+    expect(await shorten('u', '', reply(201, body))).toEqual({ ok: true, slug: 'abc123', link: `${SITE_URL}abc123`, created: true });
+    expect(await shorten('u', '', reply(200, body))).toEqual({ ok: true, slug: 'abc123', link: `${SITE_URL}abc123`, created: false });
   });
 
   it('turns a rate limit into a wait in words, from Retry-After', async () => {

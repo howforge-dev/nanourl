@@ -141,18 +141,18 @@ export function parseLink(input: string): { code: string; alpha: Alphabet | null
  * Most phone cameras open a bare host as a link; some scanners need the
  * scheme, which is why it stays on by default.
  *
- * For qr-alpha the scheme and host are uppercased: both are case-insensitive
- * (RFC 3986 §3.1 and §3.2.2), and QR alphanumeric mode has no lowercase, so
- * `HTTPS://QV.LC/` lets the base ride in the same 5.5-bit segment as the
- * code behind it instead of forcing a byte-mode segment in front. The path
- * is case-sensitive and is left alone; at the site's root it is `/`, so the
- * base is one alphanumeric run and the code another (`HTTPS://QV.LC/#CODE`
- * unmarked, `HTTPS://QV.LC/#/CODE` marked), with only the `#` between them
- * (not an alphanumeric-mode character) in byte mode. Every other alphabet's
- * link is carried as it is, since its code needs byte mode anyway.
+ * The scheme and host are uppercased for every alphabet: both are
+ * case-insensitive (RFC 3986 §3.1 and §3.2.2), and QR alphanumeric mode has
+ * no lowercase, so `HTTPS://QV.LC/` rides in a 5.5-bit segment where
+ * `https://qv.lc/` needs 8 bits a character; the encoder's segmenter takes
+ * the saving (about 22 bits on a base64url link, a version step when the
+ * code sits near one) and falls back to bytes where the code needs them.
+ * For qr-alpha the code behind the `#` is alphanumeric too, so the whole
+ * link bar the `#` is compact. The path is case-sensitive and is left
+ * alone; at the site's root it is `/`, so the base is one alphanumeric run
+ * (`HTTPS://QV.LC/#CODE` unmarked, `HTTPS://QV.LC/#/CODE` marked).
  */
-export function qrText(link: string, alpha: Alphabet, { scheme = true }: { scheme?: boolean } = {}): string {
+export function qrText(link: string, { scheme = true }: { scheme?: boolean } = {}): string {
   const text = scheme ? link : link.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
-  if (alpha !== QR_ALPHA) return text;
   return text.replace(/^(?:[a-z][a-z0-9+.-]*:\/\/)?[^/?#]*/i, (base) => base.toUpperCase());
 }

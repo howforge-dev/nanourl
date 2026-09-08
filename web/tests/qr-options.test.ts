@@ -24,6 +24,7 @@ import {
   maxImageSize,
   mix,
   presetGradient,
+  GRADIENT_END,
   qrOptions,
   reverseGradient,
   sanitize,
@@ -156,7 +157,7 @@ describe('gradients and paints', () => {
     const g = presetGradient('#000000');
     const one = addStop(g);
     expect(one.stops.map((s) => s.offset)).toEqual([0, 0.5, 1]);
-    expect(one.stops[1].color).toBe('#000000');
+    expect(one.stops[1].color).toBe(GRADIENT_END);
     const two = addStop(one);
     expect(two.stops.map((s) => s.offset)).toEqual([0, 0.5, 0.75, 1]);
     // a colour set on any stop stays on that stop through sanitize, whatever the offsets
@@ -174,11 +175,11 @@ describe('gradients and paints', () => {
     expect(defaultGradient(COLOR.acc).stops[1].color).toBe(COLOR.txt);
     expect(g.stops[0].color).not.toBe(g.stops[1].color);
   });
-  it('the preset starts from the accent pulled toward the dark end, top to bottom', () => {
+  it('the preset starts from the accent pulled toward the dots colour and ends in the purple, top to bottom', () => {
     const g = presetGradient('#000000');
     expect(g).toMatchObject({ type: 'linear', rotation: 90 });
     expect(g.stops[0].color).toBe(mix(COLOR.acc, '#000000', 0.4));
-    expect(g.stops[1].color).toBe('#000000');
+    expect(g.stops[1].color).toBe(GRADIENT_END);
     expect(mix('#000000', '#ffffff', 0.5)).toBe('#808080');
   });
 });
@@ -214,21 +215,20 @@ describe('presets and plates', () => {
     expect(presetOf(custom)).toBeNull();
     const classic = applyPreset('classic');
     expect(classic).toEqual(DEFAULT_SETTINGS);
-    expect(classic).toMatchObject({ width: 240, margin: 4 });
+    expect(classic).toMatchObject({ width: 240, margin: 1 });
     expect(applyPreset('nanourl')).toMatchObject({ style: 'nanourl', imageSource: 'logo', level: 'H', width: 240 });
     expect(sanitize(null)).toEqual(DEFAULT_SETTINGS);
   });
-  it('every preset sanitises to itself, is recognised as itself, has a hint, and sets no text', () => {
+  it('every preset sanitises to itself, is recognised as itself, and sets no text', () => {
     for (const name of PRESETS) {
       const s = applyPreset(name);
       expect(sanitize(JSON.parse(JSON.stringify(s))), name).toEqual(s);
       expect(presetOf(s), name).toBe(name);
-      expect(PRESET_TABLE[name].hint.length, name).toBeGreaterThan(20);
       // looks only: the text is the person's
       expect(s.caption, name).toBe('');
       expect(s.centreLabel, name).toBe('');
-      expect(PRESET_TABLE[name].settings).not.toHaveProperty('caption');
-      expect(PRESET_TABLE[name].settings).not.toHaveProperty('centreLabel');
+      expect(PRESET_TABLE[name]).not.toHaveProperty('caption');
+      expect(PRESET_TABLE[name]).not.toHaveProperty('centreLabel');
     }
     expect(applyPreset('minimal')).toMatchObject({ scheme: false, margin: 1, padding: 0 });
     expect(applyPreset('poster')).toMatchObject({ width: 320, margin: 2, level: 'H' });

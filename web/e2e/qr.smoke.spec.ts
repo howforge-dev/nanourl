@@ -1,8 +1,8 @@
 import { test, expect } from './fixtures';
 import type { Locator, Page } from 'playwright/test';
 import { ALPHABETS, QR_ALPHA, qrText } from '../src/lib/alphabet';
-import { CENTRE_LABEL_MAX, CORNER_TYPES, MODULE_STYLES, PRESETS, STORAGE_KEY, applyPreset, isUnscannable } from '../src/lib/qr/options';
-import { atMobile, encodeFirstExample, expectNoHorizontalOverflow, loadScanner, scan, TESTID, testIdSelector, waitForModelReady, watchErrors } from './helpers';
+import { CENTRE_LABEL_MAX, CORNER_TYPES, EC_LEVELS, MODULE_STYLES, PRESETS, STORAGE_KEY, applyPreset, isUnscannable } from '../src/lib/qr/options';
+import { atMobile, encodeFirstExample, encodeUrl, expectNoHorizontalOverflow, loadScanner, scan, TESTID, testIdSelector, waitForModelReady, watchErrors } from './helpers';
 import type { Inversion } from './helpers';
 import { CODEC_CALL } from './timeouts';
 
@@ -29,6 +29,11 @@ const symbolBox = (qr: Locator): Locator => qr.locator(testIdSelector(TESTID.qrS
 /** The module path's data, which changes whenever the symbol does. */
 const modules = (qr: Locator): Locator => symbolBox(qr).locator('path.modules');
 
+/** A URL whose base64url link, on the suite's origin, needs one QR version
+ *  more than its qr-alpha link at some error-correction level and the same
+ *  at another, so both branches of the switch offer show. */
+const OFFER_URL = 'https://news.ycombinator.com/item?id=44567890';
+
 test('QR section: renders, follows every control, exports, persists, and every style of every alphabet scans', async ({ page }) => {
   test.setTimeout(600_000);
   const watch = watchErrors(page);
@@ -38,7 +43,7 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await loadScanner(page);
 
   const encodePane = page.locator(testIdSelector(TESTID.paneEncode));
-  const { code: codeBase64url } = await encodeFirstExample(page);
+  let { code: codeBase64url } = await encodeFirstExample(page);
   const origin = new URL(page.url()).origin;
   const linkBox = encodePane.locator(testIdSelector(TESTID.redirectLink));
   /** The full link the page shows (it drops the scheme for display). */
@@ -81,19 +86,31 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await page.evaluate(() => window.scrollTo(0, 0));
 
   // --- the offer to switch: base64url is the default, the callout names both
-  //     versions, and the button changes the page's own alphabet picker. At
-  //     level M this link fits the same version either way and the callout
-  //     says so; at H the byte-mode link needs a version more than the
-  //     alphanumeric one, so the offer gains and the button shows ---
+  //     versions, and the button changes the page's own alphabet picker.
+  //     Which error-correction level makes the alphanumeric link a version
+  //     smaller depends on the link's length against the capacity table, so
+  //     the levels are swept: one must gain (the button shows), one must not
+  //     (the callout says so, no button). Whether any level gains depends on
+  //     the link too, so the link is one whose byte-mode spelling sits just
+  //     over a capacity step at some level ---
+  ({ code: codeBase64url } = await encodeUrl(page, OFFER_URL));
   const level = (l: string): Locator => qr.getByRole('group', { name: 'error correction' }).getByRole('button', { name: new RegExp(`^${l} `) });
   const offer = qr.locator(testIdSelector(TESTID.qrOffer));
   await expect(offer).toBeVisible({ timeout: CODEC_CALL });
-  await expect(offer).toContainText(/would not make the QR smaller: it stays \d+×\d+ squares/);
+  const offerAt = new Map<string, string>();
+  for (const l of EC_LEVELS) {
+    await level(l).click();
+    await expect(offer).toContainText(/QR/);
+    offerAt.set(l, ((await offer.textContent()) ?? '').replace(/\s+/g, ' '));
+  }
+  const gaining = EC_LEVELS.find((l) => /A smaller QR is possible/.test(offerAt.get(l)!));
+  const same = EC_LEVELS.find((l) => /would not make the QR smaller: it stays \d+×\d+ squares/.test(offerAt.get(l)!));
+  expect(gaining, `a level where qr-alpha gains: ${JSON.stringify([...offerAt])}`).toBeDefined();
+  expect(same, `a level where it does not: ${JSON.stringify([...offerAt])}`).toBeDefined();
+  await level(same!).click();
   await expect(qr.locator(testIdSelector(TESTID.qrSwitch))).toHaveCount(0);
-  await level('H').click();
-  await expect(offer).toContainText(/A smaller QR is possible/);
-  const offerText = ((await offer.textContent()) ?? '').replace(/\s+/g, ' ');
-  expect(offerText).toMatch(/shrinks it from \d+×\d+ to \d+×\d+ squares/);
+  await level(gaining!).click();
+  expect(offerAt.get(gaining!)).toMatch(/shrinks it from \d+×\d+ to \d+×\d+ squares/);
   await qr.locator(testIdSelector(TESTID.qrSwitch)).click();
   await expect(alphaStrip.locator('button[aria-pressed="true"]')).toHaveText('qr-alpha');
   await expect(linkBox).not.toContainText('#' + codeBase64url, { timeout: CODEC_CALL });
@@ -106,8 +123,9 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await level('M').click();
 
   // --- the text in the symbol is the link as shown, and it scans ---
-  await expect(readout).toHaveText(await shownLink());
-  await expect(info).toContainText(/\d+×\d+ squares \(version \d+\) · level M survives 15% damage · all \d+ characters stored as plain bytes/);
+  await expect(readout).toHaveText(qrText(await shownLink()));
+  // the capitalised base rides in the compact mode; the base64url code needs bytes
+  await expect(info).toContainText(/\d+×\d+ squares \(version \d+\) · level M survives 15% damage · \d+ of \d+ characters stored in the compact mode for capitals and digits, \d+ as plain bytes/);
   await expectScans(page, (await readout.textContent()) ?? '', 'the default');
   const dBase = await modules(qr).getAttribute('d');
 
@@ -134,7 +152,7 @@ test('QR section: renders, follows every control, exports, persists, and every s
 
   // --- the scheme off: the text starts at the host, and still scans ---
   await opt('scheme in the QR text', 'off').click();
-  await expect(readout).toHaveText(qrText(await shownLink(), ALPHABETS[0].id, { scheme: false }));
+  await expect(readout).toHaveText(qrText(await shownLink(), { scheme: false }));
   await expect(readout).not.toContainText('://');
   await expectScans(page, (await readout.textContent()) ?? '', 'the scheme off');
   await opt('scheme in the QR text', 'on').click();
@@ -153,7 +171,7 @@ test('QR section: renders, follows every control, exports, persists, and every s
 
   // --- hints: a "?" beside every label, each explaining its control ---
   const hints = qr.locator(testIdSelector(TESTID.hint));
-  expect(await hints.count()).toBe((await qr.locator('.lbl').count()) + PRESETS.length);
+  expect(await hints.count()).toBe(await qr.locator('.lbl').count());
   await hints.first().hover();
   await expect(qr.locator('[role=tooltip]').first()).toBeVisible();
 
@@ -230,7 +248,7 @@ test('QR section: renders, follows every control, exports, persists, and every s
     await alphaStrip.getByText(a.key, { exact: true }).click();
     if (a.id !== ALPHABETS[0].id) await expect(linkBox).not.toHaveText(before, { timeout: CODEC_CALL });
     await expect(encodePane.locator(testIdSelector(TESTID.roundtrip))).toContainText('✓', { timeout: CODEC_CALL });
-    const expected = qrText(await shownLink(), a.id);
+    const expected = qrText(await shownLink());
     await expect(readout).toHaveText(expected);
     if (a.id === QR_ALPHA) {
       expect(expected).toMatch(/^HTTP:\/\/[A-Z0-9.:-]+\/#[/0-9A-Z$*+\-.:]+$/);
@@ -330,7 +348,7 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await expect(level('H')).toHaveAttribute('aria-pressed', 'true');
   await expect(sym.locator('text.caption')).not.toHaveCount(0);
   await expect(sym.locator('text.label')).toHaveText('QV');
-  await expect(readout).toHaveText(await shownLink());
+  await expect(readout).toHaveText(qrText(await shownLink()));
   await expectScans(page, (await readout.textContent()) ?? '', 'caption and label');
   await style('dots').click();
   await square('dot').click();

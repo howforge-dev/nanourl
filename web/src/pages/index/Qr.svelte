@@ -11,9 +11,9 @@
   // a preset overwrites them, "invert colours" rewrites them, and nothing
   // is transformed on the way to the screen or a file.
   //
-  // What goes into the code is `qrText`'s business (lib/alphabet.ts): for
-  // qr-alpha the base is uppercased so the whole link, bar the '#', rides in
-  // QR alphanumeric mode. The readout under the symbol shows that text and
+  // What goes into the code is `qrText`'s business (lib/alphabet.ts): the
+  // base is uppercased so it rides in QR alphanumeric mode, and for qr-alpha
+  // the whole link, bar the '#', does. The readout under the symbol shows that text and
   // the segments the library chose for it, which is where qr-alpha's density
   // shows; the caption, the label and the image are drawn, never encoded.
   import QRCode from 'qrcode';
@@ -39,7 +39,6 @@
     MODULE_STYLES,
     PADDING_MAX,
     PRESETS,
-    PRESET_TABLE,
     SCALE_MAX,
     SCALE_MIN,
     SHAPES,
@@ -96,14 +95,19 @@
     onalpha,
   }: { link: string; altLink?: string; short?: string; code: string; alpha: Alphabet; onalpha?: (a: Alphabet) => void } = $props();
 
-  // Which link is in the code. A short link is a Crockford slug on the site's
-  // root, so it is carried like a qr-alpha link: uppercased whole, one
-  // compact segment. The alphabet switch offer is about the compressed link
-  // and hides while the short one is shown.
-  let target = $state<'compressed' | 'short'>('compressed');
+  // Which link is in the code. A short link, once made, is the default: it is
+  // the one the visitor just asked for and its symbol is a fraction of the
+  // size. The visitor's own pick holds until the short link goes away. A slug
+  // reads case-insensitively, so it is carried in capitals whole, one compact
+  // segment, though the page spells it in lowercase. The alphabet switch
+  // offer is about the compressed link and hides while the short one is shown.
+  let choice = $state<'compressed' | 'short' | null>(null);
+  $effect(() => {
+    if (short === '') choice = null;
+  });
+  let target = $derived<'compressed' | 'short'>(choice ?? 'short');
   let useShort = $derived(target === 'short' && short !== '');
-  let carried = $derived(useShort ? short : link);
-  let carriedAlpha = $derived(useShort ? QR_ALPHA : alpha);
+  let carried = $derived(useShort ? short.toUpperCase() : link);
   const TARGET_OPTIONS = [
     { value: 'compressed', label: 'compressed link' },
     { value: 'short', label: 'short link' },
@@ -115,7 +119,7 @@
   // the effect depends on every field.
   $effect(() => saveSettings(settings));
 
-  let text = $derived(qrText(carried, carriedAlpha, { scheme: settings.scheme }));
+  let text = $derived(qrText(carried, { scheme: settings.scheme }));
   let bytes = $derived(new TextEncoder().encode(text).length);
 
   // The matrix. `create` throws for a forced version too small for the text,
@@ -186,7 +190,7 @@
   let offer = $derived.by(() => {
     if (useShort || alpha === QR_ALPHA || !altLink || !built.qr || dismissed) return null;
     try {
-      const alt = build(qrText(altLink, QR_ALPHA, { scheme: settings.scheme }), settings);
+      const alt = build(qrText(altLink, { scheme: settings.scheme }), settings);
       const here = built.qr;
       const gain = alt.version < here.version;
       return { gain, from: here, to: alt };
@@ -331,7 +335,7 @@
   {#if open}
     {#if short}
       <div class="row target" data-testid={TESTID.qrTarget}>
-        <Segmented look="switch" label="link in the code" options={TARGET_OPTIONS} value={target} onchange={(v) => (target = v as typeof target)} />
+        <Segmented look="switch" label="link in the code" options={TARGET_OPTIONS} value={target} onchange={(v) => (choice = v as typeof target)} />
       </div>
     {/if}
     {#if offer}
@@ -388,10 +392,7 @@
     <div class="row presets">
       {@render lbl('presets', 'presets')}
       {#each PRESETS as name (name)}
-        <span class="preset">
-          <Chip pressed={currentPreset === name} selected={currentPreset === name} testid="qr-preset-{name}" ariaLabel="preset {name}" describedBy="hint-preset-{name}" onclick={() => (settings = applyPreset(name))}>{name}</Chip
-          ><Hint id="hint-preset-{name}" text={PRESET_TABLE[name].hint} />
-        </span>
+        <Chip pressed={currentPreset === name} selected={currentPreset === name} testid="qr-preset-{name}" ariaLabel="preset {name}" onclick={() => (settings = applyPreset(name))}>{name}</Chip>
       {/each}
       <Button size="sm" variant="ghost" describedBy={hintId('presets')} testid={TESTID.qrReset} onclick={() => (settings = sanitize(null))}>reset</Button>
     </div>
@@ -642,7 +643,6 @@
   .segs { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-1); }
   .segs .stat { margin: 0; }
   .presets { margin-bottom: var(--s-3); }
-  .preset { display: inline-flex; align-items: center; }
   .offer-actions { display: inline-flex; gap: var(--s-2); margin-left: var(--s-2); vertical-align: middle; }
   /* Collapsible groups, the way qr-code-styling arranges its options. The
      site's one <details> chrome applies, but a group is subordinate to the

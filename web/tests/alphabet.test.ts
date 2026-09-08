@@ -240,39 +240,39 @@ describe('code round trip: parseLink of a fragment and of a bare spelling', () =
 });
 
 describe('qrText', () => {
-  it('uppercases the scheme and host of a qr-alpha link, and nothing else', () => {
-    expect(qrText('https://qv.lc/#/ABCD', QR_ALPHA)).toBe('HTTPS://QV.LC/#/ABCD');
-    expect(qrText('https://qv.lc/#AB$C:D', QR_ALPHA)).toBe('HTTPS://QV.LC/#AB$C:D');
+  it('uppercases the scheme and host of a link, and nothing else', () => {
+    expect(qrText('https://qv.lc/#/ABCD')).toBe('HTTPS://QV.LC/#/ABCD');
+    expect(qrText('https://qv.lc/#AB$C:D')).toBe('HTTPS://QV.LC/#AB$C:D');
     // the path is case-sensitive and is left alone
-    expect(qrText('https://qv.lc/Index.html#/AB', QR_ALPHA)).toBe('HTTPS://QV.LC/Index.html#/AB');
+    expect(qrText('https://qv.lc/Index.html#/AB')).toBe('HTTPS://QV.LC/Index.html#/AB');
     // a port is part of the authority
-    expect(qrText('http://localhost:4173/#/AB', QR_ALPHA)).toBe('HTTP://LOCALHOST:4173/#/AB');
+    expect(qrText('http://localhost:4173/#/AB')).toBe('HTTP://LOCALHOST:4173/#/AB');
   });
-  it('leaves every other alphabet’s link exactly as it is', () => {
+  it('uppercases the base of every alphabet’s link and keeps the code as it is', () => {
     for (const a of ALPHABETS) {
       if (a.id === QR_ALPHA) continue;
-      expect(qrText('https://qv.lc/#pDkL', a.id)).toBe('https://qv.lc/#pDkL');
+      expect(qrText('https://qv.lc/#pDkL')).toBe('HTTPS://QV.LC/#pDkL');
     }
-    expect(qrText('https://qv.lc/#😀', EMOJI)).toBe('https://qv.lc/#😀');
+    expect(qrText('https://qv.lc/#😀')).toBe('HTTPS://QV.LC/#😀');
   });
-  it('drops the scheme when asked, for every alphabet, and still uppercases the qr-alpha host', () => {
+  it('drops the scheme when asked, for every alphabet, and still uppercases the host', () => {
     for (const a of ALPHABETS) {
       const spelled = fragmentFor(a.id === QR_ALPHA ? 'ABCD' : 'pDkL', a.id);
-      const text = qrText('https://qv.lc/#' + spelled, a.id, { scheme: false });
+      const text = qrText('https://qv.lc/#' + spelled, { scheme: false });
       expect(text).not.toContain('://');
-      expect(text).toBe((a.id === QR_ALPHA ? 'QV.LC/#' : 'qv.lc/#') + spelled);
-      expect(qrText('https://qv.lc/#pDkL', a.id, { scheme: true })).toBe(qrText('https://qv.lc/#pDkL', a.id));
+      expect(text).toBe('QV.LC/#' + spelled);
+      expect(qrText('https://qv.lc/#pDkL', { scheme: true })).toBe(qrText('https://qv.lc/#pDkL'));
     }
-    expect(qrText('http://localhost:4173/#/AB', QR_ALPHA, { scheme: false })).toBe('LOCALHOST:4173/#/AB');
-    expect(qrText('https://qv.lc/#😀', EMOJI, { scheme: false })).toBe('qv.lc/#😀');
+    expect(qrText('http://localhost:4173/#/AB', { scheme: false })).toBe('LOCALHOST:4173/#/AB');
+    expect(qrText('https://qv.lc/#😀', { scheme: false })).toBe('QV.LC/#😀');
     // the saving is the scheme's own 8 characters
-    expect(qrText('https://qv.lc/#pDkL', 1).length - qrText('https://qv.lc/#pDkL', 1, { scheme: false }).length).toBe(8);
+    expect(qrText('https://qv.lc/#pDkL').length - qrText('https://qv.lc/#pDkL', { scheme: false }).length).toBe(8);
   });
   it('is alphanumeric-mode text on both sides of the # for a qr-alpha link at the site root', () => {
     // '#' is the one character QR alphanumeric mode lacks; the base before
     // it and the code after it are each one alphanumeric run.
     for (const code of ['AB$*+-.:9Z', 'ABCD']) {
-      const text = qrText('https://qv.lc/#' + fragmentFor(code, QR_ALPHA), QR_ALPHA);
+      const text = qrText('https://qv.lc/#' + fragmentFor(code, QR_ALPHA));
       const [base, fragment] = text.split('#');
       expect(base).toMatch(/^[0-9A-Z $%*+\-./:]+$/);
       expect(fragment).toMatch(/^[0-9A-Z $%*+\-./:]+$/);
