@@ -209,27 +209,29 @@ describe('presets and plates', () => {
     expect(hasPlate(DEFAULT_SETTINGS)).toBe(false);
   });
   it('a preset is the defaults plus its own overrides, so it resets what it does not set', () => {
-    const ctx = { shortLink: 'qv.lc/#ABC' };
-    const custom = { ...applyPreset('nanourl', ctx), width: 400, margin: 0 };
-    expect(applyPreset('mono-dark', ctx)).toMatchObject({ dots: solid(COLOR.txt), background: solid(COLOR.ink) });
-    expect(presetOf(custom, ctx)).toBeNull();
-    const classic = applyPreset('classic', ctx);
+    const custom = { ...applyPreset('nanourl'), width: 400, margin: 0 };
+    expect(applyPreset('mono-dark')).toMatchObject({ dots: solid(COLOR.txt), background: solid(COLOR.ink) });
+    expect(presetOf(custom)).toBeNull();
+    const classic = applyPreset('classic');
     expect(classic).toEqual(DEFAULT_SETTINGS);
     expect(classic).toMatchObject({ width: 240, margin: 4 });
-    expect(applyPreset('nanourl', ctx)).toMatchObject({ style: 'nanourl', imageSource: 'logo', level: 'H', width: 240 });
+    expect(applyPreset('nanourl')).toMatchObject({ style: 'nanourl', imageSource: 'logo', level: 'H', width: 240 });
     expect(sanitize(null)).toEqual(DEFAULT_SETTINGS);
   });
-  it('every preset sanitises to itself, is recognised as itself, and has a hint', () => {
-    const ctx = { shortLink: 'qv.lc/#ABC' };
+  it('every preset sanitises to itself, is recognised as itself, has a hint, and sets no text', () => {
     for (const name of PRESETS) {
-      const s = applyPreset(name, ctx);
+      const s = applyPreset(name);
       expect(sanitize(JSON.parse(JSON.stringify(s))), name).toEqual(s);
-      expect(presetOf(s, ctx), name).toBe(name);
+      expect(presetOf(s), name).toBe(name);
       expect(PRESET_TABLE[name].hint.length, name).toBeGreaterThan(20);
+      // looks only: the text is the person's
+      expect(s.caption, name).toBe('');
+      expect(s.centreLabel, name).toBe('');
+      expect(PRESET_TABLE[name].settings).not.toHaveProperty('caption');
+      expect(PRESET_TABLE[name].settings).not.toHaveProperty('centreLabel');
     }
-    expect(applyPreset('sunset', ctx).caption).toBe('qv.lc/#ABC');
-    expect(applyPreset('minimal', ctx)).toMatchObject({ scheme: false, margin: 1, padding: 0 });
-    expect(applyPreset('poster', ctx)).toMatchObject({ width: 320, margin: 2, centreLabel: 'qv.lc', level: 'H' });
+    expect(applyPreset('minimal')).toMatchObject({ scheme: false, margin: 1, padding: 0 });
+    expect(applyPreset('poster')).toMatchObject({ width: 320, margin: 2, level: 'H' });
     expect(PRESETS).toHaveLength(10);
   });
   it('a centre label or a picture raises the level to H once, when it first appears', () => {

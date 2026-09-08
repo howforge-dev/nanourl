@@ -160,11 +160,10 @@ describe('the QR section', () => {
     unmount(app);
   });
 
-  it('shows the chosen preset as pressed until a control changes, with a swatch each', () => {
+  it('shows the chosen preset as pressed until a control changes', () => {
     const app = open({ link: 'https://qv.lc/#BAddTS_zj', code: 'BAddTS_zj', alpha: DEFAULT_ALPHABET });
     const chip = (name: string): HTMLButtonElement => host.querySelector<HTMLButtonElement>(`[data-testid="qr-preset-${name}"]`)!;
     expect(chip('classic').getAttribute('aria-pressed')).toBe('true');
-    expect(host.querySelectorAll('.swatch svg')).toHaveLength(PRESETS.length);
     chip('ocean').click();
     flushSync();
     expect(chip('ocean').getAttribute('aria-pressed')).toBe('true');

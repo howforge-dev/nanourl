@@ -1,3 +1,4 @@
+import { cpus } from 'node:os';
 import { defineConfig, devices } from 'playwright/test';
 import { DEFAULT_PREVIEW_PORT } from './e2e/ports';
 import { DESKTOP, MOBILE } from './e2e/viewports';
@@ -22,16 +23,14 @@ export default defineConfig({
   // test file is cheap to run concurrently with the others. That stops
   // holding once the threads tier is in play: any cross-origin-isolated
   // Chromium context auto-selects it, so nearly every spec's page load spins
-  // up to `min(hardwareConcurrency - 1, 8)` extra compute-worker OS threads
-  // of its own — and that cap doesn't shrink alongside Playwright's worker
-  // count on a many-core box, so the default formula oversubscribes sharply
-  // (e.g. 12 cores: 6 default workers × up to 8 threads each = 48 threads
-  // racing for 12 cores). Under that contention a single encode call can
-  // blow past the default 10s assertion timeout — not a hang, just starved —
-  // see the kernel bench notes. Capping Playwright's own parallelism keeps
-  // total oversubscription bounded regardless of host size.
-  // PW_WORKERS raises this on a bigger box (CI runs 4 on 16 vCPUs, one project per job).
-  workers: Number(process.env.PW_WORKERS ?? 2),
+  // up to MAX_WORKERS (4) extra compute-worker OS threads of its own, and that
+  // cap does not shrink alongside Playwright's worker count. Playwright's own
+  // default (half the cores) would oversubscribe a many-core box sharply, and
+  // under that contention a single encode call blows past the assertion
+  // timeout: not a hang, just starved. So one Playwright worker per four
+  // cores, at most four. PW_WORKERS overrides it (CI runs 4 on 16 vCPUs, one
+  // project per job).
+  workers: Number(process.env.PW_WORKERS ?? Math.max(1, Math.min(4, Math.floor(cpus().length / 4)))),
   timeout: 240_000,
   // A UI assertion that follows an RPC round-trip (e.g. "code changes after
   // an alphabet toggle") clears the default 10s comfortably when a page load

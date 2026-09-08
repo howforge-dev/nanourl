@@ -74,8 +74,8 @@ async function expectScans(page: Page, expected: string, what: string, inversion
   expect(await scan(page, 'export', inversion), `${what}, exported`).toBe(expected);
 }
 
-/** The symbol on show — the preset swatches are SVGs too, so every look
- *  into the drawing is scoped to it. */
+/** The symbol on show: every look into the drawing is scoped to it, so an
+ *  SVG elsewhere in the section can never stand in for it. */
 const symbolBox = (qr: Locator): Locator => qr.locator(testIdSelector(TESTID.qrSvg));
 /** The module path's data, which changes whenever the symbol does. */
 const modules = (qr: Locator): Locator => symbolBox(qr).locator('path.modules');
@@ -437,7 +437,7 @@ test('QR section: renders, follows every control, exports, persists, and every s
     await expect(chip).toHaveAttribute('aria-pressed', 'true');
     await expect(sym.locator('svg').first()).toHaveCount(1);
     // a preset whose modules are lighter than its background reads inverted
-    const p = applyPreset(name, { shortLink: '' });
+    const p = applyPreset(name);
     const luma = (hex: string): number => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).reduce((a, b) => a + b);
     const dark = luma(p.dots.color) > luma(p.background.color);
     await expectScans(page, (await readout.textContent()) ?? '', `the ${name} preset`, dark ? 'onlyInvert' : 'dontInvert');

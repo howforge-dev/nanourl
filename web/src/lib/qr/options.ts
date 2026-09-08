@@ -392,74 +392,69 @@ export function applyStyle(s: QrSettings, style: ModuleStyle): QrSettings {
   return { ...s, style };
 }
 
-/** What a preset may need from the page: the short link, for a caption. */
-export interface PresetContext {
-  shortLink: string;
-}
-
 /** The presets: each a named look, as its own overrides on the defaults —
- *  applying one resets everything it does not set. Colours are tokens
+ *  applying one resets everything it does not set. Looks only: no preset
+ *  sets a caption or a label, which are the person's. Colours are tokens
  *  where a token fits; the fixed ones live in this table and nowhere else.
  *  Every preset scans (the e2e applies each and reads it back). */
-export const PRESET_TABLE: Readonly<Record<string, { hint: string; settings: (ctx: PresetContext) => Partial<QrSettings> }>> = {
-  classic: { hint: 'The plain code: black squares on white, nothing else.', settings: () => ({}) },
+export const PRESET_TABLE: Readonly<Record<string, { hint: string; settings: Partial<QrSettings> }>> = {
+  classic: { hint: 'The plain code: black squares on white, nothing else.', settings: {} },
   nanourl: {
     hint: 'The site’s own look: dots under the blue gradient, rounded corners, the logo in the middle.',
-    settings: () => ({
+    settings: {
       style: 'nanourl',
       dots: { color: DEFAULT_SETTINGS.dots.color, gradient: presetGradient(DEFAULT_SETTINGS.dots.color) },
       cornersSquareType: 'extra-rounded',
       cornersDotType: 'rounded',
       imageSource: 'logo',
       level: 'H',
-    }),
+    },
   },
-  rounded: { hint: 'Softened squares and rounded corners, dark on light.', settings: () => ({ style: 'rounded', cornersSquareType: 'rounded', cornersDotType: 'rounded' }) },
+  rounded: { hint: 'Softened squares and rounded corners, dark on light.', settings: { style: 'rounded', cornersSquareType: 'rounded', cornersDotType: 'rounded' } },
   dots: {
     hint: 'Every module a dot, round corners, ink on light.',
-    settings: () => ({ style: 'dots', cornersSquareType: 'dot', cornersDotType: 'dot', dots: solid(COLOR.ink) }),
+    settings: { style: 'dots', cornersSquareType: 'dot', cornersDotType: 'dot', dots: solid(COLOR.ink) },
   },
-  classy: { hint: 'One corner of each module rounded so runs look woven, with matching corners.', settings: () => ({ style: 'classy', cornersSquareType: 'classy', cornersDotType: 'classy' }) },
+  classy: { hint: 'One corner of each module rounded so runs look woven, with matching corners.', settings: { style: 'classy', cornersSquareType: 'classy', cornersDotType: 'classy' } },
   ocean: {
     hint: 'Pills across the runs, fading from the site’s blue down to its ink, on white.',
-    settings: () => ({
+    settings: {
       style: 'extra-rounded',
       cornersSquareType: 'extra-rounded',
       cornersDotType: 'extra-rounded',
       dots: { color: COLOR.ink, gradient: { type: 'linear', rotation: 90, stops: [{ offset: 0, color: mix(COLOR.acc, COLOR.ink, 0.35) }, { offset: 1, color: COLOR.ink }] } },
-    }),
+    },
   },
   sunset: {
-    hint: 'Dots in a warm diagonal fade, rounded corners, the short link written underneath.',
-    settings: ({ shortLink }) => ({
+    hint: 'Dots in a warm diagonal fade, with rounded corners.',
+    settings: {
       style: 'dots',
       cornersSquareType: 'rounded',
       cornersDotType: 'rounded',
       dots: { color: '#7a1f2b', gradient: { type: 'linear', rotation: 45, stops: [{ offset: 0, color: '#7a1f2b' }, { offset: 1, color: '#b3410f' }] } },
-      caption: shortLink,
-    }),
+    },
   },
-  'mono-dark': { hint: 'Light on dark: the paper as ink and the ink as paper. Phone cameras read it; some scanners do not.', settings: () => ({ dots: solid(COLOR.txt), background: solid(COLOR.ink) }) },
+  'mono-dark': { hint: 'Light on dark: the paper as ink and the ink as paper. Phone cameras read it; some scanners do not.', settings: { dots: solid(COLOR.txt), background: solid(COLOR.ink) } },
   poster: {
-    hint: 'Large, with a tight quiet zone, the site’s name on a plate in the middle, and the strongest error correction.',
-    settings: () => ({ style: 'classy-rounded', cornersSquareType: 'classy-rounded', cornersDotType: 'rounded', width: 320, margin: 2, centreLabel: 'qv.lc', level: 'H' }),
+    hint: 'Large, with a tight quiet zone and the strongest error correction, for a label or a picture of your own in the middle.',
+    settings: { style: 'classy-rounded', cornersSquareType: 'classy-rounded', cornersDotType: 'rounded', width: 320, margin: 2, level: 'H' },
   },
-  minimal: { hint: 'The smallest text and the tightest frame: no scheme, a one-module quiet zone, no padding.', settings: () => ({ margin: 1, padding: 0, scheme: false }) },
+  minimal: { hint: 'The smallest text and the tightest frame: no scheme, a one-module quiet zone, no padding.', settings: { margin: 1, padding: 0, scheme: false } },
 };
 export const PRESETS = Object.keys(PRESET_TABLE) as Preset[];
 export type Preset = keyof typeof PRESET_TABLE;
 
 /** A preset applied: the defaults, then its own overrides — so it resets
  *  everything it does not set — validated like any other settings. */
-export function applyPreset(preset: Preset, ctx: PresetContext): QrSettings {
-  return sanitize({ ...DEFAULT_SETTINGS, ...PRESET_TABLE[preset].settings(ctx) });
+export function applyPreset(preset: Preset): QrSettings {
+  return sanitize({ ...DEFAULT_SETTINGS, ...PRESET_TABLE[preset].settings });
 }
 
 /** The preset the settings currently are, exactly, or `null` once any
  *  control has changed them. */
-export function presetOf(s: QrSettings, ctx: PresetContext): Preset | null {
+export function presetOf(s: QrSettings): Preset | null {
   const now = JSON.stringify(s);
-  return PRESETS.find((name) => JSON.stringify(applyPreset(name, ctx)) === now) ?? null;
+  return PRESETS.find((name) => JSON.stringify(applyPreset(name)) === now) ?? null;
 }
 
 /** An image is a plate, and a plate needs level H — applied when a picture

@@ -69,7 +69,6 @@
     type Mode,
     type ModuleStyle,
     type Paint,
-    type Preset,
     type QrSettings,
     type Shape,
   } from '../../lib/qr/options';
@@ -302,25 +301,9 @@
   }
 
   let shortLink = $derived(link.replace(/^https?:\/\//, ''));
-  let presetCtx = $derived({ shortLink });
   /** The preset the settings are, exactly, for the pressed chip; none once
    *  any control has changed them. */
-  let currentPreset = $derived(presetOf(settings, presetCtx));
-
-  // A swatch per preset: the look on a 21-module dummy matrix, without its
-  // text, drawn once and kept — the presets do not change while the page is
-  // open.
-  const SWATCH_MATRIX = QRCode.create('QV.LC', { errorCorrectionLevel: 'L' }).modules;
-  const swatches = new Map<string, string>();
-  const swatch = (name: Preset): string => {
-    let svg = swatches.get(name);
-    if (!svg) {
-      const s = { ...applyPreset(name, { shortLink: '' }), caption: '', centreLabel: '', margin: 1, padding: 0 };
-      svg = renderSvg(SWATCH_MATRIX, qrOptions(s, 1).screen, `sw-${name}`).svg;
-      swatches.set(name, svg);
-    }
-    return svg;
-  };
+  let currentPreset = $derived(presetOf(settings));
 </script>
 
 {#snippet lbl(key: HintKey, label: string)}
@@ -385,9 +368,7 @@
       {@render lbl('presets', 'presets')}
       {#each PRESETS as name (name)}
         <span class="preset">
-          <Chip pressed={currentPreset === name} selected={currentPreset === name} testid="qr-preset-{name}" ariaLabel="preset {name}" describedBy="hint-preset-{name}" onclick={() => (settings = applyPreset(name, presetCtx))}>
-            <!-- eslint-disable-next-line svelte/no-at-html-tags -- our renderer's SVG of a fixed dummy matrix -->
-            <span class="swatch">{@html swatch(name)}</span>{name}</Chip
+          <Chip pressed={currentPreset === name} selected={currentPreset === name} testid="qr-preset-{name}" ariaLabel="preset {name}" describedBy="hint-preset-{name}" onclick={() => (settings = applyPreset(name))}>{name}</Chip
           ><Hint id="hint-preset-{name}" text={PRESET_TABLE[name].hint} />
         </span>
       {/each}
@@ -641,9 +622,6 @@
   .segs .stat { margin: 0; }
   .presets { margin-bottom: var(--s-3); }
   .preset { display: inline-flex; align-items: center; }
-  /* The swatch: the preset's look at 24px, beside its name. */
-  .swatch { display: inline-block; width: 24px; height: 24px; }
-  .swatch :global(svg) { display: block; width: 24px; height: 24px; }
   .offer-actions { display: inline-flex; gap: var(--s-2); margin-left: var(--s-2); vertical-align: middle; }
   /* Collapsible groups, the way qr-code-styling arranges its options. The
      site's one <details> chrome applies, but a group is subordinate to the
