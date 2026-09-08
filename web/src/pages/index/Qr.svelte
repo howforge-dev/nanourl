@@ -108,6 +108,17 @@
     settings = sanitize({ ...settings, [field]: value });
   };
   const fieldValue = (e: Event): string => (e.currentTarget as HTMLInputElement).value;
+  /** A bounded number field. Typing applies live only while the text is a
+   *  number inside the bounds; anything else waits for blur or Enter, when
+   *  `sanitize` clamps it. Clamping on every keystroke would rewrite "2"
+   *  into the minimum before the user can type "240". */
+  const bounded = (field: keyof QrSettings, lo: number, hi: number) => ({
+    oninput: (e: Event) => {
+      const n = Number(fieldValue(e));
+      if (fieldValue(e) !== '' && Number.isInteger(n) && n >= lo && n <= hi) set(field, n);
+    },
+    onchange: (e: Event) => set(field, fieldValue(e)),
+  });
 
   // PNG export: our SVG rasterised through an <img> onto a canvas at the
   // export scale. Built on the first click for the current symbol, then the
@@ -199,7 +210,7 @@
           ariaLabel="QR version, {VERSION_MIN} to {VERSION_MAX}, or empty for automatic"
           placeholder="auto"
           value={settings.version === null ? '' : String(settings.version)}
-          oninput={(e) => set('version', fieldValue(e))}
+          {...bounded('version', VERSION_MIN, VERSION_MAX)}
         />
       </div>
       <span class="lbl">mask</span>
@@ -207,15 +218,15 @@
       <span class="lbl">size</span>
       <div class="row">
         <div class="num">
-          <TextField type="number" min={WIDTH_MIN} max={WIDTH_MAX} ariaLabel="on-screen width in pixels" value={settings.width} oninput={(e) => set('width', fieldValue(e))} />
+          <TextField type="number" min={WIDTH_MIN} max={WIDTH_MAX} ariaLabel="on-screen width in pixels" value={settings.width} {...bounded('width', WIDTH_MIN, WIDTH_MAX)} />
         </div>
         <span class="dim">px on screen ·</span>
         <div class="num">
-          <TextField type="number" min={SCALE_MIN} max={SCALE_MAX} ariaLabel="export scale in pixels per module" value={settings.scale} oninput={(e) => set('scale', fieldValue(e))} />
+          <TextField type="number" min={SCALE_MIN} max={SCALE_MAX} ariaLabel="export scale in pixels per module" value={settings.scale} {...bounded('scale', SCALE_MIN, SCALE_MAX)} />
         </div>
         <span class="dim">px per module in the PNG ·</span>
         <div class="num">
-          <TextField type="number" min={0} max={MARGIN_MAX} ariaLabel="quiet zone in modules" value={settings.margin} oninput={(e) => set('margin', fieldValue(e))} />
+          <TextField type="number" min={0} max={MARGIN_MAX} ariaLabel="quiet zone in modules" value={settings.margin} {...bounded('margin', 0, MARGIN_MAX)} />
         </div>
         <span class="dim">modules of quiet zone</span>
       </div>

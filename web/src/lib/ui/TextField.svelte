@@ -31,6 +31,7 @@
     class: klass = '',
     style,
     oninput,
+    onchange,
     onkeydown,
   }: {
     value: V;
@@ -51,6 +52,9 @@
     class?: string;
     style?: string;
     oninput?: (e: Event) => void;
+    /** fires on blur or Enter: the place to apply a clamp, so typing is
+     *  never overwritten mid-keystroke */
+    onchange?: (e: Event) => void;
     onkeydown?: (e: KeyboardEvent) => void;
   } = $props();
 </script>
@@ -67,6 +71,7 @@
     {style}
     aria-label={ariaLabel}
     {oninput}
+    {onchange}
     {onkeydown}
   ></textarea>
 {:else}
@@ -87,6 +92,7 @@
     {autocorrect}
     aria-label={ariaLabel}
     {oninput}
+    {onchange}
     {onkeydown}
   />
 {/if}
