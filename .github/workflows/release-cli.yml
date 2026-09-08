@@ -10,11 +10,11 @@ name: release-cli
 # costs a re-run rather than six rebuilds.
 on:
   push:
-    tags: ['cli-v*']
+    tags: ['v[0-9]*']
   workflow_dispatch:
     inputs:
       tag:
-        description: 'the cli-v* tag to publish'
+        description: 'the v* tag to publish'
         required: true
 
 permissions:
@@ -48,10 +48,10 @@ jobs:
           set -eu
           tag="${{ github.event.inputs.tag || github.ref_name }}"
           case "$tag" in
-            cli-v*) ;;
-            *) echo "'$tag' is not a cli-v* tag" >&2; exit 1 ;;
+            v[0-9]*) ;;
+            *) echo "'$tag' is not a v* tag" >&2; exit 1 ;;
           esac
-          want=${tag#cli-v}
+          want=${tag#v}
           version=$(sed -n 's/^version = "\(.*\)"/\1/p' rust/nanourl/Cargo.toml | head -1)
           if [ "$version" != "$want" ]; then
             echo "tag $tag carries version '$want', rust/nanourl/Cargo.toml says '$version'" >&2

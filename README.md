@@ -48,7 +48,7 @@ the wasm tiers, builds with no artifact on the machine.
 
 ### Install
 
-Prebuilt binaries are attached to every `cli-v*`
+Prebuilt binaries are attached to every `v*`
 [release](https://github.com/howforge-dev/nanourl/releases). Each archive
 holds the binary, the licence and a short README; `SHA256SUMS` covers them all.
 
@@ -81,7 +81,7 @@ Two workflows, so that tagging cannot produce a binary nobody tested.
   digest must match the first, the static-linking checks, `model verify`, and
   a decode of a real link. Each leg uploads its package as a workflow artifact, kept 30
   days, and a final job writes `SHA256SUMS`.
-- **`release-cli.yml`** runs on a `cli-v*` tag. It checks the tag against
+- **`release-cli.yml`** runs on a `v*` tag such as `v0.1.0`. It checks the tag against
   `rust/nanourl/Cargo.toml`, finds the successful `build-cli` run for that
   exact commit, downloads its packages, verifies them against that run's
   `SHA256SUMS`, and attaches them to the release. It builds nothing.
@@ -114,7 +114,7 @@ packaged. To check a download, build the tag through `rustflags.sh` on the
 same architecture and compare:
 
 ```bash
-git checkout cli-v<version>
+git checkout v<version>
 cd rust/nanourl
 RUSTFLAGS="$(../rustflags.sh <target>)" cargo build --release --locked --target <target>
 sha256sum ../target/<target>/release/nanourl

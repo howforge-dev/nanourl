@@ -24,6 +24,6 @@ export const MODEL_RELEASE_URL = `${REPO_URL}/releases/tag/model-v0`;
  *  `nanourl model info` names as the release its embedded copy came from. */
 export const MODEL_ASSET_URL = `${REPO_URL}/releases/download/model-v0/nanourl-target-base.nurl`;
 
-/** Every release, including the `cli-v*` tags that carry the prebuilt
+/** Every release, including the `v*` tags that carry the prebuilt
  *  `nanourl` binaries for Linux, macOS and Windows. */
 export const RELEASES_URL = `${REPO_URL}/releases`;

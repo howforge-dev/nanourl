@@ -1,6 +1,6 @@
 name: build-cli
 
-# The six release binaries, built and proven on every commit -- so a `cli-v*`
+# The six release binaries, built and proven on every commit -- so a `v*`
 # tag has nothing left to build and `release-cli` only has to publish.
 #
 # The weights ARE in these archives -- linked into the executable -- so each one
