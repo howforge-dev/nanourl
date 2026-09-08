@@ -3,6 +3,7 @@ import {
   CENTRE_LABEL_MAX,
   COVER_SHARE,
   DARK_TINT,
+  defaultGradient,
   DEFAULT_SETTINGS,
   EC_LEVELS,
   EC_RECOVERS,
@@ -56,6 +57,7 @@ describe('sanitize', () => {
       version: 7,
       mask: 3,
       mode: 'byte',
+      scheme: false,
       width: 5000,
       scale: 0,
       margin: -3,
@@ -86,6 +88,7 @@ describe('sanitize', () => {
       version: 7,
       mask: 3,
       mode: 'byte',
+      scheme: false,
       width: 1024,
       scale: 1,
       margin: 0,
@@ -150,6 +153,13 @@ describe('gradients and paints', () => {
     const twin = reverseGradient({ ...g, stops: [{ offset: 0, color: '#224488' }, { offset: 1, color: '#000000' }, { offset: 1, color: '#000000' }] }, '#ffffff');
     expect(twin.stops.filter((s) => s.offset === 1).every((s) => s.color === '#ffffff')).toBe(true);
     expect(twin.stops.find((s) => s.offset === 0)!.color).toBe(mix('#ffffff', '#000000', DARK_TINT));
+  });
+  it('a freshly switched-on gradient runs to the accent, or to the text colour from the accent', () => {
+    const g = defaultGradient('#000000');
+    expect(g).toMatchObject({ type: 'linear', rotation: 90 });
+    expect(g.stops).toEqual([{ offset: 0, color: '#000000' }, { offset: 1, color: COLOR.acc }]);
+    expect(defaultGradient(COLOR.acc).stops[1].color).toBe(COLOR.txt);
+    expect(g.stops[0].color).not.toBe(g.stops[1].color);
   });
   it('the preset starts from the accent pulled toward the dark end, top to bottom', () => {
     const g = presetGradient('#000000');

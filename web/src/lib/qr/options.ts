@@ -113,6 +113,8 @@ export interface QrSettings {
   /** `null` lets the library pick the best-scoring mask. */
   mask: number | null;
   mode: Mode;
+  /** Keep the `https://` in the text; off starts it at the host. */
+  scheme: boolean;
   /** CSS pixel width of the on-screen symbol. */
   width: number;
   /** Pixels per module in the exported raster. */
@@ -192,11 +194,25 @@ export const presetGradient = (dark: string): Gradient => ({
 
 export const solid = (color: string): Paint => ({ color, gradient: null });
 
+/** The gradient a paint gets when its switch is first turned on: from its
+ *  colour to the accent, top to bottom — two different colours, so the
+ *  change shows at once. A paint already in the accent runs to the text
+ *  colour instead. */
+export const defaultGradient = (color: string): Gradient => ({
+  type: 'linear',
+  rotation: 90,
+  stops: [
+    { offset: 0, color },
+    { offset: 1, color: color === COLOR.acc ? COLOR.txt : COLOR.acc },
+  ],
+});
+
 export const DEFAULT_SETTINGS: QrSettings = {
   level: 'M',
   version: null,
   mask: null,
   mode: 'auto',
+  scheme: true,
   width: 240,
   scale: 8,
   margin: 4,
@@ -297,6 +313,7 @@ export function sanitize(raw: unknown): QrSettings {
     version: auto(r.version, VERSION_MIN, VERSION_MAX),
     mask: auto(r.mask, 0, MASK_MAX),
     mode: oneOf(r.mode, MODES, d.mode),
+    scheme: r.scheme !== false,
     width: clampInt(r.width, WIDTH_MIN, WIDTH_MAX, d.width),
     scale: clampInt(r.scale, SCALE_MIN, SCALE_MAX, d.scale),
     margin: clampInt(r.margin, 0, MARGIN_MAX, d.margin),

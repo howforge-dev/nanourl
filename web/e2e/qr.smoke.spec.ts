@@ -115,6 +115,17 @@ test('QR section: renders, follows every control, exports, persists, and every s
     await expect(group(g)).toHaveAttribute('open', '');
   }
 
+  // --- the preview stays in view: with the Export group open and scrolled
+  //     to, the symbol is still inside the viewport ---
+  await group('export').locator('summary').scrollIntoViewIfNeeded();
+  await qr.locator(testIdSelector(TESTID.qrDownload)).scrollIntoViewIfNeeded();
+  const inView = await svg.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return r.top >= 0 && r.bottom <= window.innerHeight && r.height > 0 && r.height <= window.innerHeight * 0.4 + 1;
+  });
+  expect(inView, 'the symbol stays within the viewport while the export controls are in view').toBe(true);
+  await page.evaluate(() => window.scrollTo(0, 0));
+
   // --- the offer to switch: base64url is the default, the callout names both
   //     versions, and the button changes the page's own alphabet picker. At
   //     level M this link fits the same version either way and the callout
@@ -166,6 +177,14 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await expect(info).toContainText(/all \d+ characters stored as plain bytes/);
   await expectScans(page, (await readout.textContent()) ?? '', 'byte mode');
   await opt('segment mode', 'auto').click();
+
+  // --- the scheme off: the text starts at the host, and still scans ---
+  await opt('scheme in the QR text', 'off').click();
+  await expect(readout).toHaveText(qrText(await shownLink(), ALPHABETS[0].id, { scheme: false }));
+  await expect(readout).not.toContainText('://');
+  await expectScans(page, (await readout.textContent()) ?? '', 'the scheme off');
+  await opt('scheme in the QR text', 'on').click();
+  await expect(readout).toContainText('://');
 
   // --- a forced version below the minimum is an inline error, no console ---
   const version = qr.getByRole('textbox', { name: /QR version/ });
@@ -278,6 +297,10 @@ test('QR section: renders, follows every control, exports, persists, and every s
   await stop1.fill('#224488');
   await expect(qr.locator('linearGradient stop').first()).toHaveAttribute('stop-color', '#224488');
   await expect(dotsGroup.getByLabel('dots stop 1 colour', { exact: true })).toHaveValue('#224488');
+  // the default second stop is the accent, chosen to be seen; for the scan
+  // the gradient ends dark, since the edge rows hold two finders
+  await dotsGroup.getByLabel('dots stop 2 colour picker').fill('#003366');
+  await expect(qr.locator('linearGradient stop').nth(1)).toHaveAttribute('stop-color', '#003366');
   await dotsGroup.getByRole('spinbutton', { name: 'dots gradient angle in degrees' }).fill('45');
   await dotsGroup.getByRole('spinbutton', { name: 'dots gradient angle in degrees' }).press('Enter');
   // vertical by default (x1 = x2); at 45° both axes move

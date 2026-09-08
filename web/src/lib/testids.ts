@@ -29,6 +29,7 @@ export const TESTID = {
    *  and the two export links. */
   qr: 'qr',
   qrSvg: 'qr-svg',
+  qrPreview: 'qr-preview',
   qrText: 'qr-text',
   qrInfo: 'qr-info',
   qrError: 'qr-error',

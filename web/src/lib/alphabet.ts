@@ -136,6 +136,11 @@ export function parseLink(input: string): { code: string; alpha: Alphabet | null
 /**
  * The text a QR code of `link` carries.
  *
+ * With `scheme` off the `https://` is dropped and the text starts at the
+ * host: 8 characters fewer (about 44 bits, a version step on a small code).
+ * Most phone cameras open a bare host as a link; some scanners need the
+ * scheme, which is why it stays on by default.
+ *
  * For qr-alpha the scheme and host are uppercased: both are case-insensitive
  * (RFC 3986 §3.1 and §3.2.2), and QR alphanumeric mode has no lowercase, so
  * `HTTPS://QV.LC/` lets the base ride in the same 5.5-bit segment as the
@@ -146,7 +151,8 @@ export function parseLink(input: string): { code: string; alpha: Alphabet | null
  * (not an alphanumeric-mode character) in byte mode. Every other alphabet's
  * link is carried as it is — its code needs byte mode anyway.
  */
-export function qrText(link: string, alpha: Alphabet): string {
-  if (alpha !== QR_ALPHA) return link;
-  return link.replace(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]*/i, (base) => base.toUpperCase());
+export function qrText(link: string, alpha: Alphabet, { scheme = true }: { scheme?: boolean } = {}): string {
+  const text = scheme ? link : link.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '');
+  if (alpha !== QR_ALPHA) return text;
+  return text.replace(/^(?:[a-z][a-z0-9+.-]*:\/\/)?[^/?#]*/i, (base) => base.toUpperCase());
 }

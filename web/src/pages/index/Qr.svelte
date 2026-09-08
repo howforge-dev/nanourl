@@ -92,7 +92,7 @@
   // the effect depends on every field.
   $effect(() => saveSettings(settings));
 
-  let text = $derived(qrText(link, alpha));
+  let text = $derived(qrText(link, alpha, { scheme: settings.scheme }));
   let bytes = $derived(new TextEncoder().encode(text).length);
 
   // The matrix. `create` throws for a forced version too small for the text,
@@ -163,7 +163,7 @@
   let offer = $derived.by(() => {
     if (alpha === QR_ALPHA || !altLink || !built.qr || dismissed) return null;
     try {
-      const alt = build(qrText(altLink, QR_ALPHA), settings);
+      const alt = build(qrText(altLink, QR_ALPHA, { scheme: settings.scheme }), settings);
       const here = built.qr;
       const gain = alt.version < here.version;
       return { gain, from: here, to: alt };
@@ -322,6 +322,12 @@
       </div>
     {/if}
 
+    <!-- Two columns on a wide viewport, the preview column sticky, so a
+         control at the bottom of the options can be adjusted while the
+         symbol stays in view; on a narrow one the preview sticks to the top
+         of the viewport, capped to keep the controls usable under it. -->
+    <div class="body">
+    <div class="preview" data-testid={TESTID.qrPreview}>
     <div class="symbol" data-testid={TESTID.qrSvg} style:width="{displayWidth}px">
       <!-- eslint-disable-next-line svelte/no-at-html-tags -- our own renderer's SVG of our own link, with every text escaped -->
       {@html screen?.svg ?? ''}
@@ -353,6 +359,8 @@
       {/each}
       <Button size="sm" variant="ghost" describedBy={hintId('presets')} testid={TESTID.qrReset} onclick={() => (settings = sanitize(null))}>reset</Button>
     </div>
+    </div>
+    <div class="options">
 
     <details class="group" open data-testid="qr-group-main">
       <summary>Main</summary>
@@ -400,6 +408,8 @@
             <div class="caption" role="status" data-testid={TESTID.qrModeNote}>byte mode {MODE_NOTE_BYTE}: {bytes} bytes in one segment</div>
           {/if}
         </div>
+        {@render lbl('scheme', 'scheme in the text')}
+        <Segmented look="switch" label="scheme in the QR text" describedBy={hintId('scheme')} options={ON_OFF} value={settings.scheme ? 'on' : 'off'} onchange={(v) => set('scheme', v === 'on')} />
         {@render lbl('mask', 'mask')}
         <Segmented look="switch" label="mask pattern" describedBy={hintId('mask')} options={MASK_OPTIONS} value={settings.mask === null ? 'auto' : String(settings.mask)} onchange={(v) => set('mask', v)} />
       </div>
@@ -559,6 +569,8 @@
         </div>
       </div>
     </details>
+    </div>
+    </div>
   {/if}
 </details>
 
@@ -569,6 +581,28 @@
      framing, so the picture is not framed twice. */
   .symbol { max-width: 100%; margin-top: var(--s-3); }
   .symbol :global(svg) { display: block; width: 100%; height: auto; }
+  /* One column, the preview stuck to the top of the viewport over the
+     controls and capped at about 40% of its height: the symbol scales down
+     while stuck, the readout scrolls if it must. */
+  .body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
+  .preview {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--card);
+    border-bottom: var(--border);
+    padding-bottom: var(--s-2);
+    max-height: 40vh;
+    overflow: auto;
+  }
+  .preview .symbol :global(svg) { max-height: 26vh; width: auto; margin: 0 auto; }
+  /* Two columns on a wide viewport: the preview beside the options, stuck
+     a little below the top, no cap needed. */
+  @media (min-width: 900px) {
+    .body { grid-template-columns: minmax(0, 320px) minmax(0, 1fr); align-items: start; }
+    .preview { top: var(--s-3); max-height: none; overflow: visible; border-bottom: 0; background: none; padding-bottom: 0; }
+    .preview .symbol :global(svg) { max-height: none; width: 100%; }
+  }
   .readout { margin-top: var(--s-3); }
   .text { font-family: var(--font-mono); font-size: var(--fs-sm); overflow-wrap: anywhere; }
   .segs { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s-2); margin-top: var(--s-1); }

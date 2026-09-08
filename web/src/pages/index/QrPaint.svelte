@@ -9,7 +9,7 @@
   import Segmented from '../../lib/ui/Segmented.svelte';
   import TextField from '../../lib/ui/TextField.svelte';
   import { HINTS } from '../../lib/qr/hints';
-  import { GRADIENT_TYPES, STOPS_MAX, STOPS_MIN, sanitizePaint, type Gradient, type Paint } from '../../lib/qr/options';
+  import { GRADIENT_TYPES, STOPS_MAX, STOPS_MIN, defaultGradient, sanitizePaint, type Gradient, type Paint } from '../../lib/qr/options';
 
   let {
     paint,
@@ -29,14 +29,6 @@
    *  rotation typed out of range comes back clamped. */
   const emit = (p: Paint): void => onchange(sanitizePaint(p, paint));
   const withGradient = (g: Gradient | null): void => emit({ ...paint, gradient: g });
-  const gradientDefault = (): Gradient => ({
-    type: 'linear',
-    rotation: 90,
-    stops: [
-      { offset: 0, color: paint.color },
-      { offset: 1, color: paint.color },
-    ],
-  });
   const stopAt = (i: number, patch: Partial<{ offset: number; color: string }>): void => {
     const g = paint.gradient;
     if (!g) return;
@@ -48,7 +40,7 @@
 
 <div class="paint">
   <div class="row">
-    <Segmented look="switch" label="{name} paint" {describedBy} options={KIND} value={paint.gradient ? 'gradient' : 'solid'} onchange={(v) => withGradient(v === 'gradient' ? gradientDefault() : null)} />
+    <Segmented look="switch" label="{name} paint" {describedBy} options={KIND} value={paint.gradient ? 'gradient' : 'solid'} onchange={(v) => withGradient(v === 'gradient' ? defaultGradient(paint.color) : null)} />
     {#if !paint.gradient}
       <ColorField label="{name} colour" {describedBy} value={paint.color} onchange={(c) => emit({ ...paint, color: c })} />
     {/if}

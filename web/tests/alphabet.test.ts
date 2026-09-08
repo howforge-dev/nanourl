@@ -255,6 +255,19 @@ describe('qrText', () => {
     }
     expect(qrText('https://qv.lc/#😀', EMOJI)).toBe('https://qv.lc/#😀');
   });
+  it('drops the scheme when asked, for every alphabet, and still uppercases the qr-alpha host', () => {
+    for (const a of ALPHABETS) {
+      const spelled = fragmentFor(a.id === QR_ALPHA ? 'ABCD' : 'pDkL', a.id);
+      const text = qrText('https://qv.lc/#' + spelled, a.id, { scheme: false });
+      expect(text).not.toContain('://');
+      expect(text).toBe((a.id === QR_ALPHA ? 'QV.LC/#' : 'qv.lc/#') + spelled);
+      expect(qrText('https://qv.lc/#pDkL', a.id, { scheme: true })).toBe(qrText('https://qv.lc/#pDkL', a.id));
+    }
+    expect(qrText('http://localhost:4173/#/AB', QR_ALPHA, { scheme: false })).toBe('LOCALHOST:4173/#/AB');
+    expect(qrText('https://qv.lc/#😀', EMOJI, { scheme: false })).toBe('qv.lc/#😀');
+    // the saving is the scheme's own 8 characters
+    expect(qrText('https://qv.lc/#pDkL', 1).length - qrText('https://qv.lc/#pDkL', 1, { scheme: false }).length).toBe(8);
+  });
   it('is alphanumeric-mode text on both sides of the # for a qr-alpha link at the site root', () => {
     // '#' is the one character QR alphanumeric mode lacks; the base before
     // it and the code after it are each one alphanumeric run.

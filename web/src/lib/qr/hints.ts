@@ -17,6 +17,8 @@ export const HINTS = {
   version: 'The grid size, 1 (21×21) to 40 (177×177); auto picks the smallest that fits.',
   level: `How much of the code can be damaged or covered and still scan: ${EC_LEVELS.map(EC_LABEL).join(', ')}; higher means a denser code.`,
   mode: `How the link’s characters are packed. Auto lets the encoder pick the tightest mix, which is what gives the qr-alpha alphabet its small codes; byte ${MODE_NOTE_BYTE}.`,
+  scheme:
+    'Whether the text starts with https:// or straight at the host. Leaving it off saves 8 characters (about 44 bits, often a whole version step on a small code); most phone cameras open a bare host as a link, but some scanners need the scheme.',
   mask: 'One of eight patterns the code is XOR-ed with so its dark and light areas stay balanced. Auto picks the best-scoring one; a fixed one changes the look, never the content.',
   style: 'The shape of the small squares that carry the data. Rounded and classy soften them; dots turns them into circles; nanourl is the site’s own look.',
   roundSize: 'Snap the on-screen width so every module is a whole number of pixels, which keeps the edges crisp.',
