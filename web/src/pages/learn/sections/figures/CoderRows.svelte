@@ -26,8 +26,6 @@
    *  of a fresh line can be a fraction of a pixel, and an invisible slice reads
    *  as "nothing kept", the opposite of what happened */
   const MIN_SLICE = 12;
-  /** v's label baseline, below the last bar */
-  const V_LABEL_DY = 24;
   const toks = $derived(numbers.hn.tokens.slice(from, from + rows));
   const y = (i: number) => 30 + i * ROW_H;
   /** the ink-free band under bar `i`, stopping short of row `i+1`'s label */
@@ -47,9 +45,9 @@
   };
   // Height reaches just past the LAST row, not one whole row past it: a row's
   // worth of empty card below the final line reads as a row that failed to
-  // render. `detailed` adds the two lanes below the last bar: v's own label,
-  // then the caption naming it.
-  const height = $derived(y(Math.max(0, rows - 1)) + (detailed ? 56 : 18));
+  // render. `detailed` adds one lane below the last bar for the sentence
+  // naming v.
+  const height = $derived(y(Math.max(0, rows - 1)) + (detailed ? 40 : 18));
   // Each row's line as a range of the FIRST row's [0,1): row i+1 is row i's
   // kept slice, so its ends are that slice's ends mapped through every zoom
   // above.
@@ -115,16 +113,15 @@
       <text x={X1} y={y(i) - LABEL_DY} text-anchor="end" fill={last ? COLOR.ok : COLOR.acc}>{share(t)}</text>
     {/if}
     {#if detailed}
+      <!-- v on this row: the dot, and its name beside it every time, so no
+           row has an unexplained mark. -->
       <circle cx={vAt[i]} cy={y(i)} r="4.5" fill={COLOR.txt} stroke={COLOR.bg} stroke-width="1.5" />
+      <text x={vAt[i] - 8} y={y(i) + 4} class="big" text-anchor="end" fill={COLOR.txt}>v</text>
     {/if}
   {/each}
   {#if detailed}
-    {@const last = toks.length - 1}
-    <!-- v's label gets its own lane under the last bar; beside the dot it
-         would sit on the bar. -->
-    <text x={vAt[last]} y={y(last) + V_LABEL_DY} class="big" text-anchor="middle" fill={COLOR.txt}>v</text>
     <text x={X0} y={height - 8}>
-      the white dot is v: in every kept slice; any number in the last one is a valid code
+      v is the number the code names; it lies inside every kept slice, so decoding can read them back
     </text>
   {/if}
 </svg>
