@@ -77,9 +77,9 @@ cargo install --path rust/nanourl
 Two workflows, so that tagging cannot produce a binary nobody tested.
 
 - **`build-cli.yml`** runs on every push to `main` and every pull request that
-  touches `rust/`. Six legs, one per target: build, a second build whose digest
-  must match the first, the static-linking checks, `model verify`, and a decode
-  of a real link. Each leg uploads its package as a workflow artifact, kept 30
+  touches `rust/`. Six legs, one per target: build, a clean rebuild whose
+  digest must match the first, the static-linking checks, `model verify`, and
+  a decode of a real link. Each leg uploads its package as a workflow artifact, kept 30
   days, and a final job writes `SHA256SUMS`.
 - **`release-cli.yml`** runs on a `cli-v*` tag. It checks the tag against
   `rust/nanourl/Cargo.toml`, finds the successful `build-cli` run for that
@@ -122,7 +122,10 @@ sha256sum ../target/<target>/release/nanourl
 
 The remapping makes a build independent of where it runs, not of what it runs
 on: cargo's `-C metadata` disambiguator names the host triple, so another
-architecture links the same code in a different order.
+architecture links the same code in a different order. macOS is the one
+exception to path independence: dyld requires an `LC_UUID`, and Apple's linker
+derives it from the link's own paths, so a matching macOS digest needs the
+runner's checkout path, `/Users/runner/_work/nanourl/nanourl`.
 
 The three `.wasm` files the site serves are pinned by digest in
 `rust/urlcodec/wasm.sha256`. Those bytes are what the kernel parity gate
