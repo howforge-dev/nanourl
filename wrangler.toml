@@ -29,10 +29,6 @@ routes = [
   { pattern = "qv.lc/sw.js", zone_name = "qv.lc" },
   { pattern = "qv.lc/favicon.svg", zone_name = "qv.lc" },
   { pattern = "qv.lc/robots.txt", zone_name = "qv.lc" },
-  # Catch-all while the apex has no other origin: every path still reaches
-  # the Worker (and its 404 page). Removed when the shortener's host is
-  # the zone's origin.
-  { pattern = "qv.lc/*", zone_name = "qv.lc" },
 ]
 
 [assets]
