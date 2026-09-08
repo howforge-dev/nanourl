@@ -392,9 +392,15 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           WRANGLER_SEND_METRICS: "false"
         run: |
-          set -o pipefail
-          npx --yes wrangler@4 deploy > wrangler.log 2>&1; status=$?
-          sed -E 's/[0-9a-f]{32}/<id>/g' wrangler.log \
-            | grep -iE 'deployed|current version|route|error|✘|✔|failed|denied|permission' \
-            | grep -viE 'workers\.dev|logged in|account name' || true
+          set +e
+          npx --yes wrangler@4 deploy > wrangler.log 2>&1
+          status=$?
+          # The whole log on failure, the outcome lines on success; either way
+          # ids blanked and the lines naming the account dropped.
+          scrub() { sed -E 's/[0-9a-f]{32}/<id>/g' | grep -viE 'workers\.dev|logged in|account name'; }
+          if [ "$status" != 0 ]; then
+            scrub < wrangler.log
+          else
+            grep -iE 'deployed|current version|route|✘|✔' wrangler.log | scrub
+          fi
           exit $status
