@@ -63,7 +63,7 @@ tasks:
       # rust/NIGHTLY, so the date is in one file: build-wasm.sh, run_tiers.sh,
       # this Taskfile and both CI workflows all read it.
       NIGHTLY:
-        sh: cat rust/NIGHTLY
+        sh: cat {{.ROOT_DIR}}/rust/NIGHTLY
     cmds:
       - |
         if ! rustup toolchain list | grep -q '^{{.NIGHTLY}}'; then
