@@ -9,25 +9,29 @@ compatibility_date = "2026-09-01"
 workers_dev = false
 preview_urls = false
 
-# The site's own paths, as zone routes. Everything the site ships lives under
-# `/assets/` (src/lib/assetPath.ts), so one route carries the lot; the pages
-# are one more, and `sw.js` is the one file that cannot move, a worker being
-# confined to the folder it is served from. `robots.txt` needs no route: the
-# site ships none, and the zone's own managed one answers regardless.
-# Anything on the apex matching none of these is not the site's and goes to
-# the zone's origin, where the online shortener lives. The compressed links live after '#' and never reach the
+# The site's own paths, as zone routes. A pattern may carry a wildcard only
+# at the start of the hostname or the END of the path, so each name is spelled
+# out and nothing like `/*.html` is possible. Everything the site ships lives
+# under `/assets/` (src/lib/assetPath.ts), which is why one route covers the
+# model, the tokenizer, the kernel, the atlas, the favicon and Vite's own
+# output together; `sw.js` is the one file that cannot move, a worker being
+# confined to the folder it is served from. Anything on the apex matching none
+# of these is not the site's and goes to the zone's origin, where the online
+# shortener lives. The compressed links live after '#' and never reach the
 # server, so `qv.lc/` alone carries them.
 #
-# A pattern is matched against the whole URL, query string and all, so each
-# name carries a trailing wildcard: without it a shared `?utm_source=...`
-# link reaches the shortener and is told it is not a link. The apex cannot be
-# covered that way, since Cloudflare refuses a '?' in a pattern and a bare
-# `qv.lc/*` would swallow every slug; `php/index.php` sends `qv.lc/?...` back
-# to `qv.lc/` instead. None of these can match a slug, which is letters and
-# digits with no dot and no folder.
+# The trailing wildcard is what lets a shared `?utm_source=...` link reach the
+# page it names, since a pattern is matched against the whole URL, query and
+# all. The apex cannot be covered that way (a wildcard there would swallow
+# every slug, and a '?' in a pattern is refused), so `php/index.php` sends
+# `qv.lc/?...` back to `qv.lc/`.
 routes = [
   { pattern = "qv.lc/", zone_name = "qv.lc" },
-  { pattern = "qv.lc/*.html*", zone_name = "qv.lc" },
+  { pattern = "qv.lc/index.html*", zone_name = "qv.lc" },
+  { pattern = "qv.lc/learn.html*", zone_name = "qv.lc" },
+  { pattern = "qv.lc/model.html*", zone_name = "qv.lc" },
+  { pattern = "qv.lc/dream.html*", zone_name = "qv.lc" },
+  { pattern = "qv.lc/bench.html*", zone_name = "qv.lc" },
   { pattern = "qv.lc/assets/*", zone_name = "qv.lc" },
   { pattern = "qv.lc/sw.js*", zone_name = "qv.lc" },
 ]
