@@ -6,7 +6,7 @@ import { fmtBytes } from '../src/lib/format';
 import type { AssetEntry, Manifest } from '../src/lib/codec/manifest';
 import { arg } from './argv';
 import { CHUNK, chunkName, chunkPlan, hashName } from './pack-lib';
-import { ASSETS_JSON, PUBLIC_DIR } from './paths';
+import { ASSETS_JSON, PACKED_DIR } from './paths';
 
 // The commit the pack ran from, recorded in assets.json for provenance only.
 // A tree with no git history still has to pack (an export directory, an
@@ -55,15 +55,15 @@ if (!atlas && prior?.atlas) {
   );
 }
 
-mkdirSync(PUBLIC_DIR, { recursive: true });
-for (const f of readdirSync(PUBLIC_DIR)) if (f.endsWith('.bin')) unlinkSync(join(PUBLIC_DIR, f)); // one artifact set at a time
+mkdirSync(PACKED_DIR, { recursive: true });
+for (const f of readdirSync(PACKED_DIR)) if (f.endsWith('.bin')) unlinkSync(join(PACKED_DIR, f)); // one artifact set at a time
 
 const model = readFileSync(nurl);
 const modelSha = sha(model);
 const chunks = chunkPlan(model.length).map((c) => {
   const buf = model.subarray(c.offset, c.offset + c.bytes);
   const name = chunkName(modelSha, CHUNK, c.index);
-  writeFileSync(join(PUBLIC_DIR, name), buf);
+  writeFileSync(join(PACKED_DIR, name), buf);
   return { name, bytes: c.bytes, sha256: sha(buf) };
 });
 
@@ -71,7 +71,7 @@ const one = (base: string, path: string, ext: string): AssetEntry => {
   const b = readFileSync(path);
   const h = sha(b);
   const name = hashName(base, h, ext);
-  writeFileSync(join(PUBLIC_DIR, name), b);
+  writeFileSync(join(PACKED_DIR, name), b);
   return { name, bytes: b.length, sha256: h };
 };
 

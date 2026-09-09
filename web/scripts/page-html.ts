@@ -8,6 +8,7 @@
 // `vite.config.ts`'s `pages()` plugin writes it and derives the build's entry
 // list from the same list.
 import { pageEntryModule, pageMeta, pageWidth, type PageId } from '../src/lib/pages';
+import { FAVICON_URL } from '../src/lib/assetPath';
 
 /** Escapes text for an HTML text node or a double-quoted attribute value.
  *  Titles and descriptions are ours rather than user input, but a template
@@ -33,7 +34,7 @@ export function renderPage(id: PageId): string {
 <meta property="og:title" content="${esc(m.title)}">
 <meta property="og:description" content="${esc(m.description)}">
 <meta name="twitter:card" content="summary">
-<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="${FAVICON_URL}" type="image/svg+xml">
 </head>
 <body${bodyClass}><div id="app"></div><script type="module" src="${pageEntryModule(id)}"></script></body>
 </html>

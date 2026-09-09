@@ -12,8 +12,8 @@ export function isModelAsset(url: URL): boolean {
 }
 
 /** A precached page-shell asset the service worker should serve cache-first:
- * same-origin HTML, the hashed JS/CSS Vite emits under `/assets/`, and the
- * favicon. Deliberately excludes:
+ * same-origin HTML, and the hashed JS/CSS and the favicon under `/assets/`.
+ * Deliberately excludes:
  *  - `/sw.js` itself, because precaching the worker's own script would hide
  *    its own updates from the browser's update check, which depends on always
  *    refetching `/sw.js` off the network (web/_headers pins it
@@ -29,5 +29,5 @@ export function isShell(url: URL, origin: string): boolean {
   if (url.origin !== origin) return false;
   if (url.pathname === '/sw.js') return false;
   if (isModelAsset(url)) return false;
-  return /\.html$/.test(url.pathname) || /^\/assets\/[^/]+\.(js|css)$/.test(url.pathname) || /^\/favicon\.\w+$/.test(url.pathname);
+  return /\.html$/.test(url.pathname) || /^\/assets\/[^/]+\.(js|css|svg)$/.test(url.pathname);
 }

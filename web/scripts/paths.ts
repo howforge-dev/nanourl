@@ -10,6 +10,7 @@
 // be added to three separate directory lists.
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ASSET_DIR } from '../src/lib/assetPath';
 
 /** `web/`: the package root, one level above this file's directory. */
 export const WEB_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -21,8 +22,12 @@ export const SCRIPTS_DIR = resolve(WEB_ROOT, 'scripts');
  *  Gitignored, so every consumer must tolerate it being absent. */
 export const ASSETS_JSON = resolve(WEB_ROOT, 'src/lib/assets.json');
 
-/** Where `pack-assets.ts` writes the chunked model, tokenizer and wasm. */
+/** Vite's static root: copied into `dist/` as it stands. */
 export const PUBLIC_DIR = resolve(WEB_ROOT, 'public');
+
+/** Where `pack-assets.ts` writes the chunked model, tokenizer and wasm: the
+ *  one folder the site serves everything from (src/lib/assetPath.ts). */
+export const PACKED_DIR = resolve(PUBLIC_DIR, ASSET_DIR);
 
 /** `pnpm build`'s output: what `e2e/serve.ts` serves and `sw-update.spec.ts`
  *  patches a fixture into. */

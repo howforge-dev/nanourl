@@ -43,7 +43,7 @@ describe('the entry HTML is generated from that same record', () => {
 
   it('links the favicon as a file — never a data: URI', () => {
     for (const p of PAGES) {
-      expect(renderPage(p.id)).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml">');
+      expect(renderPage(p.id)).toContain('<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">');
       expect(renderPage(p.id)).not.toContain('data:image');
     }
   });

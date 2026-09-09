@@ -5,7 +5,7 @@ dist/
 # from its path relative to the root. Root level only: src/**.html would be a
 # source file.
 /*.html
-public/*.bin
+public/assets/
 src/lib/assets.json
 test-results/
 playwright-report/

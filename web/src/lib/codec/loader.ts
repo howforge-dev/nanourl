@@ -1,4 +1,5 @@
 import rawManifest from '../assets.json';
+import { assetUrl } from '../assetPath';
 import { isModelCache, MODEL_CACHE_PREFIX } from './cacheNames';
 import type { AssetEntry, Manifest } from './manifest';
 import { RateMeter, downloadParts, partsText } from './progress';
@@ -202,7 +203,7 @@ const isAbort = (e: unknown) => e instanceof Error && e.name === 'AbortError';
 async function download(a: AssetEntry, onBytes: OnBytes, signal?: AbortSignal): Promise<Uint8Array> {
   for (let attempt = 0; ; attempt++) {
     try {
-      const r = await fetch('/' + a.name, signal ? { signal } : undefined);
+      const r = await fetch(assetUrl(a.name), signal ? { signal } : undefined);
       if (!r.ok) throw new Error(`${a.name}: HTTP ${r.status}`);
       const reader = r.body!.getReader();
       const parts: Uint8Array[] = [];

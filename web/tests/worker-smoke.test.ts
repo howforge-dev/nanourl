@@ -15,11 +15,11 @@ import { assemble } from '../src/lib/codec/loader';
 import { numbers } from '../src/lib/numbers';
 import { DEFAULT_ALPHABET } from '../src/lib/alphabet';
 import type { Manifest } from '../src/lib/codec/manifest';
-import { ASSETS_JSON, PUBLIC_DIR } from '../scripts/paths';
+import { ASSETS_JSON, PACKED_DIR } from '../scripts/paths';
 
 
 const assetsJsonPath = ASSETS_JSON;
-const publicDir = PUBLIC_DIR;
+const publicDir = PACKED_DIR;
 const hasAssets = existsSync(assetsJsonPath);
 
 if (!hasAssets) {

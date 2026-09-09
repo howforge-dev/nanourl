@@ -23,8 +23,9 @@ describe('isShell', () => {
     expect(isShell(u('/model.html'), ORIGIN)).toBe(true);
     expect(isShell(u('/assets/index-abc123.js'), ORIGIN)).toBe(true);
     expect(isShell(u('/assets/index-abc123.css'), ORIGIN)).toBe(true);
-    expect(isShell(u('/favicon.svg'), ORIGIN)).toBe(true);
-    expect(isShell(u('/favicon.ico'), ORIGIN)).toBe(true);
+    expect(isShell(u('/assets/favicon.svg'), ORIGIN)).toBe(true);
+    // nothing at the root is the site's any more, the two files that cannot move aside
+    expect(isShell(u('/favicon.svg'), ORIGIN)).toBe(false);
   });
   it('never matches a .bin model/tokenizer/wasm asset — the loader owns those', () => {
     expect(isShell(u('/model.5e37aad1.00.bin'), ORIGIN)).toBe(false);

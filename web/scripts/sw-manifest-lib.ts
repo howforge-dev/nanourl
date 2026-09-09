@@ -27,8 +27,7 @@ export function shellFiles(distRelativePaths: string[]): string[] {
   const keep = distRelativePaths.filter((p) => {
     if (p === 'sw.js' || p.endsWith('.bin')) return false;
     if (p.endsWith('.html')) return true;
-    if (/^assets\/[^/]+\.(js|css)$/.test(p)) return true;
-    if (/^favicon\.\w+$/.test(p)) return true;
+    if (/^assets\/[^/]+\.(js|css|svg)$/.test(p)) return true;
     if (p === 'assets.json') return true;
     return false;
   });

@@ -27,17 +27,17 @@ const PATHS = [
   '/bench.html',
   '/assets/index-D4tPqvHK.js',
   '/assets/index-BxLmn0Qz.css',
-  '/model.5e37aad1.c20971520.00.bin',
-  '/model.5e37aad1.c20971520.06.bin',
-  '/tokenizer.6e4f2b4f.json.bin',
-  '/urlcodec.7867d47b.wasm.bin',
-  '/urlcodec-mt.be6068c4.wasm.bin',
-  '/atlas.8c7e850b.bin',
+  '/assets/model.5e37aad1.c20971520.00.bin',
+  '/assets/model.5e37aad1.c20971520.06.bin',
+  '/assets/tokenizer.6e4f2b4f.json.bin',
+  '/assets/urlcodec.7867d47b.wasm.bin',
+  '/assets/urlcodec-mt.be6068c4.wasm.bin',
+  '/assets/atlas.8c7e850b.bin',
   // The favicon is its own class: root-level, not `.html`, and deliberately
   // NOT content-hashed. The immutable rule, which is only ever correct for a
   // hashed name, must not reach it. Both configs get there through their
   // catch-alls today; this pins that they still agree if either grows a rule.
-  '/favicon.svg',
+  '/assets/favicon.svg',
 ];
 
 describe('_headers', () => {
@@ -54,7 +54,7 @@ describe('_headers', () => {
   });
 
   it('gives content-hashed assets an immutable Cache-Control with NO no-cache joined onto it', () => {
-    for (const path of PATHS.filter((p) => p.endsWith('.bin') || p.startsWith('/assets/'))) {
+    for (const path of PATHS.filter((p) => p.startsWith('/assets/'))) {
       expect(headersFor(rules, path)['Cache-Control'], path).toBe(IMMUTABLE);
     }
   });
@@ -70,14 +70,14 @@ describe('_headers', () => {
     // shipped, reproduced here so the regression is pinned rather than
     // described.
     const withoutClear = rules.map((r) => ({ ...r, unset: [] }));
-    expect(headersFor(withoutClear, '/model.5e37aad1.c20971520.00.bin')['Cache-Control']).toBe(`no-cache, ${IMMUTABLE}`);
+    expect(headersFor(withoutClear, '/assets/model.5e37aad1.c20971520.00.bin')['Cache-Control']).toBe(`no-cache, ${IMMUTABLE}`);
   });
 
   it('matches Cloudflare path patterns the way Cloudflare does', () => {
     expect(patternMatches('/*', '/anything/at/all.html')).toBe(true);
-    expect(patternMatches('/*.bin', '/model.abc.00.bin')).toBe(true);
-    expect(patternMatches('/*.bin', '/deep/path/model.abc.00.bin')).toBe(true);
-    expect(patternMatches('/*.bin', '/index.html')).toBe(false);
+    expect(patternMatches('/assets/*', '/assets/model.abc.00.bin')).toBe(true);
+    expect(patternMatches('/assets/*', '/assets/deep/model.abc.00.bin')).toBe(true);
+    expect(patternMatches('/assets/*', '/index.html')).toBe(false);
     expect(patternMatches('/assets/*', '/assets/index-D4tPqvHK.js')).toBe(true);
     expect(patternMatches('/assets/*', '/index.js')).toBe(false);
   });

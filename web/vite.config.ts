@@ -1,4 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
+import { FAVICON_PATH } from './src/lib/assetPath';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { resolve } from 'node:path';
 import { copyFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -19,7 +20,7 @@ import { logoSvg } from './src/lib/ui/logo';
 // Deliberately NOT content-hashed, so the name in the HTML is stable and
 // `_headers` serves it under the site-wide `no-cache` rule rather than the
 // immutable one, which is only correct for a hashed name.
-const FAVICON = 'favicon.svg';
+const FAVICON = FAVICON_PATH;
 
 function favicon(): Plugin {
   return {

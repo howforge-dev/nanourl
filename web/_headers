@@ -19,9 +19,6 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Cache-Control: no-cache
-/*.bin
-  ! Cache-Control
-  Cache-Control: public, max-age=31536000, immutable
 /assets/*
   ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable

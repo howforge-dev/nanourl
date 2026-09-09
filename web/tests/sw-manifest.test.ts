@@ -13,7 +13,7 @@ const FIXTURE_DIST = [
   'learn.html',
   'dream.html',
   'bench.html',
-  'favicon.svg',
+  'assets/favicon.svg',
   'sw.js',
   'assets/index-abc123.js',
   'assets/index-abc123.css',
@@ -25,15 +25,15 @@ const FIXTURE_DIST = [
 ];
 
 describe('shellFiles', () => {
-  it('keeps every html page, hashed assets/*.js|css, and the favicon', () => {
+  it('keeps every html page and everything hashed under assets/, favicon included', () => {
     const shell = shellFiles(FIXTURE_DIST);
     expect(shell).toEqual([
+      '/assets/favicon.svg',
       '/assets/index-abc123.css',
       '/assets/index-abc123.js',
       '/assets/model-def456.js',
       '/bench.html',
       '/dream.html',
-      '/favicon.svg',
       '/index.html',
       '/learn.html',
       '/model.html',
