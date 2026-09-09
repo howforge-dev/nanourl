@@ -47,7 +47,9 @@ describe('_headers', () => {
       expect(h['Cross-Origin-Opener-Policy'], path).toBe('same-origin');
       expect(h['Cross-Origin-Embedder-Policy'], path).toBe('require-corp');
       expect(h['X-Content-Type-Options'], path).toBe('nosniff');
-      expect(h['Referrer-Policy'], path).toBe('strict-origin-when-cross-origin');
+      // no-referrer, not strict-origin: a compressed link lives in the
+      // fragment, and the origin alone still says a visitor came from here.
+      expect(h['Referrer-Policy'], path).toBe('no-referrer');
     }
   });
 
